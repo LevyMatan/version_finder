@@ -133,7 +133,7 @@ class VersionFinder:
                 # Go to the submodule directory
                 subprocess.check_output(["cd", submodule], stderr=subprocess.DEVNULL)
             # Show all logs until the commit
-            output = subprocess.check_output(["git", "log", f"HEAD..{commit}"], stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(["git", "log", f"{commit}..HEAD", "--oneline"], stderr=subprocess.DEVNULL)
             print(output.decode("utf-8"))
         except subprocess.CalledProcessError:
             print("Error showing logs.")

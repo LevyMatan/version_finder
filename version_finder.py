@@ -24,6 +24,14 @@ def get_branches():
         sys.exit(1)
 
 def find_version_for_submodule(submodule, branch, submodule_sha):
+
+    # Verify the git is clean
+    try:
+        subprocess.check_output(["git", "diff", "--quiet"], stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        print("Please stash or commit your changes before proceeding.")
+        sys.exit(1)
+
     # Checkout the specified branch
     subprocess.run(["git", "checkout", branch])
 
@@ -62,7 +70,15 @@ if __name__ == "__main__":
         print(f"- {branch}")
 
     selected_branch = input("\nEnter the branch name: ")
+    # Verify the selected branch
+    if selected_branch not in branches:
+        print("Invalid branch name.")
+        sys.exit(1)
     selected_submodule = input("Enter the submodule path (e.g., sub-module-A): ")
+    # Verify the selected submodule
+    if selected_submodule not in submodules:
+        print("Invalid submodule path.")
+        sys.exit(1)
     selected_sha = input("Enter the commit SHA: ")
 
     find_version_for_submodule(selected_submodule, selected_branch, selected_sha)

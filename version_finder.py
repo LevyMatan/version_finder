@@ -74,11 +74,17 @@ if __name__ == "__main__":
     if selected_branch not in branches:
         print("Invalid branch name.")
         sys.exit(1)
-    selected_submodule = input("Enter the submodule path (e.g., sub-module-A): ")
-    # Verify the selected submodule
-    if selected_submodule not in submodules:
-        print("Invalid submodule path.")
-        sys.exit(1)
+    
+    if not submodules:
+        print("No submodules found. Searching in main repository.")
+        selected_submodule = ""
+    else:
+        selected_submodule = input("Enter the submodule path (e.g., sub-module-A): ")
+        # Verify the selected submodule
+        if selected_submodule not in submodules:
+            print("Invalid submodule path.")
+            sys.exit(1)
+            
     selected_sha = input("Enter the commit SHA: ")
 
     find_version_for_submodule(selected_submodule, selected_branch, selected_sha)

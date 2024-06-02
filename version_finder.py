@@ -146,3 +146,6 @@ if __name__ == "__main__":
     if not version_finder.is_valid_commit_sha(selected_sha, selected_branch, selected_submodule):
         print("Invalid commit SHA.")
         sys.exit(1)
+
+    first_commit_sha = version_finder.get_sha_of_first_commit_including_target(selected_sha, selected_branch, selected_submodule)
+    print(f"The SHA of the first commit including the target is: {first_commit_sha}")

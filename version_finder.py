@@ -74,12 +74,13 @@ class VersionFinder:
         except subprocess.CalledProcessError:
             return False
         
-    def __get_pointer_to_submodule(self, submodule, branch):
+    def __get_pointer_to_submodule(self, submodule, branch=""):
         try:
-            # Checkout the branch
-            subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
-            # Update sumodules
-            subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
+            if branch:
+                # Checkout the branch
+                subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+                # Update sumodules
+                subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
 
             # Get the commit SHA of the repository/submodule in the branch
             if submodule:
@@ -90,6 +91,13 @@ class VersionFinder:
                 return output.decode("utf-8").strip()
         except subprocess.CalledProcessError:
             return None
+
+    def __get_submodule_pointer_at_specific_repo_commit(self, submodule, commit):
+        try:
+            output = subprocess.check_output(["git", "ls-tree", commit, submodule], stderr=subprocess.DEVNULL)  
+            return output.decode("utf-8").split()[2]
+        except subprocess.CalledProcessError:
+            return None  
         
     def get_sha_of_first_commit_including_target(self, target, branch, submodule=None):
         try:
@@ -98,8 +106,13 @@ class VersionFinder:
             # Update sumodules
             subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
             if submodule:
-                # Go to the submodule directory
-                subprocess.check_output(["cd", submodule], stderr=subprocess.DEVNULL)
+                # Iterate over all commits in repository from head to the first commit
+                output = subprocess.check_output(["git", "rev-list", "HEAD", "--topo-order"], stderr=subprocess.DEVNULL)
+                for commit in output.decode("utf-8").splitlines():
+                    submodule_commit = self.__get_submodule_pointer_at_specific_repo_commit(submodule, commit)
+                    if not self.__is_ancestor(target, submodule_commit):
+                        target = commit
+                        break
             # Get the commit SHA of the first commit including the target
             output = subprocess.check_output(["git", "rev-list", target, "--topo-order", "--reverse"], stderr=subprocess.DEVNULL)
             return output.decode("utf-8").splitlines()[0]

@@ -115,6 +115,8 @@ class VersionFinder:
                         break
             # Get the commit SHA of the first commit including the target
             output = subprocess.check_output(["git", "rev-list", target, "--topo-order", "--reverse"], stderr=subprocess.DEVNULL)
+            # Debug
+            print(output)
             return output.decode("utf-8").splitlines()[0]
         except subprocess.CalledProcessError:
             return None

@@ -123,7 +123,7 @@ class VersionFinder:
         except subprocess.CalledProcessError:
             return None
         
-    def show_all_logs_until_commit(self, commit, branch, submodule=None):
+    def get_all_logs_until_commit(self, commit, branch, submodule=None):
         try:
             # Checkout the branch
             subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
@@ -134,11 +134,18 @@ class VersionFinder:
                 subprocess.check_output(["cd", submodule], stderr=subprocess.DEVNULL)
             # Show all logs until the commit
             output = subprocess.check_output(["git", "log", f"{commit}..HEAD", "--oneline"], stderr=subprocess.DEVNULL)
-            print(output.decode("utf-8"))
+            return (output.decode("utf-8"))
         except subprocess.CalledProcessError:
             print("Error showing logs.")
             sys.exit(1)
 
+    def find_first_commit_with_version(self, commit, branch, submodule=None):
+        gitlog = self.get_all_logs_until_commit(commit, branch, submodule)
+        for line in gitlog.splitlines():
+            if "Version:" in line:
+                print ("The first version including the commit is:")
+                print (line)
+                return line.split()[0]
 if __name__ == "__main__":
 
     version_finder = VersionFinder()
@@ -171,8 +178,6 @@ if __name__ == "__main__":
     if not version_finder.is_valid_branch(selected_branch):
         print("Invalid branch name.")
         sys.exit(1)
-    
-
 
     selected_sha = input("Enter the commit SHA: ")
 
@@ -183,5 +188,7 @@ if __name__ == "__main__":
     first_commit_sha = version_finder.get_sha_of_first_commit_including_target(selected_sha, selected_branch, selected_submodule)
     print(f"The SHA of the first commit including the target is: {first_commit_sha}")
 
-    version_finder.show_all_logs_until_commit(first_commit_sha, selected_branch, selected_submodule)
+    print("\nLogs until the first commit including the target: (From Head to the first commit including the target)")
+    print(version_finder.show_all_logs_until_commit(first_commit_sha, selected_branch, selected_submodule))
 
+    version_finder.find_first_commit_with_version(first_commit_sha, selected_branch, selected_submodule)

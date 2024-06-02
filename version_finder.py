@@ -21,7 +21,6 @@ class VersionFinder:
         try:
             output = subprocess.check_output(["git", "branch", "-r"], stderr=subprocess.DEVNULL)
             self.branches = [line.strip() for line in output.decode("utf-8").splitlines()]
-            return branches
         except subprocess.CalledProcessError:
             print("Error fetching branch information.")
             sys.exit(1)

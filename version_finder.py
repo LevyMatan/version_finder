@@ -111,20 +111,33 @@ class VersionFinder:
             # Update sumodules
             subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
             if submodule:
-                # Iterate over all commits in repository from head to the first commit
-                output = subprocess.check_output(["git", "rev-list", "HEAD", "--topo-order"], stderr=subprocess.DEVNULL)
-                for commit in output.decode("utf-8").splitlines():
+                # Iterate over all commits in repository that changed the submodule
+                output = subprocess.check_output(["git", "rev-list", "HEAD", "--", submodule], stderr=subprocess.DEVNULL)
+                commits_list = output.decode("utf-8").splitlines()
+                for indx,commit in enumerate(commits_list):
                     submodule_commit = self.__get_submodule_pointer_at_specific_repo_commit(submodule, commit)
                     if not self.__is_ancestor(target, submodule_commit):
-                        target = commit
-                        break
-            # Get the commit SHA of the first commit including the target
-            output = subprocess.check_output(["git", "rev-list", target, "--topo-order"], stderr=subprocess.DEVNULL)
-            # Debug
-            print(output.decode("utf-8"))
-            return output.decode("utf-8").splitlines()[1]
+                        return commits_list[indx-1]
+            else:
+                return target
         except subprocess.CalledProcessError:
             return None
+        
+    def show_all_logs_until_commit(self, commit, branch, submodule=None):
+        try:
+            # Checkout the branch
+            subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+            # Update sumodules
+            subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
+            if submodule:
+                # Go to the submodule directory
+                subprocess.check_output(["cd", submodule], stderr=subprocess.DEVNULL)
+            # Show all logs until the commit
+            output = subprocess.check_output(["git", "log", f"HEAD..{commit}"], stderr=subprocess.DEVNULL)
+            print(output.decode("utf-8"))
+        except subprocess.CalledProcessError:
+            print("Error showing logs.")
+            sys.exit(1)
 
 if __name__ == "__main__":
 
@@ -169,3 +182,6 @@ if __name__ == "__main__":
 
     first_commit_sha = version_finder.get_sha_of_first_commit_including_target(selected_sha, selected_branch, selected_submodule)
     print(f"The SHA of the first commit including the target is: {first_commit_sha}")
+
+    version_finder.show_all_logs_until_commit(first_commit_sha, selected_branch, selected_submodule)
+

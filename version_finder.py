@@ -80,20 +80,26 @@ class VersionFinder:
             subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
             # Update sumodules
             subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
-            # Get the commit SHA of the submodule in the branch
-            output = subprocess.check_output(["git", "submodule", "status", submodule], stderr=subprocess.DEVNULL)
-            return output.decode("utf-8").split()[0]
+
+            # Get the commit SHA of the repository/submodule in the branch
+            if submodule:
+                output = subprocess.check_output(["git", "submodule", "status", submodule], stderr=subprocess.DEVNULL)
+                return output.decode("utf-8").split()[0]
+            else:
+                output = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+                return output.decode("utf-8").strip()
         except subprocess.CalledProcessError:
             return None
         
-    def get_sha_of_first_commit_including_target(self, target, branch):
+    def get_sha_of_first_commit_including_target(self, target, branch, submodule=None):
         try:
             # Checkout the branch
             subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
             # Update sumodules
             subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
-            # Checkout the branch
-            subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+            if submodule:
+                # Go to the submodule directory
+                subprocess.check_output(["cd", submodule], stderr=subprocess.DEVNULL)
             # Get the commit SHA of the first commit including the target
             output = subprocess.check_output(["git", "rev-list", target, "--topo-order", "--reverse"], stderr=subprocess.DEVNULL)
             return output.decode("utf-8").splitlines()[-1]

@@ -33,6 +33,12 @@ class VersionFinder:
     def get_branches(self):
         return self.branches
 
+    def is_valid_branch(self, branch):
+        return branch in self.branches
+    
+    def is_valid_submodule(self, submodule):
+        return submodule in self.submodules
+    
     def is_valid_commit_sha(self, commit_sha, branch, submodule):
         try:
             # Checkout the branch
@@ -74,20 +80,26 @@ class VersionFinder:
             subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
             # Update sumodules
             subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
-            # Get the commit SHA of the submodule in the branch
-            output = subprocess.check_output(["git", "submodule", "status", submodule], stderr=subprocess.DEVNULL)
-            return output.decode("utf-8").split()[0]
+
+            # Get the commit SHA of the repository/submodule in the branch
+            if submodule:
+                output = subprocess.check_output(["git", "submodule", "status", submodule], stderr=subprocess.DEVNULL)
+                return output.decode("utf-8").split()[0]
+            else:
+                output = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+                return output.decode("utf-8").strip()
         except subprocess.CalledProcessError:
             return None
         
-    def get_sha_of_first_commit_including_target(self, target, branch):
+    def get_sha_of_first_commit_including_target(self, target, branch, submodule=None):
         try:
             # Checkout the branch
             subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
             # Update sumodules
             subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
-            # Checkout the branch
-            subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+            if submodule:
+                # Go to the submodule directory
+                subprocess.check_output(["cd", submodule], stderr=subprocess.DEVNULL)
             # Get the commit SHA of the first commit including the target
             output = subprocess.check_output(["git", "rev-list", target, "--topo-order", "--reverse"], stderr=subprocess.DEVNULL)
             return output.decode("utf-8").splitlines()[-1]
@@ -100,9 +112,22 @@ if __name__ == "__main__":
     submodules = version_finder.get_submodules()
     branches = version_finder.get_branches()
 
-    print("Available submodules:")
-    for submodule in submodules:
-        print(f"- {submodule}")
+    # Set default values
+    selected_submodule = None
+    selected_branch = "main"
+
+    if submodules:
+        print("Available submodules:")
+        for submodule in submodules:
+            print(f"- {submodule}")
+
+        selected_submodule = input("Enter the submodule path (e.g., sub-module-A): ")
+        # Verify the selected submodule
+        if not version_finder.is_valid_submodule(selected_submodule):
+            print("Invalid submodule path.")
+            sys.exit(1)
+    else:
+        print("No submodules found.")
 
     print("\nAvailable branches:")
     for branch in branches:
@@ -110,19 +135,11 @@ if __name__ == "__main__":
 
     selected_branch = input("\nEnter the branch name: ")
     # Verify the selected branch
-    if selected_branch not in branches:
+    if not version_finder.is_valid_branch(selected_branch):
         print("Invalid branch name.")
         sys.exit(1)
     
-    if not submodules:
-        print("No submodules found. Searching in main repository.")
-        selected_submodule = ""
-    else:
-        selected_submodule = input("Enter the submodule path (e.g., sub-module-A): ")
-        # Verify the selected submodule
-        if selected_submodule not in submodules:
-            print("Invalid submodule path.")
-            sys.exit(1)
+
 
     selected_sha = input("Enter the commit SHA: ")
 

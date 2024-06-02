@@ -43,6 +43,8 @@ class VersionFinder:
         try:
             # Checkout the branch
             subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+            # Pull
+            subprocess.check_output(["git", "pull"], stderr=subprocess.DEVNULL)
             # Update sumodules
             subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
             if submodule:
@@ -55,6 +57,9 @@ class VersionFinder:
             return False
         
     def __is_clean_git_repo(self):
+        '''
+        Check if the repository is clean.
+        '''
         try:
             subprocess.check_output(["git", "diff", "--quiet"], stderr=subprocess.DEVNULL)
             return True
@@ -114,10 +119,10 @@ class VersionFinder:
                         target = commit
                         break
             # Get the commit SHA of the first commit including the target
-            output = subprocess.check_output(["git", "rev-list", target, "--topo-order", "--reverse"], stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(["git", "rev-list", target, "--topo-order"], stderr=subprocess.DEVNULL)
             # Debug
             print(output.decode("utf-8"))
-            return output.decode("utf-8").splitlines()[0]
+            return output.decode("utf-8").splitlines()[1]
         except subprocess.CalledProcessError:
             return None
 

@@ -190,6 +190,6 @@ if __name__ == "__main__":
     print(f"The SHA of the first commit including the target is: {first_commit_sha}")
 
     print("\nLogs until the first commit including the target: (From Head to the first commit including the target)")
-    print(version_finder.show_all_logs_until_commit(first_commit_sha, selected_branch, selected_submodule))
+    print(version_finder.get_all_logs_until_commit(first_commit_sha, selected_branch, selected_submodule))
 
     version_finder.find_first_commit_with_version(first_commit_sha, selected_branch, selected_submodule)

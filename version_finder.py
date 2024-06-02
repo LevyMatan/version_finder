@@ -63,9 +63,12 @@ class VersionFinder:
             subprocess.check_output(["git", "submodule", "update", "--init"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             if submodule:
                 # Go to the submodule directory
-                subprocess.check_output(["cd", submodule], cwd=self.repository_path, stderr=subprocess.DEVNULL)
+                path = os.path.join(self.repository_path, submodule)
+            else:
+                path = self.repository_path
+
             # Verify the commit exists in the submodule
-            subprocess.check_output(["git", "show", commit_sha], cwd=self.repository_path, stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "show", commit_sha], cwd=path, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             return False
@@ -81,14 +84,18 @@ class VersionFinder:
             return False
     
 
-    def __is_ancestor(self, ancestor, commit):
+    def __is_ancestor(self, ancestor, commit, submodule=None):
         '''
         Check if the commit is an ancestor of the ancestor commit.
 
         Note: Assumes the two commits exists in the repository/submodule, and that we are the root of the repository/submodule.
         '''
+        if submodule:
+            path = os.path.join(self.repository_path, submodule)
+        else:
+            path = self.repository_path
         try:
-            subprocess.check_output(["git", "merge-base", "--is-ancestor",ancestor, commit], cwd=self.repository_path, stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "merge-base", "--is-ancestor",ancestor, commit], cwd=path, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             return False
@@ -130,7 +137,7 @@ class VersionFinder:
                 commits_list = output.decode("utf-8").splitlines()
                 for indx,commit in enumerate(commits_list):
                     submodule_commit = self.__get_submodule_pointer_at_specific_repo_commit(submodule, commit)
-                    if not self.__is_ancestor(target, submodule_commit):
+                    if not self.__is_ancestor(target, submodule_commit, submodule=submodule):
                         return commits_list[indx-1]
             else:
                 return target
@@ -144,10 +151,11 @@ class VersionFinder:
             # Update sumodules
             subprocess.check_output(["git", "submodule", "update", "--init"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             if submodule:
-                # Go to the submodule directory
-                subprocess.check_output(["cd", submodule], cwd=self.repository_path, stderr=subprocess.DEVNULL)
+                path = os.path.join(self.repository_path, submodule)
+            else:
+                path = self.repository_path
             # Show all logs until the commit
-            output = subprocess.check_output(["git", "log", f"{commit}..HEAD", "--oneline"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(["git", "log", f"{commit}..HEAD", "--oneline", "--reverse"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             return (output.decode("utf-8"))
         except subprocess.CalledProcessError:
             print("Error showing logs.")

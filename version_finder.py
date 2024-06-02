@@ -146,6 +146,7 @@ class VersionFinder:
                 print ("The first version including the commit is:")
                 print (line)
                 return line.split()[0]
+        print ("No version found in the logs.")
 if __name__ == "__main__":
 
     version_finder = VersionFinder()

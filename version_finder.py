@@ -2,16 +2,30 @@
 
 import subprocess
 import sys
+import os
 
 class VersionFinder:
 
-    def __init__(self) -> None:
+    def __init__(self, path=None) -> None:
+        # Set CWD to the repository path
+        if not path:
+            self.repository_path = os.getcwd()
+        else:
+            self.repository_path = os.path.abspath(path)
+
+        # Make sure the path is a valid git repository
+        try:
+            subprocess.check_output(["git", "rev-parse"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            print(f"Invalid git repository path: {self.repository_path}")
+            sys.exit(1)
+
         if not self.__is_clean_git_repo():
             print("The repository is not clean. Please commit or stash your changes.")
             sys.exit(1)
         # Get a list of submodules in the main project
         try:
-            output = subprocess.check_output(["git", "submodule", "status"], stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(["git", "submodule", "status"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             self.submodules = [line.split()[1] for line in output.decode("utf-8").splitlines()]
         except subprocess.CalledProcessError:
             print("Error fetching submodule information.")
@@ -19,7 +33,7 @@ class VersionFinder:
 
         # Get a list of all branches in the main project
         try:
-            output = subprocess.check_output(["git", "branch", "-r"], stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(["git", "branch", "-r"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             self.branches = [line.strip() for line in output.decode("utf-8").splitlines()]
             # Remove the origin/ prefix
             self.branches = [branch.split("/", 1)[1] for branch in self.branches]
@@ -42,16 +56,16 @@ class VersionFinder:
     def is_valid_commit_sha(self, commit_sha, branch, submodule):
         try:
             # Checkout the branch
-            subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "checkout", branch], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             # Pull
-            subprocess.check_output(["git", "pull"], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "pull"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             # Update sumodules
-            subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "submodule", "update", "--init"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             if submodule:
                 # Go to the submodule directory
-                subprocess.check_output(["cd", submodule], stderr=subprocess.DEVNULL)
+                subprocess.check_output(["cd", submodule], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             # Verify the commit exists in the submodule
-            subprocess.check_output(["git", "show", commit_sha], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "show", commit_sha], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             return False
@@ -61,7 +75,7 @@ class VersionFinder:
         Check if the repository is clean.
         '''
         try:
-            subprocess.check_output(["git", "diff", "--quiet"], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "diff", "--quiet"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             return False
@@ -74,7 +88,7 @@ class VersionFinder:
         Note: Assumes the two commits exists in the repository/submodule, and that we are the root of the repository/submodule.
         '''
         try:
-            subprocess.check_output(["git", "merge-base", "--is-ancestor",ancestor, commit], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "merge-base", "--is-ancestor",ancestor, commit], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             return False
@@ -83,23 +97,23 @@ class VersionFinder:
         try:
             if branch:
                 # Checkout the branch
-                subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+                subprocess.check_output(["git", "checkout", branch], cwd=self.repository_path, stderr=subprocess.DEVNULL)
                 # Update sumodules
-                subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
+                subprocess.check_output(["git", "submodule", "update", "--init"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
 
             # Get the commit SHA of the repository/submodule in the branch
             if submodule:
-                output = subprocess.check_output(["git", "submodule", "status", submodule], stderr=subprocess.DEVNULL)
+                output = subprocess.check_output(["git", "submodule", "status", submodule], cwd=self.repository_path, stderr=subprocess.DEVNULL)
                 return output.decode("utf-8").split()[0]
             else:
-                output = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+                output = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
                 return output.decode("utf-8").strip()
         except subprocess.CalledProcessError:
             return None
 
     def __get_submodule_pointer_at_specific_repo_commit(self, submodule, commit):
         try:
-            output = subprocess.check_output(["git", "ls-tree", commit, submodule], stderr=subprocess.DEVNULL)  
+            output = subprocess.check_output(["git", "ls-tree", commit, submodule], cwd=self.repository_path, stderr=subprocess.DEVNULL)  
             return output.decode("utf-8").split()[2]
         except subprocess.CalledProcessError:
             return None  
@@ -107,12 +121,12 @@ class VersionFinder:
     def get_sha_of_first_commit_including_target(self, target, branch, submodule=None):
         try:
             # Checkout the branch
-            subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "checkout", branch], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             # Update sumodules
-            subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "submodule", "update", "--init"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             if submodule:
                 # Iterate over all commits in repository that changed the submodule
-                output = subprocess.check_output(["git", "rev-list", "HEAD", "--", submodule], stderr=subprocess.DEVNULL)
+                output = subprocess.check_output(["git", "rev-list", "HEAD", "--", submodule], cwd=self.repository_path, stderr=subprocess.DEVNULL)
                 commits_list = output.decode("utf-8").splitlines()
                 for indx,commit in enumerate(commits_list):
                     submodule_commit = self.__get_submodule_pointer_at_specific_repo_commit(submodule, commit)
@@ -126,14 +140,14 @@ class VersionFinder:
     def get_all_logs_until_commit(self, commit, branch, submodule=None):
         try:
             # Checkout the branch
-            subprocess.check_output(["git", "checkout", branch], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "checkout", branch], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             # Update sumodules
-            subprocess.check_output(["git", "submodule", "update", "--init"], stderr=subprocess.DEVNULL)
+            subprocess.check_output(["git", "submodule", "update", "--init"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             if submodule:
                 # Go to the submodule directory
-                subprocess.check_output(["cd", submodule], stderr=subprocess.DEVNULL)
+                subprocess.check_output(["cd", submodule], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             # Show all logs until the commit
-            output = subprocess.check_output(["git", "log", f"{commit}..HEAD", "--oneline"], stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(["git", "log", f"{commit}..HEAD", "--oneline"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             return (output.decode("utf-8"))
         except subprocess.CalledProcessError:
             print("Error showing logs.")
@@ -147,9 +161,19 @@ class VersionFinder:
                 print (line)
                 return line.split()[0]
         print ("No version found in the logs.")
+
+
 if __name__ == "__main__":
 
-    version_finder = VersionFinder()
+    # Get the path of the repository from the command line invoke as argument
+    if len(sys.argv) != 2:
+        print("Usage: python version_finder.py [path_to_repository=.]")
+        print("Setting repository path to the current directory.")
+        path = None
+    else:
+        path = sys.argv[1]
+
+    version_finder = VersionFinder(path)
     submodules = version_finder.get_submodules()
     branches = version_finder.get_branches()
 

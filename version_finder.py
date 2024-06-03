@@ -53,7 +53,7 @@ class VersionFinder:
     def is_valid_submodule(self, submodule):
         return submodule in self.submodules
     
-    def is_valid_commit_sha(self, commit_sha, branch, submodule):
+    def is_valid_commit_sha(self, commit_sha, branch, submodule=None):
         try:
             # Checkout the branch
             subprocess.check_output(["git", "checkout", branch], cwd=self.repository_path, stderr=subprocess.DEVNULL)

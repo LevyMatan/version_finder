@@ -35,6 +35,8 @@ class VersionFinder:
         try:
             output = subprocess.check_output(["git", "branch", "-r"], cwd=self.repository_path, stderr=subprocess.DEVNULL)
             self.branches = [line.strip() for line in output.decode("utf-8").splitlines()]
+            # Remove the `HEAD -> <current_branch>` branch
+            self.branches = self.branches[1:]
             # Remove the origin/ prefix
             self.branches = [branch.split("/", 1)[1] for branch in self.branches]
         except subprocess.CalledProcessError:

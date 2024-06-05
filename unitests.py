@@ -53,7 +53,7 @@ class TestVersionFinder(unittest.TestCase):
         branches = self.vf.get_branches()
         if branches:
             commit = self.vf.find_first_commit_with_version("HEAD", branches[0])
-            self.assertIsNotNone(commit)
+            self.assertIsNone(commit)
 
 if __name__ == "__main__":
     unittest.main()

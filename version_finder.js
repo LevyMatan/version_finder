@@ -27,10 +27,17 @@ class VersionFinder {
         }
 
         try {
-            this.submodules = (await this.git.subModule(['status'])).split('\n').map(line => line.split(' ')[1]);
+            const submodules_raw = await this.git.subModule(['status']);
+            if (submodules_raw) {
+                console.log("submodules_raw: ", submodules_raw)
+                this.submodules = (await this.git.subModule(['status'])).split('\n').map(line => line.split(' ')[1]);
+            }
+            else {
+                this.submodules = ['No submodules in Repo'];
+            }
         } catch (error) {
             console.error('Error fetching submodule information.');
-            process.exit(1);
+            this.submodules = ['No submodules in Repo'];
         }
 
         try {

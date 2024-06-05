@@ -2,6 +2,7 @@
 const path = require('path');
 const os = require('os');
 const { ipcRenderer } = require('electron');
+const { isUndefined } = require('util');
 
 // When DOM is ready:
 // 1. Initialize the VersionFinder class
@@ -90,6 +91,7 @@ ipcRenderer.on('init:done', (event, args) => {
 
     console.log("init done in renderer.js")
     console.log(args);
+
     // Create an options Object to pass into the M.Autocomplete.init() function
     const options_branches = {
         data: {
@@ -107,11 +109,22 @@ ipcRenderer.on('init:done', (event, args) => {
     if (args["branches"].length > 0) {
         auto_branch[0].value = args["branches"][0];
     }
-    var auto_submodule = document.querySelectorAll('.autocomplete-submodule');
-    M.Autocomplete.init(auto_submodule, options_submodules);
-    // Set the value of the first submodule
-    if (args.submodules.length > 0) {
-        auto_submodule[0].value = args.submodules[0];
+
+    // Check if there are submodules in the repository
+    const noSubmodulesInRepo = args.submodules[0] === 'No submodules in Repo';
+
+    if (!noSubmodulesInRepo) {
+        var auto_submodule = document.querySelectorAll('.autocomplete-submodule');
+        M.Autocomplete.init(auto_submodule, options_submodules);
+        // Set the value of the first submodule
+        if (args.submodules.length > 0) {
+            auto_submodule[0].value = args.submodules[0];
+        }
+    }
+    else {
+        // Set the submodule input to disabled, with value: No submodules in Repository
+        document.getElementById('submodule-name-input').disabled = true;
+        document.getElementById('submodule-name-input').value = 'No submodules in Repository';
     }
 });
 

@@ -154,6 +154,4 @@ ipcRenderer.on('search:done', (event, args) => {
     // Set to green and bold
     resultParagraph.style.color = 'green';
     resultParagraph.style.fontWeight = 'bold';
-}
-
-    );
+    });

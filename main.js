@@ -13,11 +13,11 @@ function createWindow () {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-    //   preload: path.join(__dirname, 'preload.js'),
     },
-    // Open the DevTools when the app is started
-  })
+    icon: path.join(__dirname, 'icon.icns')
+})
 
+    // Open the DevTools when the app is started
   mainWindow.loadFile('index.html')
   mainWindow.webContents.openDevTools()
 

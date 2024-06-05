@@ -1,0 +1,59 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+    http-equiv="Content-Security-Policy"
+    content="script-src 'self' 'unsafe-inline'"
+    />
+    <link rel="stylesheet" href="css/all.min.css" />
+    <link rel="stylesheet" href="css/materialize.min.css" />
+    <link rel="stylesheet" href="css/style.css" />
+  <body>
+    <div class="container center-align">
+        <h1>Version Finder</h1>
+        <h2>by Matan Levy</h2>
+        <form id="version-finder-form">
+            <div class="file-field input-field">
+                <div class="btn">
+                    <span>Repo</span>
+                    <input type="file" webkitdirectory directory id="repo-browser">
+                </div>
+                <div class="file-path-wrapper">
+                    <input id="repo-path" type="text">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                  <div class="row">
+                    <div class="input-field col s12">
+                      <input type="text" id="branch-name-input" class="autocomplete-branch">
+                      <label for="branch-name-input">Branch Name</label>
+                    </div>
+                  </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                  <div class="row">
+                    <div class="input-field col s12">
+                      <input type="text" id="submodule-name-input" class="autocomplete-submodule">
+                      <label for="submodule-name-input">Submodule Name</label>
+                    </div>
+                  </div>
+                </div>
+            </div>
+
+            <label for="commit-sha">Target commit SHA:</label><br>
+            <input type="text" id="commit-sha" name="commit-sha"><br>
+            <!-- make the submit button -->
+            <input type="submit" id="find-version" value="Find Version">
+        </form>
+
+        <p id="version-result" class="strong"></p>
+    </div>
+  </body>
+  <script src="js/materialize.min.js"></script>
+  <script src="renderer.js"></script>
+</html>

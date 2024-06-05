@@ -7,7 +7,7 @@
     "start": "electron .",
     "dev": "nodemon --exec electron .",
     "docs": "jsdoc -r .",
-    "package": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=icon.icns --out=release-builds",
+    "package": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=icon.icns --out=release-builds --prune=false",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Matan Levy",

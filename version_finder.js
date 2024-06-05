@@ -1,6 +1,6 @@
 // version_finder.js
 
-const gitP = require('simple-git/promise');
+const gitP = require('simple-git');
 const path = require('path');
 
 class VersionFinder {
@@ -13,10 +13,17 @@ class VersionFinder {
 
     async init() {
         try {
-            await this.git.checkIsRepo();
+            await this.git.checkIsRepo()
+            .then(isRepo => {
+                if (!isRepo) {
+                    throw new Error('Not a git repository');
+                }
+            }
+            )
+
         } catch (error) {
             console.error(`Invalid git repository path: ${this.repositoryPath}`);
-            process.exit(1);
+            return error;
         }
 
         try {
@@ -87,7 +94,7 @@ class VersionFinder {
     async getLogs(branch, submodule) {
         try {
             await this.git.checkout(branch);
-            await this.git.pull();
+            // await this.git.pull();
             await this.git.subModule(['update', '--init']);
             let logs;
             if (submodule) {
@@ -98,18 +105,27 @@ class VersionFinder {
             return logs.all;
         } catch (error) {
             console.error('Error fetching logs.');
-            process.exit(1);
+            console.error(error)
+            return error;
         }
     }
 
     async getFirstCommitWithVersion(branch, submodule, version) {
-        const logs = await this.getLogs(branch, submodule);
-        for (const log of logs) {
-            if (log.message.includes(version)) {
-                return log.hash;
+        try {
+            const logs = await this.getLogs(branch, submodule);
+            for (const log of logs) {
+                if (log.message.includes(version)) {
+                    return log.hash;
+                }
             }
+            return null;
         }
-        return null;
+        catch (error) {
+            console.error(error)
+            console.error('Error fetching first commit with version.');
+            return new Error('Error fetching first commit with version.');
+        }
 }}
 
+module.exports = VersionFinder;
 // ... rest of the script

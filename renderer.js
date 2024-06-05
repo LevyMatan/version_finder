@@ -60,7 +60,12 @@ function sendInitRepoEvent() {
 function sendSearchVersion() {
     const repositoryPath = repositoryPathInput.value;
     const branch = branchList.value;
-    const submodule = submoduleList.value;
+    const submodule = null;
+
+    if (submoduleList.value !== 'No submodules in Repository') {
+        const submodule = submoduleList.value;
+    }
+
     const commitSHA = 'HEAD~3';
     ipcRenderer.send('search:version', {
         repositoryPath,

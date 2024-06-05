@@ -82,6 +82,15 @@ async function initRepo({ form }) {
     }
 }
 
+/**
+ * Searches for a version using the provided form data.
+ * @param {Object} options - The options object.
+ * @param {Object} options.form - The form data.
+ * @param {string} options.form.repositoryPath - The path to the repository.
+ * @param {string} options.form.commitSHA - The commit SHA.
+ * @param {string} options.form.repositoryBranch - The repository branch.
+ * @param {string} options.form.submodule - The submodule.
+ */
 async function searchVersion({ form }) {
     try {
         const versionFinder = new VersionFinder(form.repositoryPath)

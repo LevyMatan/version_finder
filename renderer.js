@@ -1,8 +1,5 @@
 // renderer.js
-const path = require('path');
-const os = require('os');
 const { ipcRenderer } = require('electron');
-const { isUndefined } = require('util');
 
 // When DOM is ready:
 // 1. Initialize the VersionFinder class

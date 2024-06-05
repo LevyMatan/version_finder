@@ -41,10 +41,11 @@ class VersionFinder {
         }
 
         try {
-            this.branches = (await this.git.branch(['-r'])).all.map(branch => branch.split('/', 2)[1]);
+            let branches = await this.git.branch();
+            this.branches = branches.all.map(branch => branch.replace('origin/', '').replace('remotes/', ''));
         } catch (error) {
             console.error('Error fetching branch information.');
-            process.exit(1);
+            throw new Error('Error fetching branch information.');
         }
     }
 
@@ -100,6 +101,8 @@ class VersionFinder {
 
     async getLogs(branch, submodule) {
         try {
+            console.log("branch: ", branch);
+            console.log("submodule: ", submodule);
             await this.git.checkout(branch);
             // await this.git.pull();
             await this.git.subModule(['update', '--init']);
@@ -117,11 +120,11 @@ class VersionFinder {
         }
     }
 
-    async getFirstCommitWithVersion(branch, submodule, version) {
+    async getFirstCommitWithVersion(commitSHA, branch, submodule) {
         try {
             const logs = await this.getLogs(branch, submodule);
             for (const log of logs) {
-                if (log.message.includes(version)) {
+                if (log.message.includes("version")) {
                     return log.hash;
                 }
             }

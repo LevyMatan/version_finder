@@ -38,6 +38,9 @@ document.getElementById('repo-browser').addEventListener('change', function() {
         var directory = path.split('/').slice(0, -1).join('/');
         console.log("directory: ", path);
         repositoryPathInput.value = directory;
+
+        // Send the repository path to the main process
+        sendInitRepoEvent();
     }
 });
 
@@ -143,3 +146,14 @@ ipcRenderer.on('init:error:invalid-repo-path', (event) => {
     resultParagraph.style.fontWeight = 'bold';
 
 });
+
+ipcRenderer.on('search:done', (event, args) => {
+    console.log("search done in renderer.js")
+    console.log(args);
+    resultParagraph.innerHTML = args.commitDetails;
+    // Set to green and bold
+    resultParagraph.style.color = 'green';
+    resultParagraph.style.fontWeight = 'bold';
+}
+
+    );

@@ -41,8 +41,6 @@ ipcMain.on('init:repo', (e, options) => {
     console.log("Got into init:repo")
     const form = {
         repositoryPath: options.repoPath,
-        repositoryBranch: "main",
-        submodule: null,
     }
     console.log(form)
     initRepo({ form })
@@ -71,6 +69,8 @@ async function initRepo({ form }) {
             console.log("init done")
             const branches = versionFinder.getBranches()
             const submodules = versionFinder.getSubmodules()
+            console.log("from initRepo: branches: ", branches)
+            console.log("from initRepo: submodules: ", submodules)
             mainWindow.webContents.send('init:done', { branches, submodules })
         })
         .catch((err) => {
@@ -103,6 +103,7 @@ async function searchVersion({ form }) {
                 throw err;
             }
             console.log("search done")
+            mainWindow.webContents.send('search:done', { commitSHA: form.commitSHA })
         })
         .catch((err) => {
             console.log("search error: ", err)

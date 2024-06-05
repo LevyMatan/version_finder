@@ -1,25 +1,7 @@
 // renderer.js
 const { ipcRenderer } = require('electron');
 
-// When DOM is ready:
-// 1. Initialize the VersionFinder class
-// 2. Send the repository path to the main process
-// 3. Listen for the reply from the main process
-// 4. Update the UI with the branches and submodules
-// 5. Listen for the form submission event
-// 6. Get the selected branch and submodule
-// 7. Send the selected branch and submodule to the main process
-// 8. Listen for the reply from the main process
-// 9. Update the UI with the commit SHA
-// 10. Listen for the form submission event
-// 11. Get the selected commit SHA
-// 12. Send the selected commit SHA to the main process
-// 13. Listen for the reply from the main process
-// 14. Update the UI with the commit details
-
-
 const form = document.getElementById('version-finder-form');
-const repositoryBrowser = document.getElementById('repo-browser');
 const repositoryPathInput = document.getElementById('repo-path');
 repositoryPathInput.value = __dirname;
 const resultParagraph = document.getElementById('version-result');
@@ -28,7 +10,9 @@ const submoduleList = document.getElementById('submodule-name-input');
 const commitSHAList = document.getElementById('commit-sha');
 commitSHAList.value = 'HEAD~1';
 
-// Update the repository path when a directory is selected
+/**
+ * Listen for the change event on the file input field
+ */
 document.getElementById('repo-browser').addEventListener('change', function() {
     if (this.files && this.files[0]) {
         var path = this.files[0].path;
@@ -147,7 +131,7 @@ ipcRenderer.on('init:error:invalid-repo-path', (event) => {
 ipcRenderer.on('search:done', (event, args) => {
     console.log("search done in renderer.js")
     console.log(args);
-    resultParagraph.innerHTML = args.commitDetails;
+    resultParagraph.innerHTML = args.commitSHA;
     // Set to green and bold
     resultParagraph.style.color = 'green';
     resultParagraph.style.fontWeight = 'bold';

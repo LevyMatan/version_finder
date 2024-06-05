@@ -28,10 +28,11 @@ repositoryPathInput.value = __dirname;
 const resultParagraph = document.getElementById('version-result');
 const branchList = document.getElementById('branch-name-input');
 const submoduleList = document.getElementById('submodule-name-input');
+const commitSHAList = document.getElementById('commit-sha');
+commitSHAList.value = 'HEAD~1';
 
 // Update the repository path when a directory is selected
 document.getElementById('repo-browser').addEventListener('change', function() {
-    event.preventDefault();
     if (this.files && this.files[0]) {
         var path = this.files[0].path;
         var directory = path.split('/').slice(0, -1).join('/');
@@ -66,7 +67,7 @@ function sendSearchVersion() {
         const submodule = submoduleList.value;
     }
 
-    const commitSHA = 'HEAD~3';
+    const commitSHA = commitSHAList.value
     ipcRenderer.send('search:version', {
         repositoryPath,
         branch,

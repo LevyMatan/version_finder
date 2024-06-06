@@ -1,22 +1,48 @@
+body {
+    background-color: #000000; /* Black background */
+    color: #76b900; /* NVIDIA Green text */
+    font-family: Arial, sans-serif; /* Arial font */
+}
 
 .container {
-	width: 400px;
-	margin-top: 70px;
-	padding: 0 20px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100vh; /* Full height of the viewport */
 }
 
-.about {
-	width: 100%;
+h1, h2 {
+    color: #76b900; /* NVIDIA Green headings */
 }
 
-.btn {
-	width: 100%;
+.form-control {
+    background-color: #1a1a1a; /* Dark gray input fields */
+    color: #76b900; /* NVIDIA Green text */
+    border: 1px solid #76b900; /* NVIDIA Green border */
 }
 
-.output {
-	margin-top: 40px;
+.btn-primary {
+    background-color: #76b900; /* NVIDIA Green button */
+    border: none; /* Remove default border */
 }
 
-#output-path {
-	font-weight: bold;
+.btn-primary:hover {
+    background-color: #5a8d00; /* Darker green on hover */
+}
+
+.fw-bold {
+    color: #ffffff; /* White text for the result */
+}
+
+.credits {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    margin: 10px;
+    color: #76b900; /* NVIDIA Green */
+}
+
+#version-finder-form {
+    margin-top: 20px; /* Adjust as needed */
 }

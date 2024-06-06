@@ -8,52 +8,53 @@
     content="script-src 'self' 'unsafe-inline'"
     />
     <link rel="stylesheet" href="css/all.min.css" />
-    <link rel="stylesheet" href="css/materialize.min.css" />
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/style.css" />
   <body>
-    <div class="container center-align">
-        <h1>Version Finder</h1>
-        <h2>by Matan Levy</h2>
-        <form id="version-finder-form">
-            <div class="file-field input-field">
-                <div class="btn">
-                    <span>Repo</span>
-                    <input type="file" webkitdirectory directory id="repo-browser">
-                </div>
-                <div class="file-path-wrapper">
-                    <input id="repo-path" type="text">
-                </div>
+    <div class="container text-center">
+      <h1>Version Finder</h1>
+      <h2>by Matan Levy</h2>
+      <form id="version-finder-form">
+        <div class="mb-3">
+          <label for="repo-browser" class="form-label">Repo</label>
+          <input type="file" class="form-control" webkitdirectory directory id="repo-browser">
+        </div>
+        <div class="mb-3">
+          <label for="repo-path" class="form-label">Repo Path</label>
+          <input type="text" class="form-control" id="repo-path">
+        </div>
+        <div class="mb-3">
+          <label for="branch-name-input" class="form-label">Branch Name</label>
+          <input type="text" class="form-control" id="branch-name-input" list="branches-list" placeholder="Type to search...">
+            <datalist id="branches-list">
+              <option value="San Francisco">
+              <option value="New York">
+              <option value="Seattle">
+              <option value="Los Angeles">
+              <option value="Chicago">
+            </datalist>
             </div>
-            <div class="row">
-                <div class="col s12">
-                  <div class="row">
-                    <div class="input-field col s12">
-                      <input type="text" id="branch-name-input" class="autocomplete-branch">
-                      <label for="branch-name-input">Branch Name</label>
-                    </div>
-                  </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col s12">
-                  <div class="row">
-                    <div class="input-field col s12">
-                      <input type="text" id="submodule-name-input" class="autocomplete-submodule">
-                      <label for="submodule-name-input">Submodule Name</label>
-                    </div>
-                  </div>
-                </div>
-            </div>
+        <div class="mb-3">
+          <label for="submodule-name-input" class="form-label">Submodule Name</label>
+          <input type="text" class="form-control" id="submodule-name-input" list="submodules-list" placeholder="Type to search...">
+            <datalist id="submodules-list">
+              <option value="San Francisco">
+              <option value="New York">
+              <option value="Seattle">
+              <option value="Los Angeles">
+              <option value="Chicago">
+            </datalist>
+        </div>
+        <div class="mb-3">
+          <label for="commit-sha" class="form-label">Target commit SHA:</label>
+          <input type="text" class="form-control" id="commit-sha" name="commit-sha" value="HEAD~1">
+        </div>
+        <button type="submit" class="btn btn-primary" id="find-version">Find Version</button>
+      </form>
 
-            <label for="commit-sha">Target commit SHA:</label><br>
-            <input type="text" id="commit-sha" name="commit-sha" value="HEAD~1"><br>
-            <!-- make the submit button -->
-            <input type="submit" id="find-version" value="Find Version">
-        </form>
-
-        <p id="version-result" class="strong"></p>
+      <p id="version-result" class="fw-bold"></p>
     </div>
   </body>
-  <script src="js/materialize.min.js"></script>
+  <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="renderer.js"></script>
 </html>

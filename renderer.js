@@ -82,42 +82,57 @@ ipcRenderer.on('init:done', (event, args) => {
     console.log("init done in renderer.js")
     console.log(args);
 
-    // Create an options Object to pass into the M.Autocomplete.init() function
-    const options_branches = {
-        data: {
-            ...args["branches"].reduce((obj, branch) => ({ ...obj, [branch]: null }), {}),
-        },
-    };
-    const options_submodules = {
-        data: {
-            ...args.submodules.reduce((obj, submodule) => ({ ...obj, [submodule]: null }), {}),
-        },
-    };
-    var auto_branch = document.querySelectorAll('.autocomplete-branch');
-    M.Autocomplete.init(auto_branch, options_branches);
-    // Set the value of the first branch
-    if (args["branches"].length > 0) {
-        auto_branch[0].value = args["branches"][0];
-    }
+    // Update the branch and submodule list
+    updateBranchAndSubmoduleList(args["branches"], args["submodules"]);
 
-    // Check if there are submodules in the repository
-    const noSubmodulesInRepo = args.submodules[0] === 'No submodules in Repo';
-
-    if (!noSubmodulesInRepo) {
-        var auto_submodule = document.querySelectorAll('.autocomplete-submodule');
-        M.Autocomplete.init(auto_submodule, options_submodules);
-        // Set the value of the first submodule
-        if (args.submodules.length > 0) {
-            auto_submodule[0].value = args.submodules[0];
-        }
-    }
-    else {
-        // Set the submodule input to disabled, with value: No submodules in Repository
+    // If the only submodule is 'No submodules in Repo', disable the submodule input,
+    // and set the value to 'No submodules in Repository'
+    if (args.submodules[0] === 'No submodules in Repo') {
         document.getElementById('submodule-name-input').disabled = true;
         document.getElementById('submodule-name-input').value = 'No submodules in Repository';
     }
+
+    // If master or main is in the branch list, set it as the default value
+    if (args.branches.includes('master')) {
+        document.getElementById('branch-name-input').value = 'master';
+    } else if (args.branches.includes('main')) {
+        document.getElementById('branch-name-input').value = 'main';
+    }
 });
 
+function updateBranchList(branchList) {
+    console.log("updateBranchList");
+    console.log(branchList);
+
+    const branchListElement = document.getElementById('branches-list');
+    branchListElement.innerHTML = '';
+
+    branchList.forEach((branch) => {
+        const branchElement = document.createElement('option');
+        branchElement.innerHTML = branch;
+        branchListElement.appendChild(branchElement);
+    });
+
+}
+
+function updateSubmoduleList(submoduleList) {
+    console.log("updateSubmoduleList");
+    console.log(submoduleList);
+    const submoduleListElement = document.getElementById('submodules-list');
+    submoduleListElement.innerHTML = '';
+
+    submoduleList.forEach((submodule) => {
+        const submoduleElement = document.createElement('option');
+        submoduleElement.innerHTML = submodule;
+        submoduleListElement.appendChild(submoduleElement);
+    });
+}
+
+function updateBranchAndSubmoduleList(branchList, submoduleList) {
+    console.log("updateBranchAndSubmoduleList");
+    updateBranchList(branchList);
+    updateSubmoduleList(submoduleList);
+}
 ipcRenderer.on('init:error:invalid-repo-path', (event) => {
     console.log("init error in renderer.js")
     console.log(event);

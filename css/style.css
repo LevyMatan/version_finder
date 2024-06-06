@@ -7,9 +7,17 @@ body {
 .container {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
+	/* align-items: center; */
 	justify-content: center;
 	height: 100vh; /* Full height of the viewport */
+	width: 100%; /* Full width of the viewport */
+	max-width: 100%; /* Override Bootstrap's max-width */
+
+}
+
+h1 {
+	font-size: 2.5em; /* Increase font size */
+	padding-top: 50px; /* Add padding to the top */
 }
 
 h1, h2 {
@@ -20,6 +28,8 @@ h1, h2 {
     background-color: #1a1a1a; /* Dark gray input fields */
     color: #76b900; /* NVIDIA Green text */
     border: 1px solid #76b900; /* NVIDIA Green border */
+	width: 100%; /* Increase width */
+    max-width: 500px; /* Set a maximum width */
 }
 
 .btn-primary {
@@ -43,6 +53,45 @@ h1, h2 {
     color: #76b900; /* NVIDIA Green */
 }
 
+.form-floating {
+	color: #76b900; /* NVIDIA Green text */
+}
+
+.form-floating > .form-control {
+	background-color: #1a1a1a; /* Dark gray input fields */
+	color: #76b900; /* NVIDIA Green text */
+	border: 1px solid #76b900; /* NVIDIA Green border */
+}
+
+.form-floating > .form-control:focus {
+	border-color: #76b900; /* NVIDIA Green border when focused */
+	box-shadow: 0 0 0 0.25rem rgba(118, 185, 0, 0.25); /* NVIDIA Green glow when focused */
+}
+
+.form-floating > label {
+	color: #76b900; /* NVIDIA Green label */
+}
+
+.form-floating > .form-control::placeholder {
+	color: #76b900; /* NVIDIA Green text */
+	opacity: 1; /* Make placeholder fully opaque */
+}
+
+.form-floating > .form-control:not(:placeholder-shown) {
+	background-color: transparent;
+}
+
+input[list]::-webkit-calendar-picker-indicator {
+	filter: invert(1);
+}
+
+input[list]:hover, input[list]:focus, input[list]:active {
+	background-color: transparent;
+}
+
 #version-finder-form {
     margin-top: 20px; /* Adjust as needed */
+	width: 80%; /* Increase width */
+	max-width: 500px; /* Set a maximum width */
+	margin: auto; /* Center the form */
 }

@@ -15,34 +15,31 @@
       <h1 class="text-center">Version Finder</h1>
       <form id="version-finder-form">
         <div class="row mb-3">
-          <div class="col-sm-10">
+          <div class="col-sm-3">
             <input type="file" class="form-control" webkitdirectory directory id="repo-browser" style="display: none;">
-            <label for="repo-browser" class="btn btn-primary">Repo Path</label>
+            <label for="repo-browser" class="btn btn-primary repo-btn">Repo Path</label>
           </div>
-        </div>
-        <div class="row mb-3">
-          <label for="repo-path" class="col-sm-2 col-form-label">Repo Path</label>
-          <div class="col-sm-10">
+          <div class="col-sm-8">
             <input type="text" class="form-control" id="repo-path">
           </div>
         </div>
         <div class="row mb-3">
-          <label for="branch-name-input" class="col-sm-2 col-form-label">Branch Name</label>
-          <div class="col-sm-10">
+          <label for="branch-name-input" class="col-sm-3 col-form-label">Branch Name</label>
+          <div class="col-sm-8">
             <input type="text" class="form-control" id="branch-name-input" list="branches-list" placeholder="Type to search...">
           </div>
             <datalist id="branches-list"></datalist>
         </div>
         <div class="row mb-3">
-          <label for="submodule-name-input" class="col-sm-2 col-form-label">Submodule Name</label>
-          <div class="col-sm-10">
+          <label for="submodule-name-input" class="col-sm-3 col-form-label">Submodule Name</label>
+          <div class="col-sm-8">
             <input type="text" class="form-control" id="submodule-name-input" list="submodules-list" placeholder="Type to search...">
           </div>
             <datalist id="submodules-list"></datalist>
         </div>
         <div class="row mb-3">
-          <label for="commit-sha" class="col-sm-2 col-form-label">Target commit SHA:</label>
-          <div class="col-sm-10">
+          <label for="commit-sha" class="col-sm-3 col-form-label">Target commit</label>
+          <div class="col-sm-8">
             <input type="text" class="form-control" id="commit-sha" name="commit-sha" value="HEAD~1">
           </div>
         </div>

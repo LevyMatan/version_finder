@@ -7,7 +7,7 @@ body {
 .container {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
+	/* align-items: center; */
 	justify-content: center;
 	height: 100vh; /* Full height of the viewport */
 }
@@ -22,6 +22,10 @@ h1, h2 {
     border: 1px solid #76b900; /* NVIDIA Green border */
 }
 
+.col-form-label {
+	text-align: left;
+}
+
 .btn-primary {
     background-color: #76b900; /* NVIDIA Green button */
     border: none; /* Remove default border */
@@ -29,6 +33,10 @@ h1, h2 {
 
 .btn-primary:hover {
     background-color: #5a8d00; /* Darker green on hover */
+}
+
+.repo-btn {
+	text-align: left;
 }
 
 .fw-bold {

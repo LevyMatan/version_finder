@@ -10,6 +10,17 @@ const submoduleList = document.getElementById('submodule-name-input');
 const commitSHAList = document.getElementById('commit-sha');
 commitSHAList.value = 'HEAD~1';
 
+function resetForm() {
+    // Clear the result paragraph
+    resultParagraph.innerHTML = '';
+    // Clear branch and submodule input fields
+    document.getElementById('branch-name-input').value = 'Please type to choose a branch';
+    document.getElementById('submodule-name-input').value = 'Please type to choose a submodule';
+    document.getElementById('commit-sha').value = 'HEAD~1';
+    // Set branch and submodule to enabled
+    document.getElementById('branch-name-input').disabled = false;
+    document.getElementById('submodule-name-input').disabled = false;
+}
 /**
  * Listen for the change event on the file input field
  */
@@ -20,12 +31,7 @@ document.getElementById('repo-browser').addEventListener('change', function() {
         console.log("directory: ", path);
         repositoryPathInput.value = directory;
 
-        // Clear all the lists
-        updateBranchList([]);
-        updateSubmoduleList([]);
-        // Clear the result paragraph
-        resultParagraph.innerHTML = '';
-
+        resetForm();
         // Send the repository path to the main process
         sendInitRepoEvent();
     }
@@ -146,6 +152,10 @@ ipcRenderer.on('init:error:invalid-repo-path', (event) => {
     // Set to red and bold
     resultParagraph.style.color = 'red';
     resultParagraph.style.fontWeight = 'bold';
+
+    // Disable the branch and submodule input fields
+    document.getElementById('branch-name-input').disabled = true;
+    document.getElementById('submodule-name-input').disabled = true;
 
 });
 

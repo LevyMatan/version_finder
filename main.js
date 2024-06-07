@@ -6,6 +6,9 @@ const VersionFinder = require('./version_finder.js')
 
 let mainWindow;
 
+const isDevMode = process.env.NODE_ENV === 'development'
+console.log("isDevMode: ", isDevMode)
+
 function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -19,8 +22,9 @@ function createWindow () {
 
     // Open the DevTools when the app is started
   mainWindow.loadFile('index.html')
-  mainWindow.webContents.openDevTools()
-
+  if (isDevMode){
+    mainWindow.webContents.openDevTools()
+  }
 }
 
 app.whenReady().then(() => {

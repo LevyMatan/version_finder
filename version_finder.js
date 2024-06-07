@@ -51,6 +51,8 @@ class VersionFinder {
         try {
             let branches = await this.git.branch();
             this.branches = branches.all.map(branch => branch.replace('origin/', '').replace('remotes/', ''));
+            // Remove duplicates
+            this.branches = [...new Set(this.branches)];
         } catch (error) {
             console.error('Error fetching branch information.');
             throw new Error('Error fetching branch information.');

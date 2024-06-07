@@ -17,7 +17,7 @@ function createWindow () {
       nodeIntegration: true,
       contextIsolation: false,
     },
-    icon: path.join(__dirname, 'icon.icns')
+    icon: path.join(__dirname, 'icon-jinny.icns')
 })
 
     // Open the DevTools when the app is started

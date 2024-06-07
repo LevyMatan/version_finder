@@ -20,6 +20,12 @@ document.getElementById('repo-browser').addEventListener('change', function() {
         console.log("directory: ", path);
         repositoryPathInput.value = directory;
 
+        // Clear all the lists
+        updateBranchList([]);
+        updateSubmoduleList([]);
+        // Clear the result paragraph
+        resultParagraph.innerHTML = '';
+
         // Send the repository path to the main process
         sendInitRepoEvent();
     }

@@ -20,20 +20,24 @@ jobs:
           node-version: 14
 
       - name: Install dependencies
+        id: install_dependencies
         run: npm ci
         continue-on-error: true
 
       - name: Print npm debug log on failure
-        if: failure()
+        if: ${{ steps.install_dependencies.outcome == 'failure' }}
         run: cat /home/runner/.npm/_logs/*-debug.log
 
       - name: Build Linux package
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: npm run build-linux
 
       - name: Archive Linux package
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: tar -czvf linux-package.tar.gz dist/
 
       - name: Upload Linux package
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
         uses: actions/upload-artifact@v2
         with:
           name: linux-package
@@ -52,20 +56,24 @@ jobs:
           node-version: 14
 
       - name: Install dependencies
+        id: install_dependencies
         run: npm ci
         continue-on-error: true
 
       - name: Print npm debug log on failure
-        if: failure()
+        if: ${{ steps.install_dependencies.outcome == 'failure' }}
         run: cat /Users/runner/.npm/_logs/*-debug.log
 
       - name: Build macOS package
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: npm run build-macos
 
       - name: Archive macOS package
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: tar -czvf macos-package.tar.gz dist/
 
       - name: Upload macOS package
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
         uses: actions/upload-artifact@v2
         with:
           name: macos-package

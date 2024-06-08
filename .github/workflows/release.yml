@@ -35,9 +35,17 @@ jobs:
         if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: npm run build-linux
 
+      - name: List build directory
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: ls -al release-builds
+
       - name: Archive Linux package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: tar -czvf linux-package.tar.gz -C release-builds VersionFinder-linux-x64
+
+      - name: List current directory
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: ls -al
 
       - name: Upload Linux package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
@@ -74,9 +82,17 @@ jobs:
         if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: npm run build-mac
 
+      - name: List build directory
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: ls -al release-builds
+
       - name: Archive macOS package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: tar -czvf macos-package.tar.gz -C release-builds VersionFinder-darwin-x64
+
+      - name: List current directory
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: ls -al
 
       - name: Upload macOS package
         if: ${{ steps.install_dependencies.outcome == 'success' }}

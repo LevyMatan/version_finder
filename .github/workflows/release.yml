@@ -21,6 +21,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        continue-on-error: true
+
+      - name: Print npm debug log on failure
+        if: failure()
+        run: cat /home/runner/.npm/_logs/*-debug.log
 
       - name: Build Linux package
         run: npm run build-linux
@@ -48,6 +53,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        continue-on-error: true
+
+      - name: Print npm debug log on failure
+        if: failure()
+        run: cat /Users/runner/.npm/_logs/*-debug.log
 
       - name: Build macOS package
         run: npm run build-macos

@@ -12,15 +12,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: 18.16.1
+          node-version: 20.14.0
 
       - name: Upgrade npm
-        run: npm install -g npm@9.5.1
+        run: npm install -g npm@10.7.1
 
       - name: Install dependencies
         id: install_dependencies
@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload Linux package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: linux-package
           path: linux-package.tar.gz
@@ -59,15 +59,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: 18.16.1
+          node-version: 20.14.0
 
       - name: Upgrade npm
-        run: npm install -g npm@9.5.1
+        run: npm install -g npm@10.7.1
 
       - name: Install dependencies
         id: install_dependencies
@@ -96,7 +96,7 @@ jobs:
 
       - name: Upload macOS package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: macos-package
           path: macos-package.tar.gz
@@ -107,7 +107,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Download Linux package
         uses: actions/download-artifact@v2

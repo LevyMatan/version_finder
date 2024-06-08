@@ -19,8 +19,11 @@ jobs:
         with:
           node-version: 20.14.0
 
-      - name: Upgrade npm
-        run: npm install -g npm@10.7.1
+      - name: Show node and npm versions
+        run: node -v && npm -v
+
+      # - name: Upgrade npm
+      #   run: npm install -g npm@10.7.1
 
       - name: Install dependencies
         id: install_dependencies
@@ -66,8 +69,10 @@ jobs:
         with:
           node-version: 20.14.0
 
-      - name: Upgrade npm
-        run: npm install -g npm@10.7.1
+      - name: Show node and npm versions
+        run: node -v && npm -v
+      # - name: Upgrade npm
+      #   run: npm install -g npm@10.7.1
 
       - name: Install dependencies
         id: install_dependencies

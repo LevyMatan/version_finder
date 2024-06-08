@@ -7,8 +7,8 @@
     "start": "electron .",
     "dev": "NODE_ENV=development nodemon --exec electron .",
     "docs": "jsdoc -r .",
-    "package": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=icon-jinny.icns --out=release-builds --prune=true --asar",
-    "package-linux": "electron-packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=icon-jinny.png --out=release-builds --prune=true",
+    "build-mac": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=icon-jinny.icns --out=release-builds --prune=true --asar",
+    "build-linux": "electron-packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=icon-jinny.png --out=release-builds --prune=true --asar",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Matan Levy",

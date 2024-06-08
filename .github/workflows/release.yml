@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux package
+        run: npm run build-linux
+
+      - name: Archive Linux package
+        run: tar -czvf linux-package.tar.gz dist/
+
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-package
+          path: linux-package.tar.gz
+
+  package-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS package
+        run: npm run build-macos
+
+      - name: Archive macOS package
+        run: tar -czvf macos-package.tar.gz dist/
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-package
+          path: macos-package.tar.gz
+
+  publish:
+    needs: [build, package-macos]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download Linux package
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-package
+          path: linux-package.tar.gz
+
+      - name: Download macOS package
+        uses: actions/download-artifact@v2
+        with:
+          name: macos-package
+          path: macos-package.tar.gz
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Linux package to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: linux-package.tar.gz
+          asset_name: linux-package.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload macOS package to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: macos-package.tar.gz
+          asset_name: macos-package.tar.gz
+          asset_content_type: application/gzip

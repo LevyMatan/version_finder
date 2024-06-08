@@ -37,7 +37,7 @@ jobs:
 
       - name: Archive Linux package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
-        run: tar -czvf linux-package.tar.gz dist/
+        run: tar -czvf linux-package.tar.gz -C release-builds VersionFinder-linux-x64
 
       - name: Upload Linux package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
@@ -72,11 +72,11 @@ jobs:
 
       - name: Build macOS package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
-        run: npm run build-macos
+        run: npm run build-mac
 
       - name: Archive macOS package
         if: ${{ steps.install_dependencies.outcome == 'success' }}
-        run: tar -czvf macos-package.tar.gz dist/
+        run: tar -czvf macos-package.tar.gz -C release-builds VersionFinder-darwin-x64
 
       - name: Upload macOS package
         if: ${{ steps.install_dependencies.outcome == 'success' }}

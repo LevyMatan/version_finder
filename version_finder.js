@@ -200,7 +200,7 @@ class VersionFinder {
             const logs = await this.getLogs(branch, submodule);
             console.log("logs: ", logs);
             for (const log of logs) {
-                if (log.message.includes("Version")) {
+                if (log.message.match(/Version: (\d+\.\d+\.\d+)/)) {
                     return log;
                 }
             }

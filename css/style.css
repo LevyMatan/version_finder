@@ -43,14 +43,17 @@ h1, h2 {
 	text-align: left;
 }
 
+.btn-outline-secondary {
+    border: none;
+    font-size: 10px; /* Match this to the .commit-sha class font size */
+}
+
 .left-justified {
 	text-align: left;
 }
-
-.clickable-sha:hover {
-	cursor: pointer;
-	color: blue;
-	text-decoration: underline;
+.inline-display {
+    display: flex;
+    align-items: center; /* Align items vertically in the center */
 }
 
 .fw-bold {

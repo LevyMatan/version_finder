@@ -119,6 +119,7 @@ async function findFirstCommit(versionFinder, form) {
         if (firstCommitSha){
           searchResultStructure.isValidFirstCommit = true;
           searchResultStructure.shortShaFirstCommit = firstCommitSha;
+          searchResultStructure.commitMessageFirstCommit = "TODO: Get commit message from SHA";
         }
         else {
           searchResultStructure.isValidFirstCommit = false;
@@ -132,11 +133,16 @@ async function findFirstCommit(versionFinder, form) {
         const result = await versionFinder.getFirstCommitWithVersion(form.commitSHA, form.repositoryBranch, form.submodule);
         console.log("search done");
         console.log("result: ", result);
+
         // Handle case the result is null
         if (result) {
+          const commit_hash = result.hash;
+          const commit_message = result.message;
+          const version = result.message.match(/Version: (\d+\.\d+\.\d+)/)[1];
           searchResultStructure.isValidVersionCommit = true;
-          searchResultStructure.commitMessageVersionCommit = result;
-          searchResultStructure.version = "1.0.0.matan"
+          searchResultStructure.shortShaVersionCommit = commit_hash;
+          searchResultStructure.commitMessageVersionCommit = commit_message;
+          searchResultStructure.version = version
         }
         mainWindow.webContents.send('search:done', searchResultStructure);
         return result; // Return the result from the function

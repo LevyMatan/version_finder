@@ -10,267 +10,139 @@ const commitSHAList = document.getElementById('commit-sha');
 commitSHAList.value = 'HEAD~1';
 
 function resetForm() {
-    // Clear branch and submodule input fields
-    document.getElementById('branch-name-input').value = '';
-    document.getElementById('submodule-name-input').value = '';
-    document.getElementById('commit-sha').value = 'HEAD~1';
-    // Set branch and submodule to enabled
-    document.getElementById('branch-name-input').disabled = false;
-    document.getElementById('submodule-name-input').disabled = false;
+    branchList.value = '';
+    submoduleList.value = '';
+    commitSHAList.value = 'HEAD~1';
+    branchList.disabled = submoduleList.disabled = false;
 }
-/**
- * Listen for the change event on the file input field
- */
+
+function sendInitRepoEvent() {
+    ipcRenderer.send('init:repo', { repoPath: repositoryPathInput.value });
+}
+
+function sendSearchVersion() {
+    const searchParams = {
+        repositoryPath: repositoryPathInput.value,
+        branch: branchList.value,
+        submodule: submoduleList.value !== 'No submodules in Repository' ? submoduleList.value : null,
+        commitSHA: commitSHAList.value,
+    };
+    ipcRenderer.send('search:version', searchParams);
+}
+
+function updateList(elementId, items) {
+    const listElement = document.getElementById(elementId);
+    listElement.innerHTML = '';
+    items.forEach(item => {
+        const optionElement = document.createElement('option');
+        optionElement.textContent = item;
+        listElement.appendChild(optionElement);
+    });
+}
+
+function setModalInfo(results) {
+    clearModalContent();
+
+    if (results.isValidFirstCommit) {
+        if (results.isValidFirstCommit) {
+            const validResultsFirstCommit = document.getElementById("validResultsFirstCommit");
+            validResultsFirstCommit.style.display = "block";
+        }
+        const firstCommitShaElement = document.getElementById("firstCommitSha");
+        if (firstCommitShaElement){
+            firstCommitShaElement.textContent = results.shortShaFirstCommit;
+            firstCommitShaElement.style.display = "block";
+        }
+
+        const firstCommitMessage = document.getElementById("firstCommitMessage");
+        if (firstCommitMessage){
+            firstCommitMessage.textContent = results.commitMessageFirstCommit;
+            firstCommitMessage.style.display = "block";
+        }
+
+        if (results.isValidVersionCommit) {
+            const versionCommitSha = document.getElementById("versionCommitSha");
+            const versionCommitMessage = document.getElementById("versionCommitMessage");
+            const versionInfo = document.getElementById("versionInfo");
+            const validResultsVersion = document.getElementById("validResultsVersion");
+            if (versionCommitSha && versionCommitMessage && versionInfo && validResultsVersion) {
+                versionCommitSha.textContent = results.shortShaVersionCommit;
+                versionCommitMessage.textContent = results.commitMessageVersionCommit;
+                versionInfo.textContent = results.version;
+                validResultsVersion.style.display = "block";
+                versionCommitSha.style.display = versionCommitMessage.style.display = versionInfo.style.display = "block";
+            }
+        }
+    } else {
+        const errorMessage = document.getElementById("errorMessage");
+        if (errorMessage) {
+            errorMessage.style.display = "block";
+        }
+    }
+}
+
+function clearModalContent() {
+    ["firstCommitSha", "firstCommitMessage", "versionCommitSha", "versionCommitMessage", "versionInfo", "errorMessage", "validResultsFirstCommit", "validResultsVersion"].forEach(id => {
+        const element = document.getElementById(id);
+        element.style.display = 'none';
+    });
+}
+
+function initializeTooltipAndCopyFunctionality(buttonId, textElementId, successMessage, originalMessage) {
+    const button = document.getElementById(buttonId);
+    const textElement = document.getElementById(textElementId);
+    const tooltip = new bootstrap.Tooltip(button, { title: originalMessage, trigger: "hover" });
+
+    button.addEventListener('click', () => {
+        navigator.clipboard.writeText(textElement.textContent).then(() => {
+            button.setAttribute('data-bs-original-title', successMessage);
+            tooltip.show();
+            setTimeout(() => resetTooltip(button, tooltip, originalMessage), 2000);
+        }).catch(err => console.error('Error copying text: ', err));
+    });
+}
+
+function resetTooltip(button, tooltip, originalMessage) {
+    button.setAttribute('data-bs-original-title', originalMessage);
+    tooltip.hide();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    sendInitRepoEvent();
+    initializeTooltipAndCopyFunctionality('copyButton', 'firstCommitSha', 'Copied!', 'Copy to clipboard');
+    initializeTooltipAndCopyFunctionality('versionCopyButton', 'versionCommitSha', 'Copied!', 'Copy to clipboard');
+});
+
 document.getElementById('repo-browser').addEventListener('change', function() {
     if (this.files && this.files[0]) {
-        var path = this.files[0].path;
-        var directory = path.split('/').slice(0, -1).join('/');
-        console.log("directory: ", path);
+        const selectedFilePath = this.files[0].path;
+        const directory = selectedFilePath.split('/').slice(0, -1).join('/');
         repositoryPathInput.value = directory;
-
         resetForm();
-        // Send the repository path to the main process
         sendInitRepoEvent();
     }
 });
 
-/**
- * Send the repository path to the main process
- */
-function sendInitRepoEvent() {
-    // Get the repository path from the input field
-    const repositoryPath = repositoryPathInput.value;
-
-    console.log("repositoryPath: ", repositoryPath);
-
-    ipcRenderer.send('init:repo', {
-        repoPath: repositoryPath,
-    });
-}
-
-/**
- * Send the selected branch and submodule to the main process
- */
-function sendSearchVersion() {
-    const repositoryPath = repositoryPathInput.value;
-    const branch = branchList.value;
-    let selected_submodule = null;
-
-    if (submoduleList.value != 'No submodules in Repository') {
-        selected_submodule = submoduleList.value;
-    }
-
-    const commitSHA = commitSHAList.value
-    const searchParams = {
-        repositoryPath,
-        branch,
-        submodule: selected_submodule,
-        commitSHA,
-    }
-    console.log("searchParams: ", searchParams)
-    ipcRenderer.send('search:version', searchParams);
-}
-
-/**
- * Listen for the form submission event
- */
 form.addEventListener('submit', (event) => {
-    // Prevent the form from submitting normally
     event.preventDefault();
-
     sendSearchVersion();
 });
 
-/**
- * When the DOM is ready, init the repository
-*/
-document.addEventListener('DOMContentLoaded', function() {
-    sendInitRepoEvent();
-});
-
 ipcRenderer.on('init:done', (event, args) => {
-
-    console.log("init done in renderer.js")
-    console.log(args);
-
-    // Update the branch and submodule list
-    updateBranchAndSubmoduleList(args["branches"], args["submodules"]);
-
-    // If the only submodule is 'No submodules in Repo', disable the submodule input,
-    // and set the value to 'No submodules in Repository'
+    updateList('branches-list', args.branches);
+    updateList('submodules-list', args.submodules);
     if (args.submodules[0] === 'No submodules in Repo') {
-        document.getElementById('submodule-name-input').disabled = true;
-        document.getElementById('submodule-name-input').value = 'No submodules in Repository';
+        submoduleList.disabled = true;
+        submoduleList.value = 'No submodules in Repository';
     }
-
-    // If master or main is in the branch list, set it as the default value
-    if (args.branches.includes('master')) {
-        document.getElementById('branch-name-input').value = 'master';
-    } else if (args.branches.includes('main')) {
-        document.getElementById('branch-name-input').value = 'main';
-    }
+    branchList.value = args.branches.includes('master') ? 'master' : args.branches.includes('main') ? 'main' : '';
 });
 
-function updateBranchList(branchList) {
-    console.log("updateBranchList");
-    console.log(branchList);
-
-    const branchListElement = document.getElementById('branches-list');
-    branchListElement.innerHTML = '';
-
-    branchList.forEach((branch) => {
-        const branchElement = document.createElement('option');
-        branchElement.innerHTML = branch;
-        branchListElement.appendChild(branchElement);
-    });
-
-}
-
-function updateSubmoduleList(submoduleList) {
-    console.log("updateSubmoduleList");
-    console.log(submoduleList);
-    const submoduleListElement = document.getElementById('submodules-list');
-    submoduleListElement.innerHTML = '';
-
-    submoduleList.forEach((submodule) => {
-        const submoduleElement = document.createElement('option');
-        submoduleElement.innerHTML = submodule;
-        submoduleListElement.appendChild(submoduleElement);
-    });
-}
-
-function updateBranchAndSubmoduleList(branchList, submoduleList) {
-    console.log("updateBranchAndSubmoduleList");
-    updateBranchList(branchList);
-    updateSubmoduleList(submoduleList);
-}
-ipcRenderer.on('init:error:invalid-repo-path', (event) => {
-    console.log("init error in renderer.js")
-    console.log(event);
-
-    // Disable the branch and submodule input fields
-    document.getElementById('branch-name-input').disabled = true;
-    document.getElementById('submodule-name-input').disabled = true;
-
+ipcRenderer.on('init:error:invalid-repo-path', () => {
+    branchList.disabled = submoduleList.disabled = true;
 });
 
 ipcRenderer.on('search:done', (event, args) => {
-    console.log("search done in renderer.js");
-    console.log(args);
-
-    // Update the modal content based on the results
+    new bootstrap.Modal(document.getElementById('resultModal')).show();
     setModalInfo(args);
-    // Show the modal
-    var myModal = new bootstrap.Modal(document.getElementById('resultModal'));
-    myModal.show();
-});
-
-// document.addEventListener("DOMContentLoaded", setModalInfo({
-//     isValidFirstCommit: true, // Change to false to test the error message
-//     shortShaFirstCommit: "abc123",
-//     commitMessageFirstCommit: "Initial commit",
-//     isValidVersionCommit: true, // Change to false to test the error message
-//     shortShaVersionCommit: "3498t69784kjsdjkv",
-//     commitMessageVersionCommit: "Version: 1.0.0",
-//     version: "1.0.0"
-// }))
-function setModalInfo(results) {
-    // Clear all modal content
-    clearModalContent();
-
-    // Update the modal content based on the results
-    if (results.isValidFirstCommit) {
-        document.getElementById("firstCommitSha").textContent = `${results.shortShaFirstCommit}`;
-        document.getElementById("firstCommitMessage").textContent = `${results.commitMessageFirstCommit}`;
-        document.getElementById("validResultsFirstCommit").style.display = "block";
-        if (results.isValidVersionCommit) {
-            document.getElementById("versionCommitSha").textContent = `${results.shortShaVersionCommit}`;
-            document.getElementById("versionCommitMessage").textContent = `${results.commitMessageVersionCommit}`;
-            document.getElementById("versionInfo").textContent = results.version;
-            document.getElementById("validResultsVersion").style.display = "block";
-        }
-    } else {
-        document.getElementById("errorMessage").style.display = "block";
-    }
-
-    function clearModalContent() {
-        document.getElementById("firstCommitSha").textContent = '';
-        document.getElementById("firstCommitMessage").textContent = '';
-        document.getElementById("versionCommitSha").textContent = '';
-        document.getElementById("versionCommitMessage").textContent = '';
-        document.getElementById("versionInfo").textContent = '';
-        document.getElementById("errorMessage").style.display = "none";
-        document.getElementById("validResultsFirstCommit").style.display = "none";
-        document.getElementById("validResultsVersion").style.display = "none";
-    }
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-    const copyButton = document.getElementById('copyButton');
-    const copyText = document.getElementById('firstCommitSha');
-
-    // Initialize the tooltip
-    const tooltip = new bootstrap.Tooltip(copyButton, {
-        title: "Copy to clipboard",
-        trigger: "hover"
-    });
-
-    copyButton.addEventListener('click', function() {
-        console.log("copy button clicked");
-        // Copy the text from the span element: firstCommitSha
-        navigator.clipboard.writeText(copyText.textContent).then(() => {
-            // Change the tooltip message after successful copy
-            copyButton.setAttribute('data-bs-original-title', 'Copied!'); // Set new title
-            tooltip.show(); // Show tooltip with new title
-
-            // Change the icon to indicate success
-            copyButton.querySelector('i').classList.remove('fa-clipboard');
-            copyButton.querySelector('i').classList.add('fa-check');
-
-            // Reset the tooltip message and icon after 2 seconds
-            setTimeout(() => {
-                copyButton.setAttribute('data-bs-original-title', 'Copy to clipboard'); // Reset title
-                copyButton.querySelector('i').classList.remove('fa-check');
-                copyButton.querySelector('i').classList.add('fa-clipboard');
-                tooltip.hide(); // Optionally, hide the tooltip
-            }, 2000);
-        }).catch(err => {
-            console.error('Error copying text: ', err);
-        });
-    });
-});
-
-document.addEventListener("DOMContentLoaded", function() {
-    const versionCopyButton = document.getElementById('versionCopyButton');
-    const versionCopyText = document.getElementById('versionCommitSha');
-
-    // Initialize the tooltip for the version copy button
-    const versionTooltip = new bootstrap.Tooltip(versionCopyButton, {
-        title: "Copy to clipboard",
-        trigger: "hover"
-    });
-
-    versionCopyButton.addEventListener('click', function() {
-        console.log("version copy button clicked");
-        // Copy the text from the span element: versionCommitSha
-        navigator.clipboard.writeText(versionCopyText.textContent).then(() => {
-            // Change the tooltip message after successful copy
-            versionCopyButton.setAttribute('data-bs-original-title', 'Copied!'); // Set new title
-            versionTooltip.show(); // Show tooltip with new title
-
-            // Change the icon to indicate success
-            versionCopyButton.querySelector('i').classList.remove('fa-clipboard');
-            versionCopyButton.querySelector('i').classList.add('fa-check');
-
-            // Reset the tooltip message and icon after 2 seconds
-            setTimeout(() => {
-                versionCopyButton.setAttribute('data-bs-original-title', 'Copy to clipboard'); // Reset title
-                versionCopyButton.querySelector('i').classList.remove('fa-check');
-                versionCopyButton.querySelector('i').classList.add('fa-clipboard');
-                versionTooltip.hide(); // Optionally, hide the tooltip
-            }, 2000);
-        }).catch(err => {
-            console.error('Error copying text: ', err);
-        });
-    });
 });

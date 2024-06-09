@@ -52,14 +52,8 @@ ipcMain.on('init:repo', (e, options) => {
 
 ipcMain.on('search:version', (e, options) => {
     console.log("Got into search:version")
-    const form = {
-        repositoryPath: options.repositoryPath,
-        repositoryBranch: options.branch,
-        submodule: options.submodule,
-        commitSHA: options.commitSHA,
-    }
-    console.log(form)
-    searchVersion({ form })
+    console.log("options: ", options)
+    searchVersion(options)
 })
 
 async function initRepo({ form }) {
@@ -86,18 +80,65 @@ async function initRepo({ form }) {
     }
 }
 
-
+/**
+ * Given the input form, searches for the first commit of the super-repo that includes the submodule target commit
+ * and the first super-repo version that includes the submodule target version.
+ * Sends the result to the renderer process.
+ * @param {*} versionFinder an instance of VersionFinder already initialized with the repository path
+ * @param {*} form containing the commitSHA, repositoryBranch, and submodule
+ * @returns
+ */
 async function findFirstCommit(versionFinder, form) {
+/**
+ * The result structure to be passed should be:
+ *  {
+ *    isValidFirstCommit: true, // Change to false to test the error message
+ *    shortShaFirstCommit: "abc123",
+ *    commitMessageFirstCommit: "Initial commit",
+ *    isValidVersionCommit: true, // Change to false to test the error message
+ *    shortShaVersionCommit: "3498t69784kjsdjkv",
+ *    commitMessageVersionCommit: "Version: 1.0.0",
+ *    version: "1.0.0"
+ *  };
+ */
+  // Try and get first commit SHA
+  const searchResultStructure = {
+    isValidFirstCommit: false,
+    shortShaFirstCommit: "",
+    commitMessageFirstCommit: "",
+    isValidVersionCommit: false,
+    shortShaVersionCommit: "",
+    commitMessageVersionCommit: "",
+    version: ""
+  };
+  console.log("Entered findFirstCommit")
+  console.log("form: ", form);
+    try {
+        const firstCommitSha = await versionFinder.getFirstCommitSha(form.repositoryBranch, form.submodule);
+        console.log("firstCommitSha: ", firstCommitSha);
+        if (firstCommitSha){
+          searchResultStructure.isValidFirstCommit = true;
+          searchResultStructure.shortShaFirstCommit = firstCommitSha;
+        }
+        else {
+          searchResultStructure.isValidFirstCommit = false;
+        }
+    }
+    catch (err) {
+        console.error(err);
+    }
+    // Try and get first version commit
     try {
         const result = await versionFinder.getFirstCommitWithVersion(form.commitSHA, form.repositoryBranch, form.submodule);
         console.log("search done");
         console.log("result: ", result);
         // Handle case the result is null
-        if (!result) {
-            mainWindow.webContents.send('search:error:version-not-found', { error: 'Version not found in commit messages.' });
-            return null;
+        if (result) {
+          searchResultStructure.isValidVersionCommit = true;
+          searchResultStructure.commitMessageVersionCommit = result;
+          searchResultStructure.version = "1.0.0.matan"
         }
-        mainWindow.webContents.send('search:done', { commitSHA: result });
+        mainWindow.webContents.send('search:done', searchResultStructure);
         return result; // Return the result from the function
     } catch (err) {
         console.log("search error: ", err);
@@ -114,7 +155,8 @@ async function findFirstCommit(versionFinder, form) {
  * @param {string} options.form.repositoryBranch - The repository branch.
  * @param {string} options.form.submodule - The submodule.
  */
-async function searchVersion({ form }) {
+async function searchVersion(form) {
+  console.log("form = ", form)
     try {
         const versionFinder = new VersionFinder(form.repositoryPath)
         await versionFinder.init()

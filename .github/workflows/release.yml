@@ -143,7 +143,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: linux-package.tar.gz
+          asset_path: linux-package.tar.gz/linux-package.tar.gz
           asset_name: linux-package.tar.gz
           asset_content_type: application/gzip
 
@@ -153,6 +153,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: macos-package.tar.gz
+          asset_path: macos-package.tar.gz/macos-package.tar.gz
           asset_name: macos-package.tar.gz
           asset_content_type: application/gzip

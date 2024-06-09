@@ -138,18 +138,64 @@ class VersionFinder {
      * @param {string} submodule - The submodule name. Optional.
      * @returns {Promise<string>} - A promise that resolves to the first commit SHA.
      */
-    async getFirstCommitSha(branch, submodule) {
+    async getFirstCommitSha(target_commit_hash, branch, submodule) {
         try {
+            console.log("In getFirstCommitSha: target_commit_hash: target_commit_hash= ",target_commit_hash, "branch=", branch, " submodule=", submodule);
             await this.git.checkout(branch);
             await this.git.pull();
             await this.git.subModule(['update', '--init']);
-            let log;
             if (submodule) {
-                log = await gitP(path.join(this.repositoryPath, submodule)).log();
+                // Get the list of all commits that modified the submodule pointer
+                let logs = await this.git.log({file: submodule});
+                console.log("logs: ", logs);
+                // Find the first commit that includes the target commit
+                // Itertate over logs in reverse order to find the first commit that includes the target commit
+
+                for (let i = logs.all.length - 1; i >= 0; i--) {
+                    const log = logs.all[i];
+                    // Check if the target_commit_hash is the ancestor of the current commit
+                    console.log("log.hash: ", log.hash);
+                    const lsTreeOutput = await this.git.raw(['ls-tree', log.hash, submodule]);
+                    const match = lsTreeOutput.match(/\b[0-9a-f]{40}\b/); // Regex to match SHA-1 hash
+                    const submodulePointer = match
+                    const submoduleGit = gitP(path.join(this.repositoryPath, submodule));
+                    console.log(`Git command to be executed: git merge-base --is-ancestor ${target_commit_hash} ${submodulePointer}`);
+                    let isAncestor;
+                    try {
+                        await submoduleGit.raw(['merge-base', '--is-ancestor', target_commit_hash, submodulePointer]);
+                        // If the command does not throw, the exit status is 0, meaning the target_commit_hash is an ancestor.
+                        isAncestor = true;
+                    } catch (error) {
+                        // If the command throws, the exit status is non-zero.
+                        // You can check error.message or error.stack for more details if needed.
+                        // For 'git merge-base --is-ancestor', a non-zero exit status typically means the target_commit_hash is not an ancestor.
+                        // However, it's good to check the specific error to distinguish between different non-zero exit statuses.
+                        if (error.message.includes('is not an ancestor')) {
+                            isAncestor = false;
+                        } else {
+                            // Handle other errors, possibly rethrow or log them.
+                            console.error('Error checking if commit is an ancestor:', error);
+                            throw error; // Rethrow if you want to escalate the error, or handle it as appropriate.
+                        }
+                    }
+                    console.log('Is Ancestor:', isAncestor);
+
+                    if (isAncestor) {
+                        return log;
+                    }
+                }
+                return null;
             } else {
-                log = await this.git.log();
+                try {
+                    let commitDetails = await this.git.raw(['show', '--no-patch', '--format={ "hash": "%H", "message": "%s"}', target_commit_hash]);
+                    console.log("Commit Details: ", commitDetails);
+                    commitDetails = JSON.parse(commitDetails);
+                    return commitDetails
+                } catch (error) {
+                    console.error('Error fetching commit details for hash:', target_commit_hash);
+                    console.error(error);
+                }
             }
-            return log.latest.hash;
         } catch (error) {
             console.error('Error fetching first commit SHA.');
             console.error(error);
@@ -163,7 +209,7 @@ class VersionFinder {
      * @param {string} submodule - The submodule name. Optional.
      * @returns {Promise<Object[]>} - A promise that resolves to an array of log objects.
      */
-    async getLogs(branch, submodule) {
+    async getLogs(branch, submodule=null, commit_hash='HEAD') {
         try {
             console.log("branch: ", branch);
             console.log("submodule: ", submodule);
@@ -171,11 +217,15 @@ class VersionFinder {
             // await this.git.pull();
             await this.git.subModule(['update', '--init']);
             let logs;
+            let gitRepo = this.git;
             if (submodule) {
-                logs = await gitP(path.join(this.repositoryPath, submodule)).log();
-            } else {
-                logs = await this.git.log();
+                gitRepo = gitP(path.join(this.repositoryPath, submodule));
             }
+            logs = await gitRepo.log({from: commit_hash});
+            // Append the commit_hash to the logs
+            const commit_hash_log = await gitRepo.raw(['show', '--no-patch', '--format={ "hash": "%H", "message": "%s"}', commit_hash]);
+            console.log("commit_hash_log: ", commit_hash_log);
+            logs.all.push(JSON.parse(commit_hash_log))
             return logs.all;
         } catch (error) {
             console.error('Error fetching logs.');
@@ -197,9 +247,9 @@ class VersionFinder {
             console.log("commitSHA: ", commitSHA);
             console.log("branch: ", branch);
             console.log("submodule: ", submodule);
-            const logs = await this.getLogs(branch, submodule);
+            const logs = await this.getLogs(branch, null, commitSHA);
             console.log("logs: ", logs);
-            for (const log of logs) {
+            for (const log of logs.reverse()) {
                 if (log.message.match(/Version: (\d+\.\d+\.\d+)/)) {
                     return log;
                 }
@@ -214,4 +264,3 @@ class VersionFinder {
 }
 
 module.exports = VersionFinder;
-// ... rest of the script

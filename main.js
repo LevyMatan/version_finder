@@ -113,44 +113,45 @@ async function findFirstCommit(versionFinder, form) {
   };
   console.log("Entered findFirstCommit")
   console.log("form: ", form);
-    try {
-        const firstCommitSha = await versionFinder.getFirstCommitSha(form.repositoryBranch, form.submodule);
-        console.log("firstCommitSha: ", firstCommitSha);
-        if (firstCommitSha){
-          searchResultStructure.isValidFirstCommit = true;
-          searchResultStructure.shortShaFirstCommit = firstCommitSha;
-          searchResultStructure.commitMessageFirstCommit = "TODO: Get commit message from SHA";
-        }
-        else {
-          searchResultStructure.isValidFirstCommit = false;
-        }
-    }
-    catch (err) {
-        console.error(err);
-    }
-    // Try and get first version commit
-    try {
-        const result = await versionFinder.getFirstCommitWithVersion(form.commitSHA, form.repositoryBranch, form.submodule);
-        console.log("search done");
-        console.log("result: ", result);
+  try {
+      const firstCommitstruct = await versionFinder.getFirstCommitSha(form.commitSHA, form.branch, form.submodule);
+      console.log("firstCommitstruct: ", firstCommitstruct);
+      if (firstCommitstruct){
+        searchResultStructure.isValidFirstCommit = true;
+        searchResultStructure.shortShaFirstCommit = firstCommitstruct.hash; // Ensure this matches the property name in firstCommitstruct
+        searchResultStructure.commitMessageFirstCommit = firstCommitstruct.message; // Ensure this matches the property name in firstCommitstruct
+      }
+      else {
+        searchResultStructure.isValidFirstCommit = false;
+      }
+      console.log("searchResultStructure: ", searchResultStructure);
+  }
+  catch (err) {
+      console.error(err);
+  }
+  // Try and get first version commit
+  try {
+      const result = await versionFinder.getFirstCommitWithVersion(searchResultStructure.shortShaFirstCommit, form.branch, form.submodule);
+      console.log("search done");
+      console.log("result: ", result);
 
-        // Handle case the result is null
-        if (result) {
-          const commit_hash = result.hash;
-          const commit_message = result.message;
-          const version = result.message.match(/Version: (\d+\.\d+\.\d+)/)[1];
-          searchResultStructure.isValidVersionCommit = true;
-          searchResultStructure.shortShaVersionCommit = commit_hash;
-          searchResultStructure.commitMessageVersionCommit = commit_message;
-          searchResultStructure.version = version
-        }
-        mainWindow.webContents.send('search:done', searchResultStructure);
-        return result; // Return the result from the function
-    } catch (err) {
-        console.log("search error: ", err);
-        mainWindow.webContents.send('search:error:invalid-commit-sha', { error: err });
-        throw err; // Rethrow the error if you want to allow the caller to handle it
-    }
+      // Handle case the result is null
+      if (result) {
+        const commit_hash = result.hash;
+        const commit_message = result.message;
+        const version = result.message.match(/Version: (\d+\.\d+\.\d+)/)[1];
+        searchResultStructure.isValidVersionCommit = true;
+        searchResultStructure.shortShaVersionCommit = commit_hash;
+        searchResultStructure.commitMessageVersionCommit = commit_message;
+        searchResultStructure.version = version
+      }
+      mainWindow.webContents.send('search:done', searchResultStructure);
+      return result; // Return the result from the function
+  } catch (err) {
+      console.log("search error: ", err);
+      mainWindow.webContents.send('search:error:invalid-commit-sha', { error: err });
+      throw err; // Rethrow the error if you want to allow the caller to handle it
+  }
 }
 /**
  * Searches for a version using the provided form data.

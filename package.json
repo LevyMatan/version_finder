@@ -1,6 +1,6 @@
 {
   "name": "version_finder",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "App to assist developer find the first version including a specific commit in a Git Repository with multiply submodules.",
   "main": "main.js",
   "scripts": {

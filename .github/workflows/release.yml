@@ -1,7 +1,7 @@
 name: Release
 
 on:
-  push:
+  pull_request:
     branches:
       - main
   workflow_dispatch:
@@ -12,24 +12,47 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: 14
+          node-version: 20.14.0
+
+      - name: Show node and npm versions
+        run: node -v && npm -v
+
+      # - name: Upgrade npm
+      #   run: npm install -g npm@10.7.1
 
       - name: Install dependencies
+        id: install_dependencies
         run: npm ci
+        continue-on-error: true
+
+      - name: Print npm debug log on failure
+        if: ${{ steps.install_dependencies.outcome == 'failure' }}
+        run: cat /home/runner/.npm/_logs/*-debug.log
 
       - name: Build Linux package
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
         run: npm run build-linux
 
+      - name: List build directory
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: ls -al release-builds
+
       - name: Archive Linux package
-        run: tar -czvf linux-package.tar.gz dist/
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: tar -czvf linux-package.tar.gz -C release-builds VersionFinder-linux-x64
+
+      - name: List current directory
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: ls -al
 
       - name: Upload Linux package
-        uses: actions/upload-artifact@v2
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
         with:
           name: linux-package
           path: linux-package.tar.gz
@@ -39,24 +62,46 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: 14
+          node-version: 20.14.0
+
+      - name: Show node and npm versions
+        run: node -v && npm -v
+      # - name: Upgrade npm
+      #   run: npm install -g npm@10.7.1
 
       - name: Install dependencies
+        id: install_dependencies
         run: npm ci
+        continue-on-error: true
+
+      - name: Print npm debug log on failure
+        if: ${{ steps.install_dependencies.outcome == 'failure' }}
+        run: cat /Users/runner/.npm/_logs/*-debug.log
 
       - name: Build macOS package
-        run: npm run build-macos
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: npm run build-mac
+
+      - name: List build directory
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: ls -al release-builds
 
       - name: Archive macOS package
-        run: tar -czvf macos-package.tar.gz dist/
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: tar -czvf macos-package.tar.gz -C release-builds VersionFinder-darwin-x64
+
+      - name: List current directory
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: ls -al
 
       - name: Upload macOS package
-        uses: actions/upload-artifact@v2
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
         with:
           name: macos-package
           path: macos-package.tar.gz
@@ -67,16 +112,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Download Linux package
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: linux-package
           path: linux-package.tar.gz
 
       - name: Download macOS package
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: macos-package
           path: macos-package.tar.gz
@@ -85,7 +130,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           tag_name: v${{ github.run_number }}
           release_name: Release v${{ github.run_number }}
@@ -95,7 +140,7 @@ jobs:
       - name: Upload Linux package to release
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: linux-package.tar.gz
@@ -105,7 +150,7 @@ jobs:
       - name: Upload macOS package to release
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: macos-package.tar.gz

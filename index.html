@@ -43,12 +43,41 @@
             <input type="text" class="form-control" id="commit-sha" name="commit-sha" value="HEAD~1">
           </div>
         </div>
-        <button type="submit" class="btn btn-primary" id="find-version">Find Version</button>
+        <button type="submit" class="btn btn-primary extra-top-space" id="find-version">Find Version</button>
       </form>
 
-      <p id="version-result" class="fw-bold"></p>
+      <!-- Button trigger modal -->
+      <!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#resultModal">
+        Launch demo modal
+      </button> -->
+
+      <!-- Modal -->
+      <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="resultModalLabel">Commit Information</h1>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body left-justified">
+              <div id="validResultsFirstCommit" style="display: none;">
+                <h5>First commit in super-repo to include target commit</h5>
+                <span id="firstCommitSha" class="clickable-sha"></span> <span id="firstCommitMessage"></span></p>
+              </div>
+              <div id="validResultsVersion" style="display: none;">
+                <h5>First version to include target commit</h5>
+                <span id="versionCommitSha" class="clickable-sha"></span> <span id="versionCommitMessage"></span></p>
+                <p>Version: <span id="versionInfo"></span></p>
+              </div>
+              <div id="errorMessage" style="display: none;">
+                Hey, Appears that the commit is not included in super-repo.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <h2 class="credits">by Matan Levy</h2>
+    <h4 class="credits">by Matan Levy</h4>
 
   </body>
   <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

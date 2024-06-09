@@ -4,15 +4,12 @@ const { ipcRenderer } = require('electron');
 const form = document.getElementById('version-finder-form');
 const repositoryPathInput = document.getElementById('repo-path');
 repositoryPathInput.value = __dirname;
-const resultParagraph = document.getElementById('version-result');
 const branchList = document.getElementById('branch-name-input');
 const submoduleList = document.getElementById('submodule-name-input');
 const commitSHAList = document.getElementById('commit-sha');
 commitSHAList.value = 'HEAD~1';
 
 function resetForm() {
-    // Clear the result paragraph
-    resultParagraph.innerHTML = '';
     // Clear branch and submodule input fields
     document.getElementById('branch-name-input').value = 'Please type to choose a branch';
     document.getElementById('submodule-name-input').value = 'Please type to choose a submodule';
@@ -57,19 +54,21 @@ function sendInitRepoEvent() {
 function sendSearchVersion() {
     const repositoryPath = repositoryPathInput.value;
     const branch = branchList.value;
-    const submodule = null;
+    let selected_submodule = null;
 
-    if (submoduleList.value !== 'No submodules in Repository') {
-        const submodule = submoduleList.value;
+    if (submoduleList.value != 'No submodules in Repository') {
+        selected_submodule = submoduleList.value;
     }
 
     const commitSHA = commitSHAList.value
-    ipcRenderer.send('search:version', {
+    const searchParams = {
         repositoryPath,
         branch,
-        submodule,
+        submodule: selected_submodule,
         commitSHA,
-    });
+    }
+    console.log("searchParams: ", searchParams)
+    ipcRenderer.send('search:version', searchParams);
 }
 
 /**
@@ -148,10 +147,6 @@ function updateBranchAndSubmoduleList(branchList, submoduleList) {
 ipcRenderer.on('init:error:invalid-repo-path', (event) => {
     console.log("init error in renderer.js")
     console.log(event);
-    resultParagraph.innerHTML = 'Invalid repository path';
-    // Set to red and bold
-    resultParagraph.style.color = 'red';
-    resultParagraph.style.fontWeight = 'bold';
 
     // Disable the branch and submodule input fields
     document.getElementById('branch-name-input').disabled = true;
@@ -160,17 +155,62 @@ ipcRenderer.on('init:error:invalid-repo-path', (event) => {
 });
 
 ipcRenderer.on('search:done', (event, args) => {
-    console.log("search done in renderer.js")
+    console.log("search done in renderer.js");
     console.log(args);
-    // Display the result in the result paragraph
-    // Make the paragraph look like:
-    // Commit: <commitSHA>
-    // Version: <version>
-    // Need to extract only the version from the commit message
-    const result_version = args.commitSHA.message.split('Version:')[1];
-    const result_string = `Commit: ${args.commitSHA.hash}<br>Version: ${result_version}`;
-    resultParagraph.innerHTML = result_string;
-    // Set to green and bold
-    resultParagraph.style.color = 'green';
-    resultParagraph.style.fontWeight = 'bold';
+
+    // Update the modal content based on the results
+    setModalInfo(args);
+    // Show the modal
+    var myModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    myModal.show();
+});
+
+document.addEventListener("DOMContentLoaded", setModalInfo({
+    isValidFirstCommit: true, // Change to false to test the error message
+    shortShaFirstCommit: "abc123",
+    commitMessageFirstCommit: "Initial commit",
+    isValidVersionCommit: true, // Change to false to test the error message
+    shortShaVersionCommit: "3498t69784kjsdjkv",
+    commitMessageVersionCommit: "Version: 1.0.0",
+    version: "1.0.0"
+}))
+function setModalInfo(results) {
+    // Clear all modal content
+    document.getElementById("firstCommitSha").textContent = '';
+    document.getElementById("firstCommitMessage").textContent = '';
+    document.getElementById("versionCommitSha").textContent = '';
+    document.getElementById("versionCommitMessage").textContent = '';
+    document.getElementById("versionInfo").textContent = '';
+    document.getElementById("errorMessage").style.display = "none";
+    document.getElementById("validResultsFirstCommit").style.display = "none";
+    document.getElementById("validResultsVersion").style.display = "none";
+
+    // Update the modal content based on the results
+    if (results.isValidFirstCommit) {
+        document.getElementById("firstCommitSha").textContent = `${results.shortShaFirstCommit}`;
+        document.getElementById("firstCommitMessage").textContent = `${results.commitMessageFirstCommit}`;
+        document.getElementById("validResultsFirstCommit").style.display = "block";
+        if (results.isValidVersionCommit) {
+            document.getElementById("versionCommitSha").textContent = `${results.shortShaVersionCommit}`;
+            document.getElementById("versionCommitMessage").textContent = `${results.commitMessageVersionCommit}`;
+            document.getElementById("versionInfo").textContent = results.version;
+            document.getElementById("validResultsVersion").style.display = "block";
+        }
+    } else {
+        document.getElementById("errorMessage").style.display = "block";
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Find all elements with the class 'clickable-sha'
+    document.querySelectorAll('.clickable-sha').forEach(function(element) {
+      element.addEventListener('click', function() {
+        // Copy the text of the clicked element to the clipboard
+        navigator.clipboard.writeText(this.textContent).then(() => {
+          alert("SHA copied to clipboard!");
+        }, () => {
+          alert("Failed to copy SHA.");
+        });
+      });
     });
+  });

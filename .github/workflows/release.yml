@@ -111,9 +111,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Download Linux package
         uses: actions/download-artifact@v4
         with:
@@ -125,6 +122,9 @@ jobs:
         with:
           name: macos-package
           path: macos-package.tar.gz
+
+      - name: List current directory
+        run: ls -al
 
       - name: Create release
         id: create_release

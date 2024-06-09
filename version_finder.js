@@ -152,7 +152,8 @@ class VersionFinder {
             return log.latest.hash;
         } catch (error) {
             console.error('Error fetching first commit SHA.');
-            process.exit(1);
+            console.error(error);
+            return null;
         }
     }
 

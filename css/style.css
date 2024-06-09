@@ -31,6 +31,10 @@ h1, h2 {
     border: none; /* Remove default border */
 }
 
+.btn-primary.extra-top-space {
+    margin-top: 40px; /* Add extra space to the top */
+}
+
 .btn-primary:hover {
     background-color: #5a8d00; /* Darker green on hover */
 }

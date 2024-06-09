@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,9 +21,6 @@ jobs:
 
       - name: Show node and npm versions
         run: node -v && npm -v
-
-      # - name: Upgrade npm
-      #   run: npm install -g npm@10.7.1
 
       - name: Install dependencies
         id: install_dependencies
@@ -57,7 +54,7 @@ jobs:
           name: linux-package
           path: linux-package.tar.gz
 
-  package-macos:
+  build-macos:
     runs-on: macos-latest
 
     steps:
@@ -71,8 +68,6 @@ jobs:
 
       - name: Show node and npm versions
         run: node -v && npm -v
-      # - name: Upgrade npm
-      #   run: npm install -g npm@10.7.1
 
       - name: Install dependencies
         id: install_dependencies
@@ -106,26 +101,11 @@ jobs:
           name: macos-package
           path: macos-package.tar.gz
 
-  publish:
-    needs: [build, package-macos]
+  create-release:
     runs-on: ubuntu-latest
-
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - name: Download Linux package
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-package
-          path: linux-package.tar.gz
-
-      - name: Download macOS package
-        uses: actions/download-artifact@v4
-        with:
-          name: macos-package
-          path: macos-package.tar.gz
-
-      - name: List current directory
-        run: ls -al
-
       - name: Create release
         id: create_release
         uses: actions/create-release@v1
@@ -137,22 +117,54 @@ jobs:
           draft: false
           prerelease: false
 
+  publish-linux:
+    needs: [build-linux, create-release]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Linux package
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-package
+          path: linux-package.tar.gz
+
+      - name: List current directory
+        run: |
+          ls -al
+          tree -L 4
+
       - name: Upload Linux package to release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: linux-package.tar.gz/linux-package.tar.gz
           asset_name: linux-package.tar.gz
           asset_content_type: application/gzip
+
+  publish-macos:
+    needs: [build-macos, create-release]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download macOS package
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-package
+          path: macos-package.tar.gz
+
+      - name: List current directory
+        run: |
+          ls -al
+          tree -L 4
 
       - name: Upload macOS package to release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: macos-package.tar.gz/macos-package.tar.gz
           asset_name: macos-package.tar.gz
           asset_content_type: application/gzip

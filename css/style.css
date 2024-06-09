@@ -43,6 +43,12 @@ h1, h2 {
 	text-align: left;
 }
 
+.clickable-sha:hover {
+	cursor: pointer;
+	color: blue;
+	text-decoration: underline;
+}
+
 .fw-bold {
     color: #ffffff; /* White text for the result */
 }

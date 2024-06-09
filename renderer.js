@@ -182,18 +182,20 @@ const results = {
     shortShaFirstCommit: "abc123",
     commitMessageFirstCommit: "Initial commit",
     isValidVersionCommit: true, // Change to false to test the error message
-    shortShaVersionCommit: "abc123",
-    commitMessageVersionCommit: "Initial commit",
+    shortShaVersionCommit: "3498t69784kjsdjkv",
+    commitMessageVersionCommit: "Version: 1.0.0",
     version: "1.0.0"
   };
 
 document.addEventListener("DOMContentLoaded", function() {
 // Update modal content based on results
 if (results.isValidFirstCommit) {
-    document.getElementById("firstCommitInfo").textContent = `${results.shortShaFirstCommit} ${results.commitMessageFirstCommit}`;
+    document.getElementById("firstCommitSha").textContent = `${results.shortShaFirstCommit}`;
+    document.getElementById("firstCommitMessage").textContent = `${results.commitMessageFirstCommit}`;
     document.getElementById("validResultsFirstCommit").style.display = "block";
     if (results.isValidVersionCommit) {
-        document.getElementById("versionCommitInfo").textContent = `${results.shortShaVersionCommit} ${results.commitMessageVersionCommit}`;
+        document.getElementById("versionCommitSha").textContent = `${results.shortShaVersionCommit}`;
+        document.getElementById("versionCommitMessage").textContent = `${results.commitMessageVersionCommit}`;
         document.getElementById("versionInfo").textContent = results.version;
         document.getElementById("validResultsVersion").style.display = "block";
     }
@@ -208,3 +210,17 @@ document.getElementById("copySha").addEventListener("click", function() {
     });
 });
 });
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Find all elements with the class 'clickable-sha'
+    document.querySelectorAll('.clickable-sha').forEach(function(element) {
+      element.addEventListener('click', function() {
+        // Copy the text of the clicked element to the clipboard
+        navigator.clipboard.writeText(this.textContent).then(() => {
+          alert("SHA copied to clipboard!");
+        }, () => {
+          alert("Failed to copy SHA.");
+        });
+      });
+    });
+  });

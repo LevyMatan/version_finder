@@ -7,12 +7,13 @@
     http-equiv="Content-Security-Policy"
     content="script-src 'self' 'unsafe-inline'"
     />
-    <link rel="stylesheet" href="css/all.min.css" />
+    <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/style.css" />
   <body>
     <div class="container text-center">
       <h1 class="text-center">Version Finder</h1>
+
       <form id="version-finder-form">
         <div class="row mb-3">
           <div class="col-sm-3">
@@ -60,14 +61,24 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body left-justified">
+              <!-- Tooltip element (hidden by default) -->
+              <div id="copyTooltip" style="display: none; position: absolute; background-color: #000; color: #fff; padding: 5px; border-radius: 5px; font-size: 12px;">SHA copied to clipboard!</div>
               <div id="validResultsFirstCommit" style="display: none;">
                 <h5>First commit in super-repo to include target commit</h5>
-                <span id="firstCommitSha" class="clickable-sha"></span> <span id="firstCommitMessage"></span></p>
-              </div>
-              <div id="validResultsVersion" style="display: none;">
-                <h5>First version to include target commit</h5>
-                <span id="versionCommitSha" class="clickable-sha"></span> <span id="versionCommitMessage"></span></p>
-                <p>Version: <span id="versionInfo"></span></p>
+                <button class="btn btn-outline-secondary" type="button" id="copyButton" data-toggle="tooltip" data-placement="top" title="Copy to clipboard">
+                    <i class="fas fa-clipboard"></i>
+                </button>
+                <span id="firstCommitSha" class="clickable-sha"></span>
+                <span id="firstCommitMessage"></span></p>
+                </div>
+                <div id="validResultsVersion" style="display: none;">
+                  <h5>First version to include target commit</h5>
+                  <button class="btn btn-outline-secondary" type="button" id="versionCopyButton" data-toggle="tooltip" data-placement="top" title="Copy to clipboard">
+                      <i class="fas fa-clipboard"></i>
+                  </button>
+                  <span id="versionCommitSha" class="clickable-sha"></span>
+                  <span id="versionCommitMessage"></span></p>
+                  <p>Version: <span id="versionInfo"></span></p>
               </div>
               <div id="errorMessage" style="display: none;">
                 Hey, Appears that the commit is not included in super-repo.

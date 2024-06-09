@@ -68,3 +68,19 @@ h1, h2 {
 #version-finder-form {
     margin-top: 20px; /* Adjust as needed */
 }
+
+#copyButton i {
+    transition: color 0.3s ease;
+}
+
+#copyButton:hover i {
+    color: #007bff;
+}
+
+.tooltip-inner {
+    background-color: #28a745 !important;
+}
+
+.tooltip.bs-tooltip-top .arrow::before {
+    border-top-color: #28a745 !important;
+}

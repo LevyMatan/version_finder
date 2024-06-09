@@ -165,25 +165,18 @@ ipcRenderer.on('search:done', (event, args) => {
     myModal.show();
 });
 
-document.addEventListener("DOMContentLoaded", setModalInfo({
-    isValidFirstCommit: true, // Change to false to test the error message
-    shortShaFirstCommit: "abc123",
-    commitMessageFirstCommit: "Initial commit",
-    isValidVersionCommit: true, // Change to false to test the error message
-    shortShaVersionCommit: "3498t69784kjsdjkv",
-    commitMessageVersionCommit: "Version: 1.0.0",
-    version: "1.0.0"
-}))
+// document.addEventListener("DOMContentLoaded", setModalInfo({
+//     isValidFirstCommit: true, // Change to false to test the error message
+//     shortShaFirstCommit: "abc123",
+//     commitMessageFirstCommit: "Initial commit",
+//     isValidVersionCommit: true, // Change to false to test the error message
+//     shortShaVersionCommit: "3498t69784kjsdjkv",
+//     commitMessageVersionCommit: "Version: 1.0.0",
+//     version: "1.0.0"
+// }))
 function setModalInfo(results) {
     // Clear all modal content
-    document.getElementById("firstCommitSha").textContent = '';
-    document.getElementById("firstCommitMessage").textContent = '';
-    document.getElementById("versionCommitSha").textContent = '';
-    document.getElementById("versionCommitMessage").textContent = '';
-    document.getElementById("versionInfo").textContent = '';
-    document.getElementById("errorMessage").style.display = "none";
-    document.getElementById("validResultsFirstCommit").style.display = "none";
-    document.getElementById("validResultsVersion").style.display = "none";
+    clearModalContent();
 
     // Update the modal content based on the results
     if (results.isValidFirstCommit) {
@@ -199,18 +192,85 @@ function setModalInfo(results) {
     } else {
         document.getElementById("errorMessage").style.display = "block";
     }
+
+    function clearModalContent() {
+        document.getElementById("firstCommitSha").textContent = '';
+        document.getElementById("firstCommitMessage").textContent = '';
+        document.getElementById("versionCommitSha").textContent = '';
+        document.getElementById("versionCommitMessage").textContent = '';
+        document.getElementById("versionInfo").textContent = '';
+        document.getElementById("errorMessage").style.display = "none";
+        document.getElementById("validResultsFirstCommit").style.display = "none";
+        document.getElementById("validResultsVersion").style.display = "none";
+    }
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    // Find all elements with the class 'clickable-sha'
-    document.querySelectorAll('.clickable-sha').forEach(function(element) {
-      element.addEventListener('click', function() {
-        // Copy the text of the clicked element to the clipboard
-        navigator.clipboard.writeText(this.textContent).then(() => {
-          alert("SHA copied to clipboard!");
-        }, () => {
-          alert("Failed to copy SHA.");
-        });
-      });
+    const copyButton = document.getElementById('copyButton');
+    const copyText = document.getElementById('firstCommitSha');
+
+    // Initialize the tooltip
+    const tooltip = new bootstrap.Tooltip(copyButton, {
+        title: "Copy to clipboard",
+        trigger: "hover"
     });
-  });
+
+    copyButton.addEventListener('click', function() {
+        console.log("copy button clicked");
+        // Copy the text from the span element: firstCommitSha
+        navigator.clipboard.writeText(copyText.textContent).then(() => {
+            // Change the tooltip message after successful copy
+            copyButton.setAttribute('data-bs-original-title', 'Copied!'); // Set new title
+            tooltip.show(); // Show tooltip with new title
+
+            // Change the icon to indicate success
+            copyButton.querySelector('i').classList.remove('fa-clipboard');
+            copyButton.querySelector('i').classList.add('fa-check');
+
+            // Reset the tooltip message and icon after 2 seconds
+            setTimeout(() => {
+                copyButton.setAttribute('data-bs-original-title', 'Copy to clipboard'); // Reset title
+                copyButton.querySelector('i').classList.remove('fa-check');
+                copyButton.querySelector('i').classList.add('fa-clipboard');
+                tooltip.hide(); // Optionally, hide the tooltip
+            }, 2000);
+        }).catch(err => {
+            console.error('Error copying text: ', err);
+        });
+    });
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    const versionCopyButton = document.getElementById('versionCopyButton');
+    const versionCopyText = document.getElementById('versionCommitSha');
+
+    // Initialize the tooltip for the version copy button
+    const versionTooltip = new bootstrap.Tooltip(versionCopyButton, {
+        title: "Copy to clipboard",
+        trigger: "hover"
+    });
+
+    versionCopyButton.addEventListener('click', function() {
+        console.log("version copy button clicked");
+        // Copy the text from the span element: versionCommitSha
+        navigator.clipboard.writeText(versionCopyText.textContent).then(() => {
+            // Change the tooltip message after successful copy
+            versionCopyButton.setAttribute('data-bs-original-title', 'Copied!'); // Set new title
+            versionTooltip.show(); // Show tooltip with new title
+
+            // Change the icon to indicate success
+            versionCopyButton.querySelector('i').classList.remove('fa-clipboard');
+            versionCopyButton.querySelector('i').classList.add('fa-check');
+
+            // Reset the tooltip message and icon after 2 seconds
+            setTimeout(() => {
+                versionCopyButton.setAttribute('data-bs-original-title', 'Copy to clipboard'); // Reset title
+                versionCopyButton.querySelector('i').classList.remove('fa-check');
+                versionCopyButton.querySelector('i').classList.add('fa-clipboard');
+                versionTooltip.hide(); // Optionally, hide the tooltip
+            }, 2000);
+        }).catch(err => {
+            console.error('Error copying text: ', err);
+        });
+    });
+});

@@ -162,7 +162,14 @@ ipcRenderer.on('init:error:invalid-repo-path', (event) => {
 ipcRenderer.on('search:done', (event, args) => {
     console.log("search done in renderer.js")
     console.log(args);
-    resultParagraph.innerHTML = args.commitSHA;
+    // Display the result in the result paragraph
+    // Make the paragraph look like:
+    // Commit: <commitSHA>
+    // Version: <version>
+    // Need to extract only the version from the commit message
+    const result_version = args.commitSHA.message.split('Version:')[1];
+    const result_string = `Commit: ${args.commitSHA.hash}<br>Version: ${result_version}`;
+    resultParagraph.innerHTML = result_string;
     // Set to green and bold
     resultParagraph.style.color = 'green';
     resultParagraph.style.fontWeight = 'bold';

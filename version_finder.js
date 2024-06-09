@@ -39,7 +39,23 @@ class VersionFinder {
             const submodules_raw = await this.git.subModule(['status']);
             if (submodules_raw) {
                 console.log("submodules_raw: ", submodules_raw);
-                this.submodules = (await this.git.subModule(['status'])).split('\n').map(line => line.split(' ')[1]);
+                // Get submodule names:
+                // THe submodules raw output looks like this:
+                // <SHA> <SubModule Name> <submodule-branch>
+                // Since we are only interested in the submodule name, we split the string by space and get the second element.
+                // I need a way to remove empty string after the last '\n' character
+                // I will use the split method to split the string by '\n' and then split each line by space to get the submodule name.
+                // I will then remove the last element of the array since it is an empty string.
+                // I will then assign the array to the submodules property.
+                const submodules_raw_lines = submodules_raw.split('\n');
+                console.log("submodules_raw_lines: ", submodules_raw_lines);
+                // Remove the last element of the array if it is an empty string
+                if (submodules_raw_lines[submodules_raw_lines.length - 1] === '') {
+                    submodules_raw_lines.pop();
+                }
+                console.log("submodules_raw_lines: ", submodules_raw_lines);
+                this.submodules = submodules_raw_lines.map(line => line.split(' ')[2]);
+                console.log("submodules: ", this.submodules);
             } else {
                 this.submodules = ['No submodules in Repo'];
             }
@@ -176,10 +192,15 @@ class VersionFinder {
      */
     async getFirstCommitWithVersion(commitSHA, branch, submodule) {
         try {
+            console.log("In getFirstCommitWithVersion");
+            console.log("commitSHA: ", commitSHA);
+            console.log("branch: ", branch);
+            console.log("submodule: ", submodule);
             const logs = await this.getLogs(branch, submodule);
+            console.log("logs: ", logs);
             for (const log of logs) {
-                if (log.message.includes("version")) {
-                    return log.hash;
+                if (log.message.includes("Version")) {
+                    return log;
                 }
             }
             return null;

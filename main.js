@@ -86,6 +86,25 @@ async function initRepo({ form }) {
     }
 }
 
+
+async function findFirstCommit(versionFinder, form) {
+    try {
+        const result = await versionFinder.getFirstCommitWithVersion(form.commitSHA, form.repositoryBranch, form.submodule);
+        console.log("search done");
+        console.log("result: ", result);
+        // Handle case the result is null
+        if (!result) {
+            mainWindow.webContents.send('search:error:version-not-found', { error: 'Version not found in commit messages.' });
+            return null;
+        }
+        mainWindow.webContents.send('search:done', { commitSHA: result });
+        return result; // Return the result from the function
+    } catch (err) {
+        console.log("search error: ", err);
+        mainWindow.webContents.send('search:error:invalid-commit-sha', { error: err });
+        throw err; // Rethrow the error if you want to allow the caller to handle it
+    }
+}
 /**
  * Searches for a version using the provided form data.
  * @param {Object} options - The options object.
@@ -110,18 +129,7 @@ async function searchVersion({ form }) {
             mainWindow.webContents.send('init:error:invalid-repo-path', { error: err })
         })
 
-        await versionFinder.getFirstCommitWithVersion(form.commitSHA, form.repositoryBranch, form.submodule)
-        .then((err) => {
-            if (err) {
-                throw err;
-            }
-            console.log("search done")
-            mainWindow.webContents.send('search:done', { commitSHA: form.commitSHA })
-        })
-        .catch((err) => {
-            console.log("search error: ", err)
-            mainWindow.webContents.send('search:error:invalid-commit-sha', { error: err })
-        })
+        findFirstCommit(versionFinder, form)
 
     } catch (err) {
         console.error(err)

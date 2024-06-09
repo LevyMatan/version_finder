@@ -11,8 +11,8 @@ commitSHAList.value = 'HEAD~1';
 
 function resetForm() {
     // Clear branch and submodule input fields
-    document.getElementById('branch-name-input').value = 'Please type to choose a branch';
-    document.getElementById('submodule-name-input').value = 'Please type to choose a submodule';
+    document.getElementById('branch-name-input').value = '';
+    document.getElementById('submodule-name-input').value = '';
     document.getElementById('commit-sha').value = 'HEAD~1';
     // Set branch and submodule to enabled
     document.getElementById('branch-name-input').disabled = false;

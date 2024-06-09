@@ -46,7 +46,38 @@
         <button type="submit" class="btn btn-primary" id="find-version">Find Version</button>
       </form>
 
-      <p id="version-result" class="fw-bold"></p>
+      <!-- Button trigger modal -->
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#resultModal">
+        Launch demo modal
+      </button>
+
+      <!-- Modal -->
+      <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="resultModalLabel">Commit Information</h1>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body left-justified">
+              <div id="validResultsFirstCommit" style="display: none;">
+                <p>First commit in super-repo to include target commit:<br>
+                <span id="firstCommitInfo"></span></p>
+                <button id="copyShaFirstCommit" class="btn btn-primary">Copy SHA</button>
+              </div>
+              <div id="validResultsVersion" style="display: none;">
+                <p>First version to include target commit:<br>
+                <span id="versionCommitInfo"></span></p>
+                <p>Version: <span id="versionInfo"></span></p>
+                <button id="copyShaVersionCommit" class="btn btn-primary">Copy SHA</button>
+              </div>
+              <div id="errorMessage" style="display: none;">
+                Hey, Appears that the commit is not included in super-repo.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <h2 class="credits">by Matan Levy</h2>
 

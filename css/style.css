@@ -39,6 +39,10 @@ h1, h2 {
 	text-align: left;
 }
 
+.left-justified {
+	text-align: left;
+}
+
 .fw-bold {
     color: #ffffff; /* White text for the result */
 }

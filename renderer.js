@@ -174,3 +174,37 @@ ipcRenderer.on('search:done', (event, args) => {
     resultParagraph.style.color = 'green';
     resultParagraph.style.fontWeight = 'bold';
     });
+
+
+    // Example result data
+const results = {
+    isValidFirstCommit: true, // Change to false to test the error message
+    shortShaFirstCommit: "abc123",
+    commitMessageFirstCommit: "Initial commit",
+    isValidVersionCommit: true, // Change to false to test the error message
+    shortShaVersionCommit: "abc123",
+    commitMessageVersionCommit: "Initial commit",
+    version: "1.0.0"
+  };
+
+document.addEventListener("DOMContentLoaded", function() {
+// Update modal content based on results
+if (results.isValidFirstCommit) {
+    document.getElementById("firstCommitInfo").textContent = `${results.shortShaFirstCommit} ${results.commitMessageFirstCommit}`;
+    document.getElementById("validResultsFirstCommit").style.display = "block";
+    if (results.isValidVersionCommit) {
+        document.getElementById("versionCommitInfo").textContent = `${results.shortShaVersionCommit} ${results.commitMessageVersionCommit}`;
+        document.getElementById("versionInfo").textContent = results.version;
+        document.getElementById("validResultsVersion").style.display = "block";
+    }
+} else {
+    document.getElementById("errorMessage").style.display = "block";
+}
+
+// Copy to clipboard functionality
+document.getElementById("copySha").addEventListener("click", function() {
+    navigator.clipboard.writeText(results.shortSha).then(() => {
+    alert("Commit SHA copied to clipboard!");
+    });
+});
+});

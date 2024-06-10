@@ -131,6 +131,7 @@ async function findFirstCommit(versionFinder, form) {
   }
   // Try and get first version commit
   try {
+    if (searchResultStructure.isValidFirstCommit){
       const result = await versionFinder.getFirstCommitWithVersion(searchResultStructure.shortShaFirstCommit, form.branch, form.submodule);
       console.log("search done");
       console.log("result: ", result);
@@ -145,8 +146,9 @@ async function findFirstCommit(versionFinder, form) {
         searchResultStructure.commitMessageVersionCommit = commit_message;
         searchResultStructure.version = version
       }
-      mainWindow.webContents.send('search:done', searchResultStructure);
-      return result; // Return the result from the function
+    }
+    mainWindow.webContents.send('search:done', searchResultStructure);
+    return searchResultStructure; // Return the result from the function
   } catch (err) {
       console.log("search error: ", err);
       mainWindow.webContents.send('search:error:invalid-commit-sha', { error: err });

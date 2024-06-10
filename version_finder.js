@@ -25,6 +25,11 @@ class VersionFinder {
      * Initializes the VersionFinder object by checking if the repository is valid and fetching submodule and branch information.
      * @returns {Promise<Error|null>} - A promise that resolves to null if initialization is successful, or an Error object if there is an error.
      */
+    /**
+     * Initializes the version finder by checking if the current directory is a git repository,
+     * fetching submodule information, and fetching branch information.
+     * @returns {Promise<Error>} An error object if any error occurs during initialization.
+     */
     async init() {
         try {
             await this.git.checkIsRepo()
@@ -41,26 +46,13 @@ class VersionFinder {
         try {
             const submodules_raw = await this.git.subModule(['status']);
             if (submodules_raw) {
-                console.log("submodules_raw: ", submodules_raw);
-                // Get submodule names:
-                // THe submodules raw output looks like this:
-                // <SHA> <SubModule Name> <submodule-branch>
-                // Since we are only interested in the submodule name, we split the string by space and get the second element.
-                // I need a way to remove empty string after the last '\n' character
-                // I will use the split method to split the string by '\n' and then split each line by space to get the submodule name.
-                // I will then remove the last element of the array since it is an empty string.
-                // I will then assign the array to the submodules property.
-                const submodules_raw_lines = submodules_raw.split('\n');
-                console.log("submodules_raw_lines: ", submodules_raw_lines);
-                // Remove the last element of the array if it is an empty string
-                if (submodules_raw_lines[submodules_raw_lines.length - 1] === '') {
-                    submodules_raw_lines.pop();
-                }
-                console.log("submodules_raw_lines: ", submodules_raw_lines);
-                this.submodules = submodules_raw_lines.map(line => line.split(' ')[2]);
-                console.log("submodules: ", this.submodules);
+              const submodules_raw_lines = submodules_raw.split('\n');
+              if (submodules_raw_lines[submodules_raw_lines.length - 1] === '') {
+                submodules_raw_lines.pop();
+              }
+              this.submodules = submodules_raw_lines.map(line => line.split(' ')[2]);
             } else {
-                this.submodules = ['No submodules in Repo'];
+              this.submodules = ['No submodules in Repo'];
             }
         } catch (error) {
             console.error('Error fetching submodule information.');
@@ -139,10 +131,7 @@ class VersionFinder {
       let isAncestor = true;
       try {
         const command_string = `cd ${submodulePath} && git merge-base --is-ancestor ${target_commit_hash} ${submodulePointer}`;
-        console.log('checkAncestor: Command to be executed:', command_string);
         const { stdout, stderr } = await execPromise(command_string);
-        console.log('Command executed . . .');
-        console.log('stdout:', stdout);
         if (stderr) {
           isAncestor = false;
           console.error('stderr:', stderr);
@@ -152,8 +141,6 @@ class VersionFinder {
         console.error('return code:', error.code);
         isAncestor = false;
       }
-      // Place the code that should execute after `exec` here
-      console.log('Is ancestor:', isAncestor);
       return isAncestor;
     }
 
@@ -172,18 +159,15 @@ class VersionFinder {
             if (submodule) {
                 // Get the list of all commits that modified the submodule pointer
                 let logs = await this.git.log({file: submodule});
-                console.log("logs: ", logs);
                 // Find the first commit that includes the target commit
                 // Itertate over logs in reverse order to find the first commit that includes the target commit
 
                 for (const log of logs.all.reverse()) {
                     // Check if the target_commit_hash is the ancestor of the current commit
-                    console.log("log.hash: ", log.hash);
                     const lsTreeOutput = await this.git.raw(['ls-tree', log.hash, submodule]);
                     const match = lsTreeOutput.match(/\b[0-9a-f]{40}\b/); // Regex to match SHA-1 hash
                     const submodulePointer = match
                     const submoduleGit = gitP(path.join(this.repositoryPath, submodule));
-                    console.log(`Git command to be executed: git merge-base --is-ancestor ${target_commit_hash} ${submodulePointer}`);
                     let isAncestor = true;
                     try {
                         // Check if the target commit is an ancestor of the submodule pointer
@@ -205,8 +189,6 @@ class VersionFinder {
                             throw error; // Rethrow if you want to escalate the error, or handle it as appropriate.
                         }
                     }
-                    console.log('Is Ancestor:', isAncestor);
-
                     if (isAncestor) {
                         return log;
                     }
@@ -215,7 +197,6 @@ class VersionFinder {
             } else {
                 try {
                     let commitDetails = await this.git.raw(['show', '--no-patch', '--format={ "hash": "%H", "message": "%s"}', target_commit_hash]);
-                    console.log("Commit Details: ", commitDetails);
                     commitDetails = JSON.parse(commitDetails);
                     return commitDetails
                 } catch (error) {
@@ -251,7 +232,6 @@ class VersionFinder {
             logs = await gitRepo.log({from: commit_hash});
             // Append the commit_hash to the logs
             const commit_hash_log = await gitRepo.raw(['show', '--no-patch', '--format={ "hash": "%H", "message": "%s"}', commit_hash]);
-            console.log("commit_hash_log: ", commit_hash_log);
             logs.all.push(JSON.parse(commit_hash_log))
             return logs.all;
         } catch (error) {

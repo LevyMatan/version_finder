@@ -12,7 +12,12 @@
   <body>
     <div class="container text-center">
       <h1 class="text-center">Version Finder</h1>
-
+      <div id="spinner-modal" style="display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+        <div style="position: relative; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+          <span id="loading-message" style="display: none;">...</span>
+          <div id="spinner-container" class="spinner-border text-primary" role="status"></div>
+        </div>
+      </div>
       <form id="version-finder-form">
         <div class="row mb-3">
           <div class="col-sm-3">

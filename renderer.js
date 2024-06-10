@@ -15,8 +15,19 @@ function resetForm() {
     commitSHAList.value = 'HEAD~1';
     branchList.disabled = submoduleList.disabled = false;
 }
+// Function to show the spinner and set the message
+function showProcessingMessage(message) {
+  document.getElementById("spinner-modal").style.display = "block"; // Show the spinner
+  document.getElementById("loading-message").innerHTML = message; // Set the message
+}
+
+// Function to hide the spinner
+function hideProcessingMessage() {
+  document.getElementById("spinner-modal").style.display = "none"; // Hide the spinner
+}
 
 function sendInitRepoEvent() {
+    showProcessingMessage("Initializing repository...");
     ipcRenderer.send('init:repo', { repoPath: repositoryPathInput.value });
 }
 
@@ -27,6 +38,7 @@ function sendSearchVersion() {
         submodule: submoduleList.value !== 'No submodules in Repository' ? submoduleList.value : null,
         commitSHA: commitSHAList.value,
     };
+    showProcessingMessage("Searching for version...");
     ipcRenderer.send('search:version', searchParams);
 }
 
@@ -136,13 +148,16 @@ ipcRenderer.on('init:done', (event, args) => {
         submoduleList.value = 'No submodules in Repository';
     }
     branchList.value = args.branches.includes('master') ? 'master' : args.branches.includes('main') ? 'main' : '';
+    hideProcessingMessage();
 });
 
 ipcRenderer.on('init:error:invalid-repo-path', () => {
     branchList.disabled = submoduleList.disabled = true;
+    hideProcessingMessage();
 });
 
 ipcRenderer.on('search:done', (event, args) => {
     new bootstrap.Modal(document.getElementById('resultModal')).show();
     setModalInfo(args);
+    hideProcessingMessage();
 });

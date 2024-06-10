@@ -2,6 +2,9 @@
 
 const gitP = require('simple-git');
 const path = require('path');
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 
 /**
  * Represents a VersionFinder object that provides methods to interact with a git repository.
@@ -132,6 +135,28 @@ class VersionFinder {
         }
     }
 
+    async checkAncestor(submodulePath, target_commit_hash, submodulePointer) {
+      let isAncestor = true;
+      try {
+        const command_string = `cd ${submodulePath} && git merge-base --is-ancestor ${target_commit_hash} ${submodulePointer}`;
+        console.log('checkAncestor: Command to be executed:', command_string);
+        const { stdout, stderr } = await execPromise(command_string);
+        console.log('Command executed . . .');
+        console.log('stdout:', stdout);
+        if (stderr) {
+          isAncestor = false;
+          console.error('stderr:', stderr);
+        }
+      } catch (error) {
+        console.error(`exec error: ${error}`);
+        console.error('return code:', error.code);
+        isAncestor = false;
+      }
+      // Place the code that should execute after `exec` here
+      console.log('Is ancestor:', isAncestor);
+      return isAncestor;
+    }
+
     /**
      * Gets the first commit SHA for a given branch and submodule.
      * @param {string} branch - The branch name.
@@ -151,8 +176,7 @@ class VersionFinder {
                 // Find the first commit that includes the target commit
                 // Itertate over logs in reverse order to find the first commit that includes the target commit
 
-                for (let i = logs.all.length - 1; i >= 0; i--) {
-                    const log = logs.all[i];
+                for (const log of logs.all.reverse()) {
                     // Check if the target_commit_hash is the ancestor of the current commit
                     console.log("log.hash: ", log.hash);
                     const lsTreeOutput = await this.git.raw(['ls-tree', log.hash, submodule]);
@@ -160,16 +184,19 @@ class VersionFinder {
                     const submodulePointer = match
                     const submoduleGit = gitP(path.join(this.repositoryPath, submodule));
                     console.log(`Git command to be executed: git merge-base --is-ancestor ${target_commit_hash} ${submodulePointer}`);
-                    let isAncestor;
+                    let isAncestor = true;
                     try {
-                        await submoduleGit.raw(['merge-base', '--is-ancestor', target_commit_hash, submodulePointer]);
+                        // Check if the target commit is an ancestor of the submodule pointer
+                        const submodulePath = path.join(this.repositoryPath, submodule);
+                        // const mergeBase = await submoduleGit.raw(['merge-base', target_commit_hash, submodulePointer]);
                         // If the command does not throw, the exit status is 0, meaning the target_commit_hash is an ancestor.
-                        isAncestor = true;
+                        isAncestor = await this.checkAncestor(submodulePath, target_commit_hash, submodulePointer);
                     } catch (error) {
                         // If the command throws, the exit status is non-zero.
                         // You can check error.message or error.stack for more details if needed.
                         // For 'git merge-base --is-ancestor', a non-zero exit status typically means the target_commit_hash is not an ancestor.
                         // However, it's good to check the specific error to distinguish between different non-zero exit statuses.
+                        console.error('Error checking if commit is an ancestor:', error);
                         if (error.message.includes('is not an ancestor')) {
                             isAncestor = false;
                         } else {

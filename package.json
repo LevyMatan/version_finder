@@ -7,9 +7,16 @@
     "start": "electron .",
     "dev": "NODE_ENV=development nodemon --exec electron .",
     "docs": "jsdoc -r .",
-    "build-mac": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=icon-jinny.icns --out=release-builds --prune=true --asar",
-    "build-linux": "electron-packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=icon-jinny.png --out=release-builds --prune=true --asar",
+    "build-mac": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=./assets/icons/icon-jinny.icns --out=release-builds --prune=true --asar",
+    "build-linux": "electron-packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=./assets/icons/ic_launcher.png --out=release-builds --prune=true --asar",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "build": {
+    "appId": "com.matanlevy.version_finder",
+    "productName": "Version Finder",
+    "mac": {
+      "icon": "/Users/matanlevy/GitHub/version_finder/assets/icons/icon-jinny.icns"
+    }
   },
   "author": "Matan Levy",
   "license": "MIT",

@@ -152,57 +152,59 @@ class VersionFinder {
      */
     async getFirstCommitSha(target_commit_hash, branch, submodule) {
         try {
-            console.log("In getFirstCommitSha: target_commit_hash: target_commit_hash= ",target_commit_hash, "branch=", branch, " submodule=", submodule);
+            console.log("In getFirstCommitSha: target_commit_hash=", target_commit_hash, "branch=", branch, "submodule=", submodule);
             await this.git.checkout(branch);
             await this.git.pull();
             await this.git.subModule(['update', '--init']);
             if (submodule) {
-                // Get the list of all commits that modified the submodule pointer
                 let logs = await this.git.log({file: submodule});
-                // Find the first commit that includes the target commit
-                // Itertate over logs in reverse order to find the first commit that includes the target commit
+                // Convert logs to an array if not already
+                logs = logs.all || [];
 
-                for (const log of logs.all.reverse()) {
-                    // Check if the target_commit_hash is the ancestor of the current commit
-                    const lsTreeOutput = await this.git.raw(['ls-tree', log.hash, submodule]);
-                    const match = lsTreeOutput.match(/\b[0-9a-f]{40}\b/); // Regex to match SHA-1 hash
-                    const submodulePointer = match
-                    const submoduleGit = gitP(path.join(this.repositoryPath, submodule));
-                    let isAncestor = true;
-                    try {
-                        // Check if the target commit is an ancestor of the submodule pointer
-                        const submodulePath = path.join(this.repositoryPath, submodule);
-                        // const mergeBase = await submoduleGit.raw(['merge-base', target_commit_hash, submodulePointer]);
-                        // If the command does not throw, the exit status is 0, meaning the target_commit_hash is an ancestor.
-                        isAncestor = await this.checkAncestor(submodulePath, target_commit_hash, submodulePointer);
-                    } catch (error) {
-                        // If the command throws, the exit status is non-zero.
-                        // You can check error.message or error.stack for more details if needed.
-                        // For 'git merge-base --is-ancestor', a non-zero exit status typically means the target_commit_hash is not an ancestor.
-                        // However, it's good to check the specific error to distinguish between different non-zero exit statuses.
-                        console.error('Error checking if commit is an ancestor:', error);
-                        if (error.message.includes('is not an ancestor')) {
-                            isAncestor = false;
+                // Binary search function
+                const binarySearch = async (logs) => {
+                    let low = 0;
+                    let high = logs.length - 1;
+                    const submodulePath = path.join(this.repositoryPath, submodule);
+                    console.log("submodulePath: ", submodulePath);
+                    console.log("submodule: ", submodule);
+                    while (low <= high) {
+                        const mid = Math.floor((low + high) / 2);
+                        const log = logs[mid];
+                        const lsTreeOutput = await this.git.raw(['ls-tree', log.hash, submodule]);
+                        const match = lsTreeOutput.match(/\b[0-9a-f]{40}\b/);
+                        if (!match) continue; // Skip if no match found
+                        const submodulePointer = match[0];
+                        const isAncestor = await this.checkAncestor(submodulePath, target_commit_hash, submodulePointer);
+                        if (isAncestor) {
+                            // If isAncestor, search left (earlier commits)
+                            high = mid - 1;
                         } else {
-                            // Handle other errors, possibly rethrow or log them.
-                            console.error('Error checking if commit is an ancestor:', error);
-                            throw error; // Rethrow if you want to escalate the error, or handle it as appropriate.
+                            // If not ancestor, search right (later commits)
+                            low = mid + 1;
                         }
                     }
-                    if (isAncestor) {
-                        return log;
+                    // Return the log at the boundary if it's an ancestor, else null
+                    if (low < logs.length) {
+                        const lsTreeOutput = await this.git.raw(['ls-tree', logs[low].hash, submodule]);
+                        const match = lsTreeOutput.match(/\b[0-9a-f]{40}\b/);
+                        if (match) {
+                            const submodulePointer = match[0];
+                            const isAncestor = await this.checkAncestor(submodulePath, target_commit_hash, submodulePointer);
+                            if (isAncestor) {
+                                return logs[low];
+                            }
+                        }
                     }
-                }
-                return null;
+                    return null;
+                };
+
+                return await binarySearch(logs.reverse()); // Reverse logs to have them in chronological order for binary search
             } else {
-                try {
-                    let commitDetails = await this.git.raw(['show', '--no-patch', '--format={ "hash": "%H", "message": "%s"}', target_commit_hash]);
-                    commitDetails = JSON.parse(commitDetails);
-                    return commitDetails
-                } catch (error) {
-                    console.error('Error fetching commit details for hash:', target_commit_hash);
-                    console.error(error);
-                }
+                // Handle the case where there's no submodule
+                let commitDetails = await this.git.raw(['show', '--no-patch', '--format={"hash": "%H", "message": "%s"}', target_commit_hash]);
+                commitDetails = JSON.parse(commitDetails);
+                return commitDetails;
             }
         } catch (error) {
             console.error('Error fetching first commit SHA.');

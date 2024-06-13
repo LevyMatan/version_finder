@@ -3,6 +3,7 @@ const path = require('path')
 const os = require('os')
 const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron')
 const VersionFinder = require('./version_finder.js')
+const { dialog } = require('electron')
 
 let mainWindow;
 
@@ -186,3 +187,17 @@ async function searchVersion(form) {
         console.error(err)
     }
 }
+
+ipcMain.on('open:directory', async function() {
+    console.log("Got into open:directory")
+    const result = await dialog.showOpenDialog({
+        properties: ['openDirectory']
+    });
+
+    console.log("Selected directory: ", result)
+
+    // Send the selected directory to the renderer process
+    if (!result.canceled && result.filePaths.length > 0) {
+        mainWindow.webContents.send('selected:directory', result.filePaths[0]);
+    }
+});

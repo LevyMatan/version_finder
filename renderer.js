@@ -125,20 +125,39 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTooltipAndCopyFunctionality('versionCopyButton', 'versionCommitSha', 'Copied!', 'Copy to clipboard');
 });
 
-document.getElementById('repo-browser').addEventListener('change', function() {
-    if (this.files && this.files[0]) {
-        const selectedFilePath = this.files[0].path;
-        const directory = selectedFilePath.split('/').slice(0, -1).join('/');
-        repositoryPathInput.value = directory;
-        resetForm();
-        sendInitRepoEvent();
-    }
+document.getElementById('open-directory-btn').addEventListener('click', () => {
+    sendOpwnDirectory();
 });
 
 form.addEventListener('submit', (event) => {
     event.preventDefault();
     sendSearchVersion();
 });
+
+ipcRenderer.on('selected:directory', (event, selectedDirectoryPath) => {
+
+    console.log("selected:directory", selectedDirectoryPath)
+
+    const startTime = performance.now(); // Start timing
+
+    // Update the input value with the selected directory
+    repositoryPathInput.value = selectedDirectoryPath;
+    const inputUpdateTime = performance.now(); // Time after getting the file path
+
+    // Reset the form
+    resetForm();
+    const resetFormTime = performance.now(); // Time after resetting the form
+
+    // Send the event to initialize the repository
+    sendInitRepoEvent();
+    const sendEventTime = performance.now(); // Time after sending the event
+
+    // Log the time taken for each step
+    console.log(`Input update: ${inputUpdateTime - startTime}ms`);
+    console.log(`Form reset: ${resetFormTime - inputUpdateTime}ms`);
+    console.log(`Event sending: ${sendEventTime - resetFormTime}ms`);
+}
+);
 
 ipcRenderer.on('init:done', (event, args) => {
     updateList('branches-list', args.branches);
@@ -161,3 +180,9 @@ ipcRenderer.on('search:done', (event, args) => {
     setModalInfo(args);
     hideProcessingMessage();
 });
+
+
+
+function sendOpwnDirectory() {
+    ipcRenderer.send('open:directory');
+}

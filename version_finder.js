@@ -157,7 +157,7 @@ class VersionFinder {
             await this.git.pull();
             await this.git.subModule(['update', '--init']);
             if (submodule) {
-                let logs = await this.git.log({file: submodule});
+                let logs = await this.git.log({file: submodule, format: {hash: '%H', message: '%s'}});
                 // Convert logs to an array if not already
                 logs = logs.all || [];
 

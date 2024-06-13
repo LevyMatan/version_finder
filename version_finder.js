@@ -140,9 +140,11 @@ class VersionFinder {
         console.error("stderr:", stderr);
       }
     } catch (error) {
-      console.error(`exec error: ${error}`);
-      console.error("return code:", error.code);
-      isAncestor = false;
+      if ( 1 === error.code ) {
+        isAncestor = false;
+      } else {
+        throw error;
+      }
     }
     return isAncestor;
   }
@@ -243,7 +245,7 @@ class VersionFinder {
     } catch (error) {
       console.error("Error fetching first commit SHA.");
       console.error(error);
-      return null;
+      throw error;
     }
   }
 

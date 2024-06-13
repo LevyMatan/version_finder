@@ -19,10 +19,9 @@
         </div>
       </div>
       <div id="error-alert-placeholder"></div>
-      <form id="version-finder-form">
+      <form id="version-finder-form" class="needs-validation">
         <div class="row mb-3">
           <div class="col-sm-3">
-            <input type="text" class="form-control" id="repo-browser" style="display: none;" readonly>
             <label for="repo-browser" id="open-directory-btn" class="btn btn-primary repo-btn">Repo Path</label>
           </div>
           <div class="col-sm-8">
@@ -31,8 +30,11 @@
         </div>
         <div class="row mb-3">
           <label for="branch-name-input" class="col-sm-3 col-form-label">Branch Name</label>
-          <div class="col-sm-8">
-            <input type="text" class="form-control" id="branch-name-input" list="branches-list" ="Type to search...">
+          <div class="col-sm-8 has-validation">
+            <input type="text" class="form-control" id="branch-name-input" list="branches-list" placeholder="Type to search..." required>
+            <div class="invalid-feedback">
+              Branch name is required.
+            </div>
           </div>
             <datalist id="branches-list"></datalist>
         </div>
@@ -46,7 +48,10 @@
         <div class="row mb-3">
           <label for="commit-sha" class="col-sm-3 col-form-label">Target commit</label>
           <div class="col-sm-8">
-            <input type="text" class="form-control" id="commit-sha" name="commit-sha" value="HEAD~1">
+            <input type="text" class="form-control" id="commit-sha" name="commit-sha" value="HEAD~1" pattern="([0-9a-fA-F]{40}|[0-9a-fA-F]{4,}|HEAD(~[0-9]+)?)" required>
+            <div class="invalid-feedback">
+              A valid commit SHA is required.
+            </div>
           </div>
         </div>
         <button type="submit" class="btn btn-primary extra-top-space" id="find-version">Find Version</button>

@@ -133,6 +133,7 @@ async function findFirstCommit(versionFinder, form) {
     console.log("searchResultStructure: ", searchResultStructure);
   } catch (err) {
     sendError("search:error:invalid-commit-sha", "Invalid commit SHA", err);
+    return;
   }
   // Try and get first version commit
   try {

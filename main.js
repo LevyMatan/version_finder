@@ -8,7 +8,7 @@ let mainWindow;
 
 const settingsPath = path.join(app.getPath('userData'), 'version-finder-settings.json');
 const DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX = /Version: (\d+\.\d+\.\d+)/;
-const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX = /Version: (\d+_\d+_\d+)/;
+const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX = /Version: (XX_\d+_\d+_\d+)/;
 let settings = {};
 let settings_search_pattern_html_form_options = [];
 const isDevMode = process.env.NODE_ENV === "development";
@@ -289,7 +289,9 @@ ipcMain.on('open-settings', () => {
     settingsWindow.loadFile('settings.html');
     settingsWindow.once('ready-to-show', () => {
       settingsWindow.show();
-      settingsWindow.webContents.openDevTools();
+      if (isDevMode) {
+        settingsWindow.webContents.openDevTools();
+      }
     });
 
     settingsWindow.on('closed', () => {

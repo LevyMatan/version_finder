@@ -87,3 +87,9 @@ h1, h2 {
 .tooltip.bs-tooltip-top .arrow::before {
     border-top-color: #28a745 !important;
 }
+
+#linkedin_ref {
+    color: #76b900; /* NVIDIA Green */
+    /* Remove default underline */
+    text-decoration: none;
+}

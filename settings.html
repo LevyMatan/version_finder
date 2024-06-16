@@ -1,0 +1,26 @@
+<!-- settings.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'" />
+  <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <title>Settings</title>
+</head>
+<body>
+  <div class="container centered text-align">
+    <h1>Settings</h1>
+    <form id="settingsForm">
+      <label>Version search pattern:</label><br>
+      <div class="input-group-by-matan" id="searchPatternInputGroup"></div>
+      <button type="submit">Save</button>
+    </form>
+
+    <button id="closeButton">Close</button>
+  </div>
+  </body>
+<script src="settings.js"></script>
+</html>

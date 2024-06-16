@@ -211,6 +211,9 @@ async function searchVersion(form) {
   try {
     const VersionFinder = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
+    const searchPattern = getSelectedSearchPattern();
+    console.log("searchPattern: ", searchPattern);
+    versionFinder.setSearchPattern(searchPattern);
     await versionFinder
       .init()
       .then(() => {
@@ -329,14 +332,26 @@ ipcMain.on('close-settings', () => {
   }
 });
 
-function getSearchPattern() {
-  /**
-   * Reads the search pattern from the settings file if exists.
-   * Overwise write the default search pattern to the settings file.
-   */
-  if (!fs.existsSync(settingsPath)) {
-    fs.writeFileSync(settingsPath, JSON.stringify({ searchPattern: '/Version: (\d+\.\d+\.\d+)/' }));
-  const settings = JSON.parse(fs.readFileSync(settingsPath));
-  return settings.searchPattern;
+function getSelectedSearchPattern() {
+
+  try {
+    // Verify file exists before reading
+    if (!fs.existsSync(settingsPath)) {
+      throw new Error('Settings file does not exist');
+    }
+    settings = JSON.parse(fs.readFileSync(settingsPath));
   }
+  catch (err) {
+    console.error('Failed to read settings:', err);
+  }
+
+  for (const option of settings.searchPatternOptions) {
+    console.log('option: ', option);
+    if (option.isChecked) {
+      console.log('getSelectedSearchPattern: option.value: ', option.value);
+      return option.value;
+    }
+  }
+  // Optional: Return a default value or null if no option is checked
+  return null;
 }

@@ -19,8 +19,19 @@ class VersionFinder {
     this.git = gitP(this.repositoryPath);
     this.submodules = [];
     this.branches = [];
+    this.searchPatternRegex = null;
   }
 
+  setSearchPattern(searchPattern) {
+    console.log("searchPattern: ", searchPattern);
+    const regexBody = searchPattern.slice(1, searchPattern.lastIndexOf('/'));
+
+    // Extract flags if present
+    const regexFlags = searchPattern.slice(searchPattern.lastIndexOf('/') + 1);
+
+    this.searchPatternRegex = new RegExp(regexBody, regexFlags);
+    console.log("searchPatternRegex: ", this.searchPatternRegex);
+  }
   /**
    * Initializes the VersionFinder object by checking if the repository is valid and fetching submodule and branch information.
    * @returns {Promise<Error|null>} - A promise that resolves to null if initialization is successful, or an Error object if there is an error.
@@ -300,7 +311,7 @@ class VersionFinder {
       const logs = await this.getLogs(branch, null, commitSHA);
       console.log("logs: ", logs);
       for (const log of logs.reverse()) {
-        if (log.message.match(/Version: (\d+\.\d+\.\d+)/)) {
+        if (log.message.match(this.searchPatternRegex)) {
           return log;
         }
       }

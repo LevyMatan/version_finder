@@ -1,10 +1,7 @@
 // main.js
 const path = require("path");
-const os = require("os");
-const { app, BrowserWindow, Menu, ipcMain, shell } = require("electron");
-const VersionFinder = require("./version_finder.js");
+const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const { dialog } = require("electron");
-const { send } = require("process");
 
 let mainWindow;
 
@@ -59,6 +56,7 @@ ipcMain.on("search:version", (e, options) => {
 
 async function initRepo({ form }) {
   try {
+    const VersionFinder = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
     await versionFinder
       .init()
@@ -175,6 +173,7 @@ async function findFirstCommit(versionFinder, form) {
 async function searchVersion(form) {
   console.log("form = ", form);
   try {
+    const VersionFinder = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
     await versionFinder
       .init()

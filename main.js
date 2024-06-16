@@ -2,11 +2,47 @@
 const path = require("path");
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const { dialog } = require("electron");
+const fs = require('fs');
 
 let mainWindow;
 
+const settingsPath = path.join(app.getPath('userData'), 'version-finder-settings.json');
+const DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX = /Version: (\d+\.\d+\.\d+)/;
+const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX = /Version: (\d+_\d+_\d+)/;
+let settings = {};
+let settings_search_pattern_html_form_options = [];
 const isDevMode = process.env.NODE_ENV === "development";
 console.log("isDevMode: ", isDevMode);
+
+function deleteSettingsFile() {
+  if (fs.existsSync(settingsPath)) {
+    fs.unlinkSync(settingsPath);
+  }
+}
+
+function createDefaultSettingsFile() {
+  // Create a default settings file if it does not exist
+  if (!fs.existsSync(settingsPath)) {
+    // Create the searchPattern form options
+    settings_search_pattern_html_form_options.push({ value: DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX.toString(), text: 'Dot Notation (e.g. 1.0.0)', isChecked: true });
+    settings_search_pattern_html_form_options.push({ value: DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX.toString(), text: 'Underscore Notation (e.g. 1_0_0)', isChecked: false });
+    settings.searchPatternOptions = settings_search_pattern_html_form_options;
+    fs.writeFileSync(settingsPath, JSON.stringify(settings));
+  }
+}
+
+function initializeSettings() {
+  if (isDevMode) {
+    deleteSettingsFile();
+  }
+  // Create a default settings file if it does not exist
+  createDefaultSettingsFile();
+
+  // Read the search pattern from the settings file
+  settings = JSON.parse(fs.readFileSync(settingsPath));
+}
+
+initializeSettings();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -175,6 +211,9 @@ async function searchVersion(form) {
   try {
     const VersionFinder = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
+    const searchPattern = getSelectedSearchPattern();
+    console.log("searchPattern: ", searchPattern);
+    versionFinder.setSearchPattern(searchPattern);
     await versionFinder
       .init()
       .then(() => {
@@ -228,4 +267,91 @@ function sendError(channel, message, error) {
     message,
     error: errorToSend,
   });
+}
+
+
+let settingsWindow;
+
+ipcMain.on('open-settings', () => {
+  if (!settingsWindow) {
+    settingsWindow = new BrowserWindow({
+      width: 800,
+      height: 600,
+      parent: mainWindow, // Assuming mainWindow is your main app window
+      modal: true,
+      show: false,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      }
+    });
+
+    settingsWindow.loadFile('settings.html');
+    settingsWindow.once('ready-to-show', () => {
+      settingsWindow.show();
+      settingsWindow.webContents.openDevTools();
+    });
+
+    settingsWindow.on('closed', () => {
+      settingsWindow = null;
+    });
+  }
+});
+
+ipcMain.on('get-settings', (event) => {
+  try {
+    // Verify file exists before reading
+    if (!fs.existsSync(settingsPath)) {
+      throw new Error('Settings file does not exist');
+    }
+    settings = JSON.parse(fs.readFileSync(settingsPath));
+  } catch (err) {
+    console.error('Failed to read settings:', err);
+  }
+  console.log('ipcMain: get-settings');
+  console.log('settings: ', settings);
+  event.returnValue = settings;
+});
+
+ipcMain.on('save-settings', (event, newSettings) => {
+  console.log('ipcMain: save-settings');
+  console.log('newSettings: ', newSettings);
+  try {
+    console.log('Saving to settings file:', settingsPath);
+    fs.writeFileSync(settingsPath, JSON.stringify(newSettings));
+  } catch (err) {
+    console.error('Failed to save settings:', err);
+  }
+});
+
+// Add this inside the main.js, where you have other ipcMain handlers
+ipcMain.on('close-settings', () => {
+  console.log('Close settings window');
+  if (settingsWindow) {
+    settingsWindow.close();
+  }
+});
+
+function getSelectedSearchPattern() {
+
+  try {
+    // Verify file exists before reading
+    if (!fs.existsSync(settingsPath)) {
+      throw new Error('Settings file does not exist');
+    }
+    settings = JSON.parse(fs.readFileSync(settingsPath));
+  }
+  catch (err) {
+    console.error('Failed to read settings:', err);
+  }
+
+  for (const option of settings.searchPatternOptions) {
+    console.log('option: ', option);
+    if (option.isChecked) {
+      console.log('getSelectedSearchPattern: option.value: ', option.value);
+      return option.value;
+    }
+  }
+  // Optional: Return a default value or null if no option is checked
+  return null;
 }

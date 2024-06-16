@@ -303,3 +303,9 @@ document.getElementById('commit-sha').addEventListener('input', function() {
 
   this.nextElementSibling.textContent = message; // Update the invalid-feedback message
 });
+
+const settingsButton = document.getElementById('settingsButton');
+
+settingsButton.addEventListener('click', () => {
+  ipcRenderer.send('open-settings');
+});

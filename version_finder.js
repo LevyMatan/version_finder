@@ -24,10 +24,10 @@ class VersionFinder {
 
   setSearchPattern(searchPattern) {
     console.log("searchPattern: ", searchPattern);
-    const regexBody = searchPattern.slice(1, searchPattern.lastIndexOf('/'));
+    const regexBody = searchPattern.slice(1, searchPattern.lastIndexOf("/"));
 
     // Extract flags if present
-    const regexFlags = searchPattern.slice(searchPattern.lastIndexOf('/') + 1);
+    const regexFlags = searchPattern.slice(searchPattern.lastIndexOf("/") + 1);
 
     this.searchPatternRegex = new RegExp(regexBody, regexFlags);
     console.log("searchPatternRegex: ", this.searchPatternRegex);
@@ -151,7 +151,7 @@ class VersionFinder {
         console.error("stderr:", stderr);
       }
     } catch (error) {
-      if ( 1 === error.code ) {
+      if (1 === error.code) {
         isAncestor = false;
       } else {
         throw error;

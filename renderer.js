@@ -275,37 +275,41 @@ ipcRenderer.on("error", (event, { channel, message, error }) => {
   placeholder.appendChild(alertDiv);
 });
 
-document.getElementById('version-finder-form').addEventListener('submit', function(event) {
-  if (!this.checkValidity()) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
+document.getElementById("version-finder-form").addEventListener(
+  "submit",
+  function (event) {
+    if (!this.checkValidity()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
 
-  this.classList.add('was-validated');
-}, false);
+    this.classList.add("was-validated");
+  },
+  false
+);
 
-document.getElementById('commit-sha').addEventListener('input', function() {
+document.getElementById("commit-sha").addEventListener("input", function () {
   const value = this.value;
   const fullCommitHashPattern = /^[0-9a-fA-F]{40}$/;
   const headPattern = /^HEAD(~[0-9]+)?$/;
   let message = "A valid commit SHA is required.";
 
   if (!fullCommitHashPattern.test(value) && !headPattern.test(value)) {
-    if (value.startsWith('HEAD')) {
+    if (value.startsWith("HEAD")) {
       message = "Format should be 'HEAD' or 'HEAD~[number]'.";
-    }else if (value.length === 40 && !fullCommitHashPattern.test(value)) {
+    } else if (value.length === 40 && !fullCommitHashPattern.test(value)) {
       message = "Full commit hash must be exactly 40 hex characters.";
     }
     this.setCustomValidity(message);
   } else {
-    this.setCustomValidity('');
+    this.setCustomValidity("");
   }
 
   this.nextElementSibling.textContent = message; // Update the invalid-feedback message
 });
 
-const settingsButton = document.getElementById('settingsButton');
+const settingsButton = document.getElementById("settingsButton");
 
-settingsButton.addEventListener('click', () => {
-  ipcRenderer.send('open-settings');
+settingsButton.addEventListener("click", () => {
+  ipcRenderer.send("open-settings");
 });

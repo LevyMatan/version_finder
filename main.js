@@ -2,13 +2,18 @@
 const path = require("path");
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const { dialog } = require("electron");
-const fs = require('fs');
+const fs = require("fs");
 
 let mainWindow;
 
-const settingsPath = path.join(app.getPath('userData'), 'version-finder-settings.json');
-const DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX = /Version: (\d+\.\d+\.\d+)/;
-const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX = /Version: (XX_\d+_\d+_\d+)/;
+const settingsPath = path.join(
+  app.getPath("userData"),
+  "version-finder-settings.json"
+);
+const DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX =
+  /Version: (\d+\.\d+\.\d+)/;
+const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX =
+  /Version: (XX_\d+_\d+_\d+)/;
 let settings = {};
 const isDevMode = process.env.NODE_ENV === "development";
 console.log("isDevMode: ", isDevMode);
@@ -19,12 +24,19 @@ function deleteSettingsFile() {
   }
 }
 
-function createDefaultSearchPatternSettings(){
+function createDefaultSearchPatternSettings() {
   let settings_search_pattern_html_form_options = [];
-  settings_search_pattern_html_form_options.push({ value: DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX.toString(), text: 'Dot Notation (e.g. 1.0.0)', isChecked: true });
-  settings_search_pattern_html_form_options.push({ value: DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX.toString(), text: 'Underscore Notation (e.g. 1_0_0)', isChecked: false });
+  settings_search_pattern_html_form_options.push({
+    value: DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX.toString(),
+    text: "Dot Notation (e.g. 1.0.0)",
+    isChecked: true,
+  });
+  settings_search_pattern_html_form_options.push({
+    value: DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX.toString(),
+    text: "Underscore Notation (e.g. 1_0_0)",
+    isChecked: false,
+  });
   return settings_search_pattern_html_form_options;
-
 }
 function createDefaultSettingsFile() {
   // Create a default settings file if it does not exist
@@ -273,10 +285,9 @@ function sendError(channel, message, error) {
   });
 }
 
-
 let settingsWindow;
 
-ipcMain.on('open-settings', () => {
+ipcMain.on("open-settings", () => {
   if (!settingsWindow) {
     settingsWindow = new BrowserWindow({
       width: 800,
@@ -287,74 +298,72 @@ ipcMain.on('open-settings', () => {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-      }
+      },
     });
 
-    settingsWindow.loadFile('settings.html');
-    settingsWindow.once('ready-to-show', () => {
+    settingsWindow.loadFile("settings.html");
+    settingsWindow.once("ready-to-show", () => {
       settingsWindow.show();
       if (isDevMode) {
         settingsWindow.webContents.openDevTools();
       }
     });
 
-    settingsWindow.on('closed', () => {
+    settingsWindow.on("closed", () => {
       settingsWindow = null;
     });
   }
 });
 
-ipcMain.on('get-settings', (event) => {
+ipcMain.on("get-settings", (event) => {
   try {
     // Verify file exists before reading
     if (!fs.existsSync(settingsPath)) {
-      throw new Error('Settings file does not exist');
+      throw new Error("Settings file does not exist");
     }
     settings = JSON.parse(fs.readFileSync(settingsPath));
   } catch (err) {
-    console.error('Failed to read settings:', err);
+    console.error("Failed to read settings:", err);
   }
-  console.log('ipcMain: get-settings');
-  console.log('settings: ', settings);
+  console.log("ipcMain: get-settings");
+  console.log("settings: ", settings);
   event.returnValue = settings;
 });
 
-ipcMain.on('save-settings', (event, newSettings) => {
-  console.log('ipcMain: save-settings');
-  console.log('newSettings: ', newSettings);
+ipcMain.on("save-settings", (event, newSettings) => {
+  console.log("ipcMain: save-settings");
+  console.log("newSettings: ", newSettings);
   try {
-    console.log('Saving to settings file:', settingsPath);
+    console.log("Saving to settings file:", settingsPath);
     fs.writeFileSync(settingsPath, JSON.stringify(newSettings));
   } catch (err) {
-    console.error('Failed to save settings:', err);
+    console.error("Failed to save settings:", err);
   }
 });
 
 // Add this inside the main.js, where you have other ipcMain handlers
-ipcMain.on('close-settings', () => {
-  console.log('Close settings window');
+ipcMain.on("close-settings", () => {
+  console.log("Close settings window");
   if (settingsWindow) {
     settingsWindow.close();
   }
 });
 
 function getSelectedSearchPattern() {
-
   try {
     // Verify file exists before reading
     if (!fs.existsSync(settingsPath)) {
-      throw new Error('Settings file does not exist');
+      throw new Error("Settings file does not exist");
     }
     settings = JSON.parse(fs.readFileSync(settingsPath));
-  }
-  catch (err) {
-    console.error('Failed to read settings:', err);
+  } catch (err) {
+    console.error("Failed to read settings:", err);
   }
 
   for (const option of settings.searchPatternOptions) {
-    console.log('option: ', option);
+    console.log("option: ", option);
     if (option.isChecked) {
-      console.log('getSelectedSearchPattern: option.value: ', option.value);
+      console.log("getSelectedSearchPattern: option.value: ", option.value);
       return option.value;
     }
   }

@@ -14,8 +14,17 @@ body {
 
 h1, h2 {
     color: #76b900; /* NVIDIA Green headings */
+    text-align: center;
+}
+/* Add a top margin */
+.container.centered.height > h1 {
+    margin-top: 20px; /* Adjust the value as needed */
 }
 
+/* Or, add top padding */
+.container.centered.height > h1 {
+    padding-top: 20px; /* Adjust the value as needed */
+}
 .form-control {
     background-color: #1a1a1a; /* Dark gray input fields */
     color: #76b900; /* NVIDIA Green text */

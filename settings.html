@@ -11,16 +11,20 @@
   <title>Settings</title>
 </head>
 <body>
-  <div class="container centered text-align">
+  <div class="container centered height">
     <h1>Settings</h1>
-    <form id="settingsForm">
-      <label>Version search pattern:</label><br>
-      <div class="input-group-by-matan" id="searchPatternInputGroup"></div>
-      <button type="submit">Save</button>
-    </form>
+    <div class="container centered text-align">
+      <form id="settingsForm">
+        <label>Version search pattern:</label><br>
+        <div class="input-group-by-matan" id="searchPatternInputGroup"></div>
+        <button type="submit" class="btn btn-primary extra-top-space">Save</button>
+      </form>
 
-    <button id="closeButton">Close</button>
+      <button id="closeButton" class="btn btn-primary extra-top-space">Close</button>
+    </div>
   </div>
+
+  <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="settings.js"></script>
   </body>
-<script src="settings.js"></script>
 </html>

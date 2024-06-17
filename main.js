@@ -8,9 +8,8 @@ let mainWindow;
 
 const settingsPath = path.join(app.getPath('userData'), 'version-finder-settings.json');
 const DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX = /Version: (\d+\.\d+\.\d+)/;
-const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX = /Version: (\d+_\d+_\d+)/;
+const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX = /Version: (XX_\d+_\d+_\d+)/;
 let settings = {};
-let settings_search_pattern_html_form_options = [];
 const isDevMode = process.env.NODE_ENV === "development";
 console.log("isDevMode: ", isDevMode);
 
@@ -20,13 +19,18 @@ function deleteSettingsFile() {
   }
 }
 
+function createDefaultSearchPatternSettings(){
+  let settings_search_pattern_html_form_options = [];
+  settings_search_pattern_html_form_options.push({ value: DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX.toString(), text: 'Dot Notation (e.g. 1.0.0)', isChecked: true });
+  settings_search_pattern_html_form_options.push({ value: DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX.toString(), text: 'Underscore Notation (e.g. 1_0_0)', isChecked: false });
+  return settings_search_pattern_html_form_options;
+
+}
 function createDefaultSettingsFile() {
   // Create a default settings file if it does not exist
   if (!fs.existsSync(settingsPath)) {
     // Create the searchPattern form options
-    settings_search_pattern_html_form_options.push({ value: DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX.toString(), text: 'Dot Notation (e.g. 1.0.0)', isChecked: true });
-    settings_search_pattern_html_form_options.push({ value: DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX.toString(), text: 'Underscore Notation (e.g. 1_0_0)', isChecked: false });
-    settings.searchPatternOptions = settings_search_pattern_html_form_options;
+    settings.searchPatternOptions = createDefaultSearchPatternSettings();
     fs.writeFileSync(settingsPath, JSON.stringify(settings));
   }
 }
@@ -289,7 +293,9 @@ ipcMain.on('open-settings', () => {
     settingsWindow.loadFile('settings.html');
     settingsWindow.once('ready-to-show', () => {
       settingsWindow.show();
-      settingsWindow.webContents.openDevTools();
+      if (isDevMode) {
+        settingsWindow.webContents.openDevTools();
+      }
     });
 
     settingsWindow.on('closed', () => {

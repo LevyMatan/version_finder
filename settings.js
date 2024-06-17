@@ -89,15 +89,17 @@ window.onload = () => {
   }
 };
 
+// Add this at the end of settings.js
+const closeButton = document.getElementById("closeButton");
+
 // Save settings when the form is submitted
 settingsForm.addEventListener("submit", (e) => {
   console.log("settingsForm submitted");
   e.preventDefault();
   ipcRenderer.send("save-settings", settings);
+  closeButton.click();
 });
 
-// Add this at the end of settings.js
-const closeButton = document.getElementById("closeButton");
 
 closeButton.addEventListener("click", () => {
   ipcRenderer.send("close-settings");

@@ -29,12 +29,12 @@ function createDefaultSearchPatternSettings() {
   settings_search_pattern_html_form_options.push({
     value: DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX.toString(),
     text: "Dot Notation (e.g. 1.0.0)",
-    isChecked: true,
+    isChecked: false,
   });
   settings_search_pattern_html_form_options.push({
     value: DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX.toString(),
-    text: "Underscore Notation (e.g. 1_0_0)",
-    isChecked: false,
+    text: "Underscore Notation (e.g. XX_1_0_0)",
+    isChecked: true,
   });
   return settings_search_pattern_html_form_options;
 }

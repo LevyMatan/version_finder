@@ -102,3 +102,29 @@ h1, h2 {
     /* Remove default underline */
     text-decoration: none;
 }
+
+a {
+    color: #76b900; /* NVIDIA Green */
+    /* Remove default underline */
+    text-decoration: none;
+}
+
+.settings-card {
+    background-color: #1a1a1a; /* Dark gray card */
+    color: #76b900; /* NVIDIA Green text */
+    /* border: 1px solid #76b900; NVIDIA Green border */
+    padding: 20px;
+}
+
+div[data-bs-theme="dark"] {
+    position: fixed; /* Use 'absolute' if you don't need it to stick at the top on scroll */
+    top: 20px;
+    left: 20px;
+    z-index: 1000; /* Ensure it's above other content */
+}
+
+.full-width {
+    display: block;
+    width: 40%;
+    margin: 0 auto;
+}

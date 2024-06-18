@@ -68,6 +68,73 @@ window.onload = () => {
     });
     searchPatternInputGroup.appendChild(container);
 
+    // In the searchPatternInputGroup, I would like to let the user add a new pattern
+    // Below the last radio button, I would like to add a button that says "Add new pattern"
+    // Once clicked, the Add new pattern should be replaced with a single line the has:
+    // 1. A text input field for the pattern name
+    // 2. A text input field for the RegEx pattern
+    // 3. A button that says "Create new pattern"
+    // Once the "Create new pattern" button is clicked, the new pattern should be added to the searchPatternOptions
+    // and the radio buttons should be updated to include the new pattern
+    // and the "Add new pattern" button should be added back to the end of the radio buttons
+
+    // to implement this, I would like to create a new div, that will hold two divs and toggle the display of the divs
+    // The first div will hold the "Add new pattern" button
+    // The second div will hold the text input fields and the "Create new pattern" button
+    const addNewPatternDiv = document.createElement("div");
+
+    const newPatternButtonDiv = document.createElement("div");
+    newPatternButtonDiv.id = "newPatternButtonDiv";
+
+    const addNewPatternButton = document.createElement("button");
+    addNewPatternButton.className = "btn btn-primary";
+    addNewPatternButton.textContent = "Add new pattern";
+    addNewPatternButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      console.log("Add new pattern clicked");
+      document.getElementById("newPatternButtonDiv").style.display = "none";
+      newPatternDiv.style.display = "flex"; // Use Flexbox to align children in a row
+      newPatternDiv.style.gap = "10px"; // Optional: add some space between the children
+    });
+    newPatternButtonDiv.appendChild(addNewPatternButton);
+    addNewPatternDiv.appendChild(newPatternButtonDiv);
+
+    const newPatternDiv = document.createElement("div");
+    newPatternDiv.style.display = "none";
+
+    const newPatternName = document.createElement("input");
+    newPatternName.type = "text";
+    newPatternName.className = "form-control";
+    newPatternName.placeholder = "Pattern Name";
+    newPatternDiv.appendChild(newPatternName);
+    const newPatternRegEx = document.createElement("input");
+    newPatternRegEx.type = "text";
+    newPatternRegEx.className = "form-control";
+    newPatternRegEx.placeholder = "RegEx Pattern";
+    newPatternDiv.appendChild(newPatternRegEx);
+    const createNewPatternButton = document.createElement("button");
+    createNewPatternButton.className = "btn btn-primary";
+    createNewPatternButton.textContent = "Create new pattern";
+    createNewPatternButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      const newPattern = {
+        text: newPatternName.value,
+        value: newPatternRegEx.value,
+        isChecked: false,
+      };
+      searchPatternOptions.push(newPattern);
+      newPatternDiv.style.display = "none";
+      newPatternButtonDiv.style.display = "block";
+      newPatternName.value = "";
+      newPatternRegEx.value = "";
+
+    });
+
+    newPatternDiv.appendChild(createNewPatternButton);
+    addNewPatternDiv.appendChild(newPatternDiv);
+    searchPatternInputGroup.appendChild(addNewPatternDiv);
+
+
     // Manually initialize collapse components for dynamically added elements
     document.querySelectorAll(".collapse").forEach((collapseElement) => {
       new bootstrap.Collapse(collapseElement, {

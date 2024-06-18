@@ -11,17 +11,19 @@
   <title>Settings</title>
 </head>
 <body>
+  <div data-bs-theme="dark">
+    <button id="closeButton" type="button" class="btn-close" aria-label="Close"></button>
+  </div>
   <div class="container centered height">
     <h1>Settings</h1>
     <div class="container centered text-align">
       <form id="settingsForm">
-        <div class="input-group-by-matan" id="searchPatternInputGroup">
+        <div class="input-group-by-matan card settings-card" id="searchPatternInputGroup">
           <strong>Version search pattern</strong><br>
         </div>
-        <button type="submit" class="btn btn-primary extra-top-space">Save</button>
+        <button type="submit" class="btn btn-primary extra-top-space full-width">Save</button>
       </form>
 
-      <button id="closeButton" class="btn btn-primary extra-top-space">Close</button>
     </div>
   </div>
 

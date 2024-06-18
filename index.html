@@ -70,32 +70,44 @@
               <h1 class="modal-title fs-5" id="resultModalLabel">Commit Information</h1>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body left-justified">
-              <!-- Tooltip element (hidden by default) -->
-              <div id="copyTooltip" style="display: none; position: absolute; background-color: #000; color: #fff; padding: 5px; border-radius: 5px; font-size: 12px;">SHA copied to clipboard!</div>
-              <div id="validResultsFirstCommit" style="display: none;">
-                <h5>First commit in super-repo to include target commit</h5>
-                <div class="inline-display">
-                  <button class="btn btn-outline-secondary" type="button" id="copyButton" data-toggle="tooltip" data-placement="top" title="Copy to clipboard">
-                    <i class="fas fa-clipboard"></i>
-                  </button>
-                  <span id="firstCommitSha"> </span>
-                </div>
-                <span id="firstCommitMessage"></span>
-              </div>
-              <div id="validResultsVersion" style="display: none;">
-                <h5>First version to include target commit</h5>
-                <div class="inline-display">
-                  <button class="btn btn-outline-secondary" type="button" id="versionCopyButton" data-toggle="tooltip" data-placement="top" title="Copy to clipboard">
+            <div class="modal-body">
+              <!-- First Commit Section -->
+              <div class="card mb-3" id="validResultsFirstCommit" style="display: none;">
+                <div class="card-body">
+                  <h5 class="card-title">First Commit</h5>
+                  <div class="d-flex align-items-center mb-2">
+                    <button class="btn btn-outline-secondary btn-sm me-2" type="button" id="copyButton" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard">
                       <i class="fas fa-clipboard"></i>
-                  </button>
-                  <span id="versionCommitSha"></span>
+                    </button>
+                    <span id="firstCommitSha"></span>
+                  </div>
+                  <label>Commit message:</label><br>
+                  <p class="card-text commit-message" id="firstCommitMessage"></p>
                 </div>
-                <span id="versionCommitMessage"></span>
-                <span id="versionInfo"></span> </p>
               </div>
-              <div id="errorMessage" style="display: none;">
-                Hey, Appears that the commit is not included in super-repo.
+
+              <!-- First Version Section -->
+              <div class="card mb-3" id="validResultsVersion" style="display: none;">
+                <div class="card-body">
+                  <h5 class="card-title">First Version</h5>
+                  <div class="d-flex align-items-center mb-2">
+                    <button class="btn btn-outline-secondary btn-sm me-2" type="button" id="versionCopyButton" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard">
+                      <i class="fas fa-clipboard"></i>
+                    </button>
+                    <span id="versionCommitSha"></span>
+                  </div>
+                  <label>Commit message:</label><br>
+                  <p class="card-text commit-message" id="versionCommitMessage"></p>
+
+                  <div class="alert alert-success text-center mt-3" id="versionFoundAlert">
+                    <span id="versionInfo"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Error Message Section -->
+              <div class="alert alert-danger" id="errorMessage" style="display: none;">
+                Hey, it appears that the commit is not included in super-repo.
               </div>
             </div>
           </div>

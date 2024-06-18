@@ -73,8 +73,7 @@ function setModalInfo(results) {
 
     const firstCommitMessage = document.getElementById("firstCommitMessage");
     if (firstCommitMessage) {
-      firstCommitMessage.textContent =
-        "Commit Message:" + results.commitMessageFirstCommit;
+      firstCommitMessage.textContent = results.commitMessageFirstCommit;
       firstCommitMessage.style.display = "block";
     }
 
@@ -94,8 +93,7 @@ function setModalInfo(results) {
         validResultsVersion
       ) {
         versionCommitSha.textContent = results.shortShaVersionCommit;
-        versionCommitMessage.textContent =
-          "Commit Message:" + results.commitMessageVersionCommit;
+        versionCommitMessage.textContent = results.commitMessageVersionCommit;
         versionInfo.textContent = "Version: " + results.version;
         validResultsVersion.style.display = "block";
         versionCommitSha.style.display =

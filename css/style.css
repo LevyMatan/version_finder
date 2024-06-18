@@ -128,3 +128,10 @@ div[data-bs-theme="dark"] {
     width: 40%;
     margin: 0 auto;
 }
+.card-title {
+    color: #76b900; /* NVIDIA Green text */
+}
+.commit-message {
+    /* Set the text to be left justified */
+    text-align: left;
+}

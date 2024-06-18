@@ -200,7 +200,7 @@ async function findFirstCommit(versionFinder, form) {
       if (result) {
         const commit_hash = result.hash;
         const commit_message = result.message;
-        const version = result.message.match(/Version: (\d+\.\d+\.\d+)/)[1];
+        const version = result.message.match(versionFinder.searchPatternRegex)[1];
         searchResultStructure.isValidVersionCommit = true;
         searchResultStructure.shortShaVersionCommit = commit_hash;
         searchResultStructure.commitMessageVersionCommit = commit_message;

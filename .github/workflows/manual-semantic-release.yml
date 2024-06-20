@@ -21,7 +21,7 @@ jobs:
         continue-on-error: true
 
       - name: Run Semantic Release
-        uses: cycjimmy/semantic-release-action@v2
+        uses: cycjimmy/semantic-release-action@v4
         with:
             branch: main  # Specify the branch to release from if different from the default
         env:

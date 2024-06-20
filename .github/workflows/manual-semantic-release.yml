@@ -21,7 +21,9 @@ jobs:
         continue-on-error: true
 
       - name: Run Semantic Release
-        run: npx semantic-release
+        uses: cycjimmy/semantic-release-action@v2
+        with:
+            branch: main  # Specify the branch to release from if different from the default
         env:
-            GH_TOKEN: ${{ secrets.GH_TOKEN }}
             GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+            NPM_TOKEN: "Dummy value to avoid npm error"

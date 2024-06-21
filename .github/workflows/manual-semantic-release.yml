@@ -27,3 +27,4 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.REPO_ACCESS }}
             NPM_TOKEN: "Dummy value to avoid npm error"
+            DEBUG: semantic-release:*

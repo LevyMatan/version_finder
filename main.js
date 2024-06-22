@@ -10,13 +10,13 @@ const settingsPath = path.join(
   app.getPath("userData"),
   "version-finder-settings.json"
 );
+
 const DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX =
   /Version: (\d+\.\d+\.\d+)/;
 const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX =
   /Version: (XX_\d+_\d+_\d+)/;
 let settings = {};
 const isDevMode = process.env.NODE_ENV === "development";
-console.log("isDevMode: ", isDevMode);
 
 function deleteSettingsFile() {
   if (fs.existsSync(settingsPath)) {
@@ -38,11 +38,28 @@ function createDefaultSearchPatternSettings() {
   });
   return settings_search_pattern_html_form_options;
 }
+
+function createDefaultLoggerSettings() {
+  const os = require('os');
+  const tempDir = os.tmpdir();
+  const timeString = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
+  const logFilePath = `${tempDir}/version_finder_${timeString}.log`;
+  const settings_logger_options = {
+    logLevel: isDevMode ? "debug": "info",
+    logFile: logFilePath,
+    logConsole: isDevMode,
+  }
+  return settings_logger_options;
+}
+
 function createDefaultSettingsFile() {
   // Create a default settings file if it does not exist
   if (!fs.existsSync(settingsPath)) {
+    // Create the logger options
+    settings.loggerOptions = createDefaultLoggerSettings();
     // Create the searchPattern form options
     settings.searchPatternOptions = createDefaultSearchPatternSettings();
+    // Write the settings to the file
     fs.writeFileSync(settingsPath, JSON.stringify(settings));
   }
 }
@@ -59,6 +76,25 @@ function initializeSettings() {
 }
 
 initializeSettings();
+
+function initializeLogger(loggerOptions) {
+  const { addFileTransport, addConsoleTransport, logger} = require("./logger.js");
+
+  if (loggerOptions.logFile) {
+    addFileTransport(logger, loggerOptions.logFile);
+  }
+  if (loggerOptions.logConsole) {
+    addConsoleTransport(logger);
+  }
+  if (loggerOptions.logLevel) {
+    logger.level = loggerOptions.logLevel;
+  }
+  logger.info("Logger initialized");
+
+  return logger;
+
+}
+const logger = initializeLogger(settings.loggerOptions);
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -92,17 +128,17 @@ app.on("window-all-closed", function () {
 
 // Main IPC code
 ipcMain.on("init:repo", (e, options) => {
-  console.log("Got into init:repo");
+  logger.info("Got into init:repo");
   const form = {
     repositoryPath: options.repoPath,
   };
-  console.log(form);
+  logger.info(form);
   initRepo({ form });
 });
 
 ipcMain.on("search:version", (e, options) => {
-  console.log("Got into search:version");
-  console.log("options: ", options);
+  logger.info("Got into search:version");
+  logger.info("options: ", options);
   searchVersion(options);
 });
 
@@ -113,11 +149,11 @@ async function initRepo({ form }) {
     await versionFinder
       .init()
       .then(() => {
-        console.log("init done");
+        logger.info("init done");
         const branches = versionFinder.getBranches();
         const submodules = versionFinder.getSubmodules();
-        console.log("from initRepo: branches: ", branches);
-        console.log("from initRepo: submodules: ", submodules);
+        logger.info("from initRepo: branches: ", branches);
+        logger.info("from initRepo: submodules: ", submodules);
         mainWindow.webContents.send("init:done", { branches, submodules });
       })
       .catch((err) => {
@@ -163,15 +199,15 @@ async function findFirstCommit(versionFinder, form) {
     commitMessageVersionCommit: "",
     version: "",
   };
-  console.log("Entered findFirstCommit");
-  console.log("form: ", form);
+  logger.info("Entered findFirstCommit");
+  logger.info("form: ", form);
   try {
     const firstCommitstruct = await versionFinder.getFirstCommitSha(
       form.commitSHA,
       form.branch,
       form.submodule
     );
-    console.log("firstCommitstruct: ", firstCommitstruct);
+    logger.info("firstCommitstruct: ", firstCommitstruct);
     if (firstCommitstruct) {
       searchResultStructure.isValidFirstCommit = true;
       searchResultStructure.shortShaFirstCommit = firstCommitstruct.hash; // Ensure this matches the property name in firstCommitstruct
@@ -180,7 +216,7 @@ async function findFirstCommit(versionFinder, form) {
     } else {
       searchResultStructure.isValidFirstCommit = false;
     }
-    console.log("searchResultStructure: ", searchResultStructure);
+    logger.info("searchResultStructure: ", searchResultStructure);
   } catch (err) {
     sendError("search:error:invalid-commit-sha", "Invalid commit SHA", err);
     return;
@@ -193,8 +229,8 @@ async function findFirstCommit(versionFinder, form) {
         form.branch,
         form.submodule
       );
-      console.log("search done");
-      console.log("result: ", result);
+      logger.info("search done");
+      logger.info("result: ", result);
 
       // Handle case the result is null
       if (result) {
@@ -223,17 +259,17 @@ async function findFirstCommit(versionFinder, form) {
  * @param {string} options.form.submodule - The submodule.
  */
 async function searchVersion(form) {
-  console.log("form = ", form);
+  logger.info("form = ", form);
   try {
     const VersionFinder = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
     const searchPattern = getSelectedSearchPattern();
-    console.log("searchPattern: ", searchPattern);
+    logger.info("searchPattern: ", searchPattern);
     versionFinder.setSearchPattern(searchPattern);
     await versionFinder
       .init()
       .then(() => {
-        console.log("init done");
+        logger.info("init done");
         findFirstCommit(versionFinder, form);
       })
       .catch((err) => {
@@ -249,12 +285,12 @@ async function searchVersion(form) {
 }
 
 ipcMain.on("open:directory", async function () {
-  console.log("Got into open:directory");
+  logger.info("Got into open:directory");
   const result = await dialog.showOpenDialog({
     properties: ["openDirectory"],
   });
 
-  console.log("Selected directory: ", result);
+  logger.info("Selected directory: ", result);
 
   // Send the selected directory to the renderer process
   if (!result.canceled && result.filePaths.length > 0) {
@@ -325,16 +361,16 @@ ipcMain.on("get-settings", (event) => {
   } catch (err) {
     console.error("Failed to read settings:", err);
   }
-  console.log("ipcMain: get-settings");
-  console.log("settings: ", settings);
+  logger.info("ipcMain: get-settings");
+  logger.info("settings: ", settings);
   event.returnValue = settings;
 });
 
 ipcMain.on("save-settings", (event, newSettings) => {
-  console.log("ipcMain: save-settings");
-  console.log("newSettings: ", newSettings);
+  logger.info("ipcMain: save-settings");
+  logger.info("newSettings: ", newSettings);
   try {
-    console.log("Saving to settings file:", settingsPath);
+    logger.info("Saving to settings file:", settingsPath);
     fs.writeFileSync(settingsPath, JSON.stringify(newSettings));
   } catch (err) {
     console.error("Failed to save settings:", err);
@@ -343,7 +379,7 @@ ipcMain.on("save-settings", (event, newSettings) => {
 
 // Add this inside the main.js, where you have other ipcMain handlers
 ipcMain.on("close-settings", () => {
-  console.log("Close settings window");
+  logger.info("Close settings window");
   if (settingsWindow) {
     settingsWindow.close();
   }
@@ -361,9 +397,9 @@ function getSelectedSearchPattern() {
   }
 
   for (const option of settings.searchPatternOptions) {
-    console.log("option: ", option);
+    logger.info("option: ", option);
     if (option.isChecked) {
-      console.log("getSelectedSearchPattern: option.value: ", option.value);
+      logger.info("getSelectedSearchPattern: option.value: ", option.value);
       return option.value;
     }
   }

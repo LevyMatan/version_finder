@@ -5,6 +5,11 @@ const settingsForm = document.getElementById("settingsForm");
 
 let settings = {};
 
+// Assuming loggerOptions is an object with your logger settings
+function updateLoggerConfiguration(type, value) {
+  ipcRenderer.send("update-logger-configurations", { type, value });
+}
+
 window.onload = () => {
   settings = ipcRenderer.sendSync("get-settings");
   console.log("settings.js: get-settings");
@@ -211,6 +216,7 @@ window.onload = () => {
     logLevelSelect.required = true;
     logLevelSelect.addEventListener("change", (e) => {
       loggerOptions.logLevel = e.target.value;
+      updateLoggerConfiguration("logLevel", loggerOptions.logLevel);
     });
     const logLevels = ["error", "warn", "info", "http", "verbose", "debug", "silly"];
     logLevels.forEach((level) => {
@@ -287,6 +293,8 @@ window.onload = () => {
         if (this.files.length > 0) {
             fileNameDisplay.value = this.files[0].name;
         }
+        loggerOptions.logFile = this.files[0].path;
+        updateLoggerConfiguration("logFile", loggerOptions.logFile);
     });
 
     // logConsoleDiv will contain:
@@ -311,6 +319,7 @@ window.onload = () => {
     logConsoleInput.checked = loggerOptions.logConsole;
     logConsoleInput.addEventListener("change", (e) => {
       loggerOptions.logConsole = e.target.checked;
+      updateLoggerConfiguration("logConsole", loggerOptions.logConsole);
     });
 
     // Insert the checkbox at the beginning of the label element

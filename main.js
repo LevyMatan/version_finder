@@ -4,30 +4,82 @@ const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const { dialog } = require("electron");
 const fs = require("fs");
 
+
+// Global Variables:
+
+/**
+ * The main window of the application.
+ * @type {Object}
+ */
 let mainWindow;
+
+/**
+ * Represents the structure of a repository.
+ * @typedef {Object} RepoStruct
+ * @property {string} repoPath - The path of the repository.
+ * @property {null|RepoHandler} repoHandler - The handler for the repository.
+ */
 const repoStruct = {
   repoPath: "",
   repoHandler: null,
 }
 
+/**
+ * The logger variable is used for logging messages.
+ * @type {Logger}
+ */
+let logger;
+
+/**
+ * The file path for the version finder settings file.
+ * @type {string}
+ */
 const settingsPath = path.join(
   app.getPath("userData"),
   "version-finder-settings.json"
 );
 
+/**
+ * Regular expression pattern used to extract the dot notation version from a string.
+ * @type {RegExp}
+ */
 const DEFAULT_SEARCH_PATTERN_DOT_NOTATION_VERSION_REGEX =
   /Version: (\d+\.\d+\.\d+)/;
+
+/**
+ * Regular expression pattern used to match version numbers in the format XX_0_0_0.
+ * @type {RegExp}
+ */
 const DEFAULT_SEARCH_PATTERN_UNDERSCORE_NOTATION_VERSION_REGEX =
   /Version: (XX_\d+_\d+_\d+)/;
+
+/**
+ * Object representing the settings.
+ * @type {Object}
+ */
 let settings = {};
+
+/**
+ * Indicates whether the application is running in development mode.
+ * @type {boolean}
+ */
 const isDevMode = process.env.NODE_ENV === "development";
 
+// Functions:: Settings related functions
+
+/**
+ * Deletes the settings file if it exists.
+ */
 function deleteSettingsFile() {
   if (fs.existsSync(settingsPath)) {
     fs.unlinkSync(settingsPath);
   }
 }
 
+/**
+ * Creates the default search pattern settings.
+ * @returns {Array} The default search pattern settings.
+ */
 function createDefaultSearchPatternSettings() {
   let settings_search_pattern_html_form_options = [];
   settings_search_pattern_html_form_options.push({
@@ -43,6 +95,10 @@ function createDefaultSearchPatternSettings() {
   return settings_search_pattern_html_form_options;
 }
 
+/**
+ * Creates default logger settings.
+ * @returns {Object} The default logger settings.
+ */
 function createDefaultLoggerSettings() {
   const os = require('os');
   const tempDir = os.tmpdir();
@@ -56,6 +112,9 @@ function createDefaultLoggerSettings() {
   return settings_logger_options;
 }
 
+/**
+ * Creates a default settings file if it does not exist.
+ */
 function createDefaultSettingsFile() {
   // Create a default settings file if it does not exist
   if (!fs.existsSync(settingsPath)) {
@@ -68,19 +127,15 @@ function createDefaultSettingsFile() {
   }
 }
 
-function initializeSettings() {
-  if (isDevMode) {
-    deleteSettingsFile();
-  }
-  // Create a default settings file if it does not exist
-  createDefaultSettingsFile();
-
-  // Read the search pattern from the settings file
-  settings = JSON.parse(fs.readFileSync(settingsPath));
-}
-
-initializeSettings();
-
+/**
+ * Initializes the logger with the specified options.
+ *
+ * @param {Object} loggerOptions - The options for configuring the logger.
+ * @param {string} [loggerOptions.logFile] - The path to the log file.
+ * @param {boolean} [loggerOptions.logConsole] - Whether to log to the console.
+ * @param {string} [loggerOptions.logLevel] - The log level to set for the logger.
+ * @returns {Object} - The initialized logger object.
+ */
 function initializeLogger(loggerOptions) {
   const { addFileTransport, addConsoleTransport, logger} = require("./logger.js");
 
@@ -96,11 +151,34 @@ function initializeLogger(loggerOptions) {
   logger.info("Logger initialized");
 
   return logger;
-
 }
-const logger = initializeLogger(settings.loggerOptions);
 
-function createWindow() {
+/**
+ * Initializes the settings for the application.
+ * If in development mode, deletes the settings file.
+ * Creates a default settings file if it does not exist.
+ * Reads the search pattern from the settings file.
+ * Initializes the logger.
+ */
+function initializeSettings() {
+  if (isDevMode) {
+    deleteSettingsFile();
+  }
+  // Create a default settings file if it does not exist
+  createDefaultSettingsFile();
+
+  // Read the search pattern from the settings file
+  settings = JSON.parse(fs.readFileSync(settingsPath));
+
+  // Initialize the logger
+  logger = initializeLogger(settings.loggerOptions);
+}
+
+initializeSettings();
+
+
+
+function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -119,10 +197,10 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  createWindow();
+  createMainWindow();
 
   app.on("activate", function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
 });
 
@@ -364,8 +442,8 @@ let settingsWindow;
 ipcMain.on("open-settings", () => {
   if (!settingsWindow) {
     settingsWindow = new BrowserWindow({
-      width: 800,
-      height: 600,
+      width: 1200,
+      height: 800,
       parent: mainWindow, // Assuming mainWindow is your main app window
       modal: true,
       show: false,

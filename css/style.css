@@ -114,6 +114,7 @@ a {
     color: #76b900; /* NVIDIA Green text */
     /* border: 1px solid #76b900; NVIDIA Green border */
     padding: 20px;
+    margin-top: 20px; /* Add top margin */
 }
 
 div[data-bs-theme="dark"] {
@@ -134,4 +135,9 @@ div[data-bs-theme="dark"] {
 .commit-message {
     /* Set the text to be left justified */
     text-align: left;
+}
+
+.settings-input-helper {
+    font-size: 12px;
+    color: #76b900; /* NVIDIA Green text */
 }

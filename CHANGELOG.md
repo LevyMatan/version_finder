@@ -1,3 +1,16 @@
+# [1.1.0](https://github.com/LevyMatan/version_finder/compare/v1.0.0...v1.1.0) (2024-06-22)
+
+
+### Bug Fixes
+
+* **logging:** remove the log file from repo ([0c3aa76](https://github.com/LevyMatan/version_finder/commit/0c3aa766f49747e5fa3bfda74b1b6333d626019a))
+
+
+### Features
+
+* **logging:** Add logger - with control through settings ([11988e0](https://github.com/LevyMatan/version_finder/commit/11988e0f2be18c82d2c1c90d38a26bd07111b7fa))
+* **logging:** Add open log file button at settings page ([3771f54](https://github.com/LevyMatan/version_finder/commit/3771f54a09f08c5f62423500170d216113106ff2))
+
 # 1.0.0 (2024-06-21)
 
 

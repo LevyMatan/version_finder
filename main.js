@@ -5,6 +5,10 @@ const { dialog } = require("electron");
 const fs = require("fs");
 
 let mainWindow;
+const repoStruct = {
+  repoPath: "",
+  repoHandler: null,
+}
 
 const settingsPath = path.join(
   app.getPath("userData"),
@@ -127,13 +131,26 @@ app.on("window-all-closed", function () {
 });
 
 // Main IPC code
-ipcMain.on("init:repo", (e, options) => {
+ipcMain.on("init:repo", async(e, options) => {
   logger.info("Got into init:repo");
-  const form = {
-    repositoryPath: options.repoPath,
-  };
-  logger.info(form);
-  initRepo({ form });
+  logger.debug("repoStruct.repoPath: ", repoStruct.repoPath);
+  logger.debug("options.repoPath: ", options.repoPath);
+
+  // Check if the repo was already initialized
+  if (repoStruct.repoHandler && repoStruct.repoPath && repoStruct.repoPath === options.repoPath) {
+    logger.debug("repoStruct: ", repoStruct.repoPath);
+    logger.debug("Repo already initialized");
+    mainWindow.webContents.send("init:done", { branches: repoStruct.repoHandler.getBranches(), submodules: repoStruct.repoHandler.getSubmodules() });
+    return;
+  }
+  else {
+    const form = {
+      repositoryPath: options.repoPath,
+    };
+    logger.info(form);
+    initRepo({ form });
+    logger.debug("repoStruct.repoHandler: ", repoStruct.repoHandler);
+  }
 });
 
 ipcMain.on("search:version", (e, options) => {
@@ -143,6 +160,23 @@ ipcMain.on("search:version", (e, options) => {
 });
 
 async function initRepo({ form }) {
+
+  if (!form.repositoryPath) {
+    sendError("init:error:invalid-repo-path", "Invalid repository path", new Error("Repository path is empty"));
+    return null;
+  }
+  if (!fs.existsSync(form.repositoryPath)) {
+    sendError("init:error:invalid-repo-path", "Invalid repository path", new Error("Repository path does not exist"));
+    return null;
+  }
+  if (repoStruct.repoHandler && repoStruct.repoPath && repoStruct.repoPath == form.repositoryPath) {
+    logger.info("Repo already initialized");
+    logger.debug("repoStruct: ", repoStruct);
+
+    mainWindow.webContents.send("init:done", { branches: repoStruct.repoHandler.getBranches(), submodules: repoStruct.repoHandler.getSubmodules()});
+    return true;
+  }
+
   try {
     const VersionFinder = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
@@ -155,6 +189,9 @@ async function initRepo({ form }) {
         logger.info("from initRepo: branches: ", branches);
         logger.info("from initRepo: submodules: ", submodules);
         mainWindow.webContents.send("init:done", { branches, submodules });
+        repoStruct.repoPath = form.repositoryPath;
+        repoStruct.repoHandler = versionFinder;
+        return true;
       })
       .catch((err) => {
         sendError(
@@ -165,6 +202,7 @@ async function initRepo({ form }) {
       });
   } catch (err) {
     sendError("init:error:invalid-repo-path", "Invalid repository path", err);
+    return null;
   }
 }
 

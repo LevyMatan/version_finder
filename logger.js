@@ -30,10 +30,6 @@ const logger = createLogger({
   ),
 });
 
-// Example usage
-logger.log('info', "Here is an object to be logged:", ["hello", "worlds"]);
-
-
 function addConsoleTransport(logger) {
   logger.add(new transports.Console());
 }

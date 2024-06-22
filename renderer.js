@@ -157,7 +157,6 @@ function resetTooltip(button, tooltip, originalMessage) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  sendInitRepoEvent();
   initializeTooltipAndCopyFunctionality(
     "copyButton",
     "firstCommitSha",
@@ -170,6 +169,13 @@ document.addEventListener("DOMContentLoaded", () => {
     "Copied!",
     "Copy to clipboard"
   );
+
+  // Add click event listeners to branch and submodule inputs
+  const branchInput = document.getElementById("branch-name-input"); // Assuming the ID of the branch input is "branchInput"
+  const submoduleInput = document.getElementById("submodule-name-input"); // Assuming the ID of the submodule input is "submoduleInput"
+
+  branchInput.addEventListener("click", sendInitRepoEvent);
+  submoduleInput.addEventListener("click", sendInitRepoEvent);
 });
 
 document.getElementById("open-directory-btn").addEventListener("click", () => {

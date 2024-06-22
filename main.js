@@ -140,7 +140,7 @@ ipcMain.on("init:repo", async(e, options) => {
   if (repoStruct.repoHandler && repoStruct.repoPath && repoStruct.repoPath === options.repoPath) {
     logger.debug("repoStruct: ", repoStruct.repoPath);
     logger.debug("Repo already initialized");
-    mainWindow.webContents.send("init:done", { branches: repoStruct.repoHandler.getBranches(), submodules: repoStruct.repoHandler.getSubmodules() });
+    mainWindow.webContents.send("init:done");
     return;
   }
   else {
@@ -173,7 +173,7 @@ async function initRepo({ form }) {
     logger.info("Repo already initialized");
     logger.debug("repoStruct: ", repoStruct);
 
-    mainWindow.webContents.send("init:done", { branches: repoStruct.repoHandler.getBranches(), submodules: repoStruct.repoHandler.getSubmodules()});
+    mainWindow.webContents.send("init:done");
     return true;
   }
 
@@ -188,7 +188,7 @@ async function initRepo({ form }) {
         const submodules = versionFinder.getSubmodules();
         logger.info("from initRepo: branches: ", branches);
         logger.info("from initRepo: submodules: ", submodules);
-        mainWindow.webContents.send("init:done", { branches, submodules });
+        mainWindow.webContents.send("init:done::updated-lists", { branches, submodules });
         repoStruct.repoPath = form.repositoryPath;
         repoStruct.repoHandler = versionFinder;
         return true;

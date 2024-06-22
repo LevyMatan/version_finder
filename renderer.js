@@ -210,7 +210,7 @@ ipcRenderer.on("selected:directory", (event, selectedDirectoryPath) => {
   console.log(`Event sending: ${sendEventTime - resetFormTime}ms`);
 });
 
-ipcRenderer.on("init:done", (event, args) => {
+ipcRenderer.on("init:done::updated-lists", (event, args) => {
   updateList("branches-list", args.branches);
   updateList("submodules-list", args.submodules);
   if (args.submodules[0] === "No submodules in Repo") {
@@ -224,6 +224,12 @@ ipcRenderer.on("init:done", (event, args) => {
     : "";
   hideProcessingMessage();
 });
+ipcRenderer.on("init:done", () => {
+  console.log("init:done");
+  hideProcessingMessage();
+});
+
+
 
 ipcRenderer.on("init:error:invalid-repo-path", () => {
   branchList.disabled = submoduleList.disabled = true;

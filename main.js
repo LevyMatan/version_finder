@@ -406,3 +406,10 @@ function getSelectedSearchPattern() {
   // Optional: Return a default value or null if no option is checked
   return null;
 }
+
+// Hanlde the open:log-file event
+ipcMain.on("open:log-file", (event) => {
+  logger.info("Got into open:log-file");
+  shell.openPath(settings.loggerOptions.logFile);
+}
+);

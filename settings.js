@@ -327,6 +327,16 @@ window.onload = () => {
 
     loggerOptionsDiv.appendChild(logConsoleDiv);
 
+    // Add a button to open the log file and display the logs in a table (using DataTables)
+    const openLogFileButton = document.createElement("button");
+    openLogFileButton.className = "btn btn-primary";
+    openLogFileButton.textContent = "Open Log File";
+    openLogFileButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      ipcRenderer.send("open:log-file", loggerOptions.logFile);
+    });
+    loggerOptionsDiv.appendChild(openLogFileButton);
+
   }
 };
 

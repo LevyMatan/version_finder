@@ -139,6 +139,9 @@ function createDefaultSettingsFile() {
 function initializeLogger(loggerOptions) {
   const { addFileTransport, addConsoleTransport, logger} = require("./logger.js");
 
+  // Initialize the logger
+  logger.clear();
+
   if (loggerOptions.logFile) {
     addFileTransport(logger, loggerOptions.logFile);
   }
@@ -529,3 +532,15 @@ ipcMain.on("open:log-file", (event) => {
   shell.openPath(settings.loggerOptions.logFile);
 }
 );
+
+ipcMain.on("update-logger-configurations", (event, { type, value }) => {
+  // Check if the type is valid to avoid updating non-existing properties
+  if (['logLevel', 'logConsole', 'logFile'].includes(type)) {
+    // Update the corresponding setting
+    settings.loggerOptions[type] = value;
+    // Reinitialize the logger with updated settings
+    initializeLogger(settings.loggerOptions);
+  } else {
+    console.error(`Invalid logger configuration type: ${type}`);
+  }
+});

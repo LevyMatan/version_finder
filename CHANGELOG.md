@@ -1,3 +1,13 @@
+# [2.0.0](https://github.com/LevyMatan/version_finder/compare/v1.1.0...v2.0.0) (2024-06-22)
+
+
+* pref(ipc-comm)!: Improve preformance by changing the ipc communication. ([75609cb](https://github.com/LevyMatan/version_finder/commit/75609cbdecac9092eb052773ad8b95b75a88143f))
+
+
+### BREAKING CHANGES
+
+* The change in IPC (modyfing existing IPC) may break competability with imaginary third parties.
+
 # [1.1.0](https://github.com/LevyMatan/version_finder/compare/v1.0.0...v1.1.0) (2024-06-22)
 
 

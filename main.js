@@ -259,7 +259,7 @@ async function initRepo({ form }) {
   }
 
   try {
-    const VersionFinder = require("./version_finder.js");
+    const {VersionFinder} = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
     await versionFinder
       .init()
@@ -527,7 +527,7 @@ function getSelectedSearchPattern() {
 }
 
 // Hanlde the open:log-file event
-ipcMain.on("open:log-file", (event) => {
+ipcMain.on("open:log-file", () => {
   logger.info("Got into open:log-file");
   shell.openPath(settings.loggerOptions.logFile);
 }

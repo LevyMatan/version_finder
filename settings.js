@@ -1,6 +1,5 @@
 // settings.js
 const { ipcRenderer } = require("electron");
-const { log } = require("winston");
 const settingsForm = document.getElementById("settingsForm");
 
 let settings = {};
@@ -158,7 +157,7 @@ window.onload = () => {
       });
     });
   } else {
-    console.error("Element not found for selector:", selector);
+    console.error("Element not found for selector:", "input[type=radio]");
   }
 
   if (settings && settings.loggerOptions) {

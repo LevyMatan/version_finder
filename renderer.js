@@ -1,5 +1,7 @@
 // renderer.js
 const { ipcRenderer } = require("electron");
+// import bootstrap from "bootstrap";
+const bootstrap = require("bootstrap");
 
 const form = document.getElementById("version-finder-form");
 const repositoryPathInput = document.getElementById("repo-path");

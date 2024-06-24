@@ -4,29 +4,35 @@
   "description": "App to assist developer find the first version including a specific commit in a Git Repository with multiply submodules.",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "electron --inspect .",
     "dev": "NODE_ENV=development nodemon --exec electron .",
     "docs": "jsdoc -r .",
     "build-mac": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=./assets/icons/icon-jinny.icns --out=release-builds --prune=true --asar",
     "build-linux": "electron-packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=./assets/icons/ic_launcher.png --out=release-builds --prune=true --asar",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "lint": "eslint ."
   },
   "build": {
     "appId": "com.matanlevy.version_finder",
     "productName": "Version Finder",
     "mac": {
       "icon": "/Users/matanlevy/GitHub/version_finder/assets/icons/icon-jinny.icns"
+    },
+    "linux": {
+      "icon": "/Users/matanlevy/GitHub/version_finder/assets/icons/ic_launcher.png"
     }
   },
   "author": "Matan Levy",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^9.5.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^10.0.6",
     "electron": "^30.0.9",
     "electron-packager": "^17.1.2",
+    "eslint": "^9.5.0",
     "globals": "^15.6.0",
     "jsdoc": "^4.0.3",
     "nodemon": "^3.1.3",

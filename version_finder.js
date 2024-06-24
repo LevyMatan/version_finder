@@ -66,7 +66,7 @@ class VersionFinder {
       } else {
         this.submodules = ["No submodules in Repo"];
       }
-    } catch (error) {
+    } catch (e) {
       console.error("Error fetching submodule information.");
       this.submodules = ["No submodules in Repo"];
     }
@@ -78,7 +78,7 @@ class VersionFinder {
       );
       // Remove duplicates
       this.branches = [...new Set(this.branches)];
-    } catch (error) {
+    } catch (e) {
       console.error("Error fetching branch information.");
       throw new Error("Error fetching branch information.");
     }
@@ -136,7 +136,7 @@ class VersionFinder {
         await this.git.show([commitSha]);
       }
       return true;
-    } catch (error) {
+    } catch (e) {
       return false;
     }
   }
@@ -145,7 +145,7 @@ class VersionFinder {
     let isAncestor = true;
     try {
       const command_string = `cd ${submodulePath} && git merge-base --is-ancestor ${target_commit_hash} ${submodulePointer}`;
-      const { stdout, stderr } = await execPromise(command_string);
+      const { stderr } = await execPromise(command_string);
       if (stderr) {
         isAncestor = false;
         console.error("stderr:", stderr);
@@ -324,4 +324,7 @@ class VersionFinder {
   }
 }
 
-module.exports = VersionFinder;
+function sayHello() {
+  console.log("Hello from VersionFinder");
+}
+module.exports = {VersionFinder, sayHello};

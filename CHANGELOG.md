@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/LevyMatan/version_finder/compare/v2.1.0...v2.1.1) (2024-06-25)
+
+
+### Bug Fixes
+
+* Update .releaserc message format ([3753ea5](https://github.com/LevyMatan/version_finder/commit/3753ea5c56d966b1c3105f55f7616e04fb56efec))
+
 # [2.1.0](https://github.com/LevyMatan/version_finder/compare/v2.0.0...v2.1.0) (2024-06-25)
 
 

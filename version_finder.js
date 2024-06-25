@@ -5,6 +5,7 @@ const path = require("path");
 const { exec } = require("child_process");
 const util = require("util");
 const execPromise = util.promisify(exec);
+const fs = require("fs");
 
 /**
  * Represents a VersionFinder object that provides methods to interact with a git repository.
@@ -16,6 +17,12 @@ class VersionFinder {
    */
   constructor(repositoryPath = process.cwd()) {
     this.repositoryPath = path.resolve(repositoryPath);
+
+    if (!fs.existsSync(this.repositoryPath)) {
+      console.error(`The provided path "${this.repositoryPath}" does not exist.`);
+      // Handle the error appropriately. For example, you might want to throw an error or set an internal state.
+      throw new Error(`The provided path "${this.repositoryPath}" does not exist.`);
+    }
     this.git = gitP(this.repositoryPath);
     this.submodules = [];
     this.branches = [];
@@ -42,16 +49,11 @@ class VersionFinder {
    * @returns {Promise<Error>} An error object if any error occurs during initialization.
    */
   async init() {
-    try {
-      await this.git.checkIsRepo().then((isRepo) => {
-        if (!isRepo) {
-          throw new Error("Not a git repository");
-        }
-      });
-    } catch (error) {
-      console.error(`Invalid git repository path: ${this.repositoryPath}`);
-      throw error;
-    }
+    await this.git.checkIsRepo().then((isRepo) => {
+      if (!isRepo) {
+        throw new Error(`The given path ${this.repositoryPath} is Not a git repository`);
+      }
+    });
 
     try {
       const submodules_raw = await this.git.subModule(["status"]);
@@ -69,6 +71,7 @@ class VersionFinder {
     } catch (e) {
       console.error("Error fetching submodule information.");
       this.submodules = ["No submodules in Repo"];
+      throw e;
     }
 
     try {
@@ -80,7 +83,7 @@ class VersionFinder {
       this.branches = [...new Set(this.branches)];
     } catch (e) {
       console.error("Error fetching branch information.");
-      throw new Error("Error fetching branch information.");
+      throw e;
     }
   }
 
@@ -126,19 +129,15 @@ class VersionFinder {
    * @returns {Promise<boolean>} - A promise that resolves to true if the commit SHA is valid, false otherwise.
    */
   async isValidCommitSha(commitSha, branch, submodule) {
-    try {
-      await this.git.checkout(branch);
-      await this.git.pull();
-      await this.git.subModule(["update", "--init"]);
-      if (submodule) {
-        await gitP(path.join(this.repositoryPath, submodule)).show([commitSha]);
-      } else {
-        await this.git.show([commitSha]);
-      }
-      return true;
-    } catch (e) {
-      return false;
+    await this.git.checkout(branch);
+    await this.git.pull();
+    await this.git.subModule(["update", "--init"]);
+    if (submodule) {
+      await gitP(path.join(this.repositoryPath, submodule)).show([commitSha]);
+    } else {
+      await this.git.show([commitSha]);
     }
+    return true;
   }
 
   async checkAncestor(submodulePath, target_commit_hash, submodulePointer) {
@@ -291,7 +290,7 @@ class VersionFinder {
     } catch (error) {
       console.error("Error fetching logs.");
       console.error(error);
-      return error;
+      throw error;
     }
   }
 
@@ -303,11 +302,11 @@ class VersionFinder {
    * @returns {Promise<string|null>} - A promise that resolves to the first commit SHA that contains a version, or null if no such commit is found.
    */
   async getFirstCommitWithVersion(commitSHA, branch, submodule) {
+    console.log("In getFirstCommitWithVersion");
+    console.log("commitSHA: ", commitSHA);
+    console.log("branch: ", branch);
+    console.log("submodule: ", submodule);
     try {
-      console.log("In getFirstCommitWithVersion");
-      console.log("commitSHA: ", commitSHA);
-      console.log("branch: ", branch);
-      console.log("submodule: ", submodule);
       const logs = await this.getLogs(branch, null, commitSHA);
       console.log("logs: ", logs);
       for (const log of logs.reverse()) {
@@ -319,12 +318,9 @@ class VersionFinder {
     } catch (error) {
       console.error(error);
       console.error("Error fetching first commit with version.");
-      return new Error("Error fetching first commit with version.");
+      throw error;
     }
   }
 }
 
-function sayHello() {
-  console.log("Hello from VersionFinder");
-}
-module.exports = {VersionFinder, sayHello};
+module.exports = {VersionFinder};

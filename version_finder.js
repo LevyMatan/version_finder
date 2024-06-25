@@ -27,6 +27,7 @@ class VersionFinder {
     this.submodules = [];
     this.branches = [];
     this.searchPatternRegex = null;
+    this.isInitialized = false;
   }
 
   setSearchPattern(searchPattern) {
@@ -85,6 +86,7 @@ class VersionFinder {
       console.error("Error fetching branch information.");
       throw e;
     }
+    this.isInitialized = true;
   }
 
   /**
@@ -92,6 +94,9 @@ class VersionFinder {
    * @returns {string[]} - An array of submodule names.
    */
   getSubmodules() {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     return this.submodules;
   }
 
@@ -100,6 +105,9 @@ class VersionFinder {
    * @returns {string[]} - An array of branch names.
    */
   getBranches() {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     return this.branches;
   }
 
@@ -109,6 +117,9 @@ class VersionFinder {
    * @returns {boolean} - true if the branch is valid, false otherwise.
    */
   isValidBranch(branch) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     return this.branches.includes(branch);
   }
 
@@ -118,6 +129,9 @@ class VersionFinder {
    * @returns {boolean} - true if the submodule is valid, false otherwise.
    */
   isValidSubmodule(submodule) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     return this.submodules.includes(submodule);
   }
 
@@ -129,6 +143,9 @@ class VersionFinder {
    * @returns {Promise<boolean>} - A promise that resolves to true if the commit SHA is valid, false otherwise.
    */
   async isValidCommitSha(commitSha, branch, submodule) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     await this.git.checkout(branch);
     await this.git.pull();
     await this.git.subModule(["update", "--init"]);
@@ -141,6 +158,9 @@ class VersionFinder {
   }
 
   async checkAncestor(submodulePath, target_commit_hash, submodulePointer) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     let isAncestor = true;
     try {
       const command_string = `cd ${submodulePath} && git merge-base --is-ancestor ${target_commit_hash} ${submodulePointer}`;

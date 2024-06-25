@@ -243,11 +243,11 @@ ipcMain.on("search:version", (e, options) => {
 async function initRepo({ form }) {
 
   if (!form.repositoryPath) {
-    sendError("init:error:invalid-repo-path", "Invalid repository path", new Error("Repository path is empty"));
+    sendError("Invalid repository path", new Error("Repository path is empty"));
     return null;
   }
   if (!fs.existsSync(form.repositoryPath)) {
-    sendError("init:error:invalid-repo-path", "Invalid repository path", new Error("Repository path does not exist"));
+    sendError("Invalid repository path", new Error("Repository path does not exist"));
     return null;
   }
   if (repoStruct.repoHandler && repoStruct.repoPath && repoStruct.repoPath == form.repositoryPath) {
@@ -259,7 +259,7 @@ async function initRepo({ form }) {
   }
 
   try {
-    const VersionFinder = require("./version_finder.js");
+    const {VersionFinder} = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
     await versionFinder
       .init()
@@ -273,16 +273,9 @@ async function initRepo({ form }) {
         repoStruct.repoPath = form.repositoryPath;
         repoStruct.repoHandler = versionFinder;
         return true;
-      })
-      .catch((err) => {
-        sendError(
-          "init:error:invalid-repo-path",
-          "Invalid repository path",
-          err
-        );
       });
   } catch (err) {
-    sendError("init:error:invalid-repo-path", "Invalid repository path", err);
+    sendError("Failed to initialize repository", err);
     return null;
   }
 }
@@ -337,7 +330,7 @@ async function findFirstCommit(versionFinder, form) {
     }
     logger.info("searchResultStructure: ", searchResultStructure);
   } catch (err) {
-    sendError("search:error:invalid-commit-sha", "Invalid commit SHA", err);
+    sendError("Invalid commit SHA", err);
     return;
   }
   // Try and get first version commit
@@ -365,7 +358,7 @@ async function findFirstCommit(versionFinder, form) {
     mainWindow.webContents.send("search:done", searchResultStructure);
     return searchResultStructure; // Return the result from the function
   } catch (err) {
-    sendError("search:error:invalid-commit-sha", "Invalid commit SHA", err);
+    sendError("Invalid commit SHA", err);
   }
 }
 /**
@@ -380,7 +373,7 @@ async function findFirstCommit(versionFinder, form) {
 async function searchVersion(form) {
   logger.info("form = ", form);
   try {
-    const VersionFinder = require("./version_finder.js");
+    const {VersionFinder} = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
     const searchPattern = getSelectedSearchPattern();
     logger.info("searchPattern: ", searchPattern);
@@ -391,15 +384,8 @@ async function searchVersion(form) {
         logger.info("init done");
         findFirstCommit(versionFinder, form);
       })
-      .catch((err) => {
-        sendError(
-          "error:init:invalid-repo-path",
-          "Invalid repository path",
-          err
-        );
-      });
   } catch (err) {
-    sendError("error:search:invalid-repo-path", "Invalid repository path", err);
+    sendError("Failed to initialize repository", err);
   }
 }
 
@@ -419,12 +405,11 @@ ipcMain.on("open:directory", async function () {
 
 /**
  * Send error messages to the renderer process
- * @param {string} channel - The channel to send the message to.
  * @param {string} message - The error message.
  * @param {Object} error - The error object.
  */
-function sendError(channel, message, error) {
-  console.error(channel, message, error);
+function sendError(message, error) {
+  console.error(message, error);
   console.error("message: ", error.message);
   console.error("stack: ", error.stack);
   // Convert the error object into a plain object including message and stack
@@ -434,7 +419,6 @@ function sendError(channel, message, error) {
     // Include any other properties you need
   };
   mainWindow.webContents.send("error", {
-    channel,
     message,
     error: errorToSend,
   });
@@ -527,7 +511,7 @@ function getSelectedSearchPattern() {
 }
 
 // Hanlde the open:log-file event
-ipcMain.on("open:log-file", (event) => {
+ipcMain.on("open:log-file", () => {
   logger.info("Got into open:log-file");
   shell.openPath(settings.loggerOptions.logFile);
 }

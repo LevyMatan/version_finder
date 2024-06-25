@@ -1,5 +1,7 @@
 // renderer.js
 const { ipcRenderer } = require("electron");
+// import bootstrap from "bootstrap";
+const bootstrap = require("bootstrap");
 
 const form = document.getElementById("version-finder-form");
 const repositoryPathInput = document.getElementById("repo-path");
@@ -246,7 +248,7 @@ function sendOpwnDirectory() {
   ipcRenderer.send("open:directory");
 }
 
-ipcRenderer.on("error", (event, { channel, message, error }) => {
+ipcRenderer.on("error", (event, {message, error }) => {
   // Hide the spinner
   hideProcessingMessage();
 
@@ -262,7 +264,7 @@ ipcRenderer.on("error", (event, { channel, message, error }) => {
   alertDiv.innerHTML = `
       <strong>An error occurred</strong>
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      <p>${channel} :: ${message}</p>
+      <p>${message}</p>
       <div class="accordion accordion-flush" id="accordion-${uniqueId}" style="background-color: inherit;">
         <div class="accordion-item" style="background-color: inherit;">
           <h2 class="accordion-header" id="heading-${uniqueId}">

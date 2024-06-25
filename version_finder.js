@@ -5,6 +5,7 @@ const path = require("path");
 const { exec } = require("child_process");
 const util = require("util");
 const execPromise = util.promisify(exec);
+const fs = require("fs");
 
 /**
  * Represents a VersionFinder object that provides methods to interact with a git repository.
@@ -16,13 +17,32 @@ class VersionFinder {
    */
   constructor(repositoryPath = process.cwd()) {
     this.repositoryPath = path.resolve(repositoryPath);
+
+    if (!fs.existsSync(this.repositoryPath)) {
+      console.error(`The provided path "${this.repositoryPath}" does not exist.`);
+      // Handle the error appropriately. For example, you might want to throw an error or set an internal state.
+      throw new Error(`The provided path "${this.repositoryPath}" does not exist.`);
+    }
     this.git = gitP(this.repositoryPath);
     this.submodules = [];
     this.branches = [];
     this.searchPatternRegex = null;
+    this.isInitialized = false;
+    this.hasChanges = false;
   }
 
   setSearchPattern(searchPattern) {
+
+    // Validate the input is a string and not a regex
+    if (typeof searchPattern !== "string") {
+      throw new Error("The search pattern must be a string.");
+    }
+
+    // Validate the string is a valid regex
+    if (!searchPattern.startsWith("/") || searchPattern.lastIndexOf("/") === 0) {
+      throw new Error("The search pattern must be a valid regex.");
+    }
+
     console.log("searchPattern: ", searchPattern);
     const regexBody = searchPattern.slice(1, searchPattern.lastIndexOf("/"));
 
@@ -36,22 +56,12 @@ class VersionFinder {
    * Initializes the VersionFinder object by checking if the repository is valid and fetching submodule and branch information.
    * @returns {Promise<Error|null>} - A promise that resolves to null if initialization is successful, or an Error object if there is an error.
    */
-  /**
-   * Initializes the version finder by checking if the current directory is a git repository,
-   * fetching submodule information, and fetching branch information.
-   * @returns {Promise<Error>} An error object if any error occurs during initialization.
-   */
   async init() {
-    try {
-      await this.git.checkIsRepo().then((isRepo) => {
-        if (!isRepo) {
-          throw new Error("Not a git repository");
-        }
-      });
-    } catch (error) {
-      console.error(`Invalid git repository path: ${this.repositoryPath}`);
-      throw error;
-    }
+    await this.git.checkIsRepo().then((isRepo) => {
+      if (!isRepo) {
+        throw new Error(`The given path ${this.repositoryPath} is Not a git repository`);
+      }
+    });
 
     try {
       const submodules_raw = await this.git.subModule(["status"]);
@@ -66,9 +76,10 @@ class VersionFinder {
       } else {
         this.submodules = ["No submodules in Repo"];
       }
-    } catch (error) {
+    } catch (e) {
       console.error("Error fetching submodule information.");
       this.submodules = ["No submodules in Repo"];
+      throw e;
     }
 
     try {
@@ -78,10 +89,24 @@ class VersionFinder {
       );
       // Remove duplicates
       this.branches = [...new Set(this.branches)];
-    } catch (error) {
+    } catch (e) {
       console.error("Error fetching branch information.");
-      throw new Error("Error fetching branch information.");
+      throw e;
     }
+
+    // Check if repository is "clean" (no uncommitted changes)
+    const status = await this.git.status();
+    if (status.files.length > 0) {
+      console.warn(
+        "Warning: The repository has uncommitted changes. This may affect the results."
+      );
+      this.hasChanges = true;
+    }
+    else {
+      this.hasChanges = false;
+    }
+
+    this.isInitialized = true;
   }
 
   /**
@@ -89,6 +114,9 @@ class VersionFinder {
    * @returns {string[]} - An array of submodule names.
    */
   getSubmodules() {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     return this.submodules;
   }
 
@@ -97,6 +125,9 @@ class VersionFinder {
    * @returns {string[]} - An array of branch names.
    */
   getBranches() {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     return this.branches;
   }
 
@@ -106,6 +137,9 @@ class VersionFinder {
    * @returns {boolean} - true if the branch is valid, false otherwise.
    */
   isValidBranch(branch) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     return this.branches.includes(branch);
   }
 
@@ -115,6 +149,9 @@ class VersionFinder {
    * @returns {boolean} - true if the submodule is valid, false otherwise.
    */
   isValidSubmodule(submodule) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     return this.submodules.includes(submodule);
   }
 
@@ -126,26 +163,31 @@ class VersionFinder {
    * @returns {Promise<boolean>} - A promise that resolves to true if the commit SHA is valid, false otherwise.
    */
   async isValidCommitSha(commitSha, branch, submodule) {
-    try {
-      await this.git.checkout(branch);
-      await this.git.pull();
-      await this.git.subModule(["update", "--init"]);
-      if (submodule) {
-        await gitP(path.join(this.repositoryPath, submodule)).show([commitSha]);
-      } else {
-        await this.git.show([commitSha]);
-      }
-      return true;
-    } catch (error) {
-      return false;
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
     }
+    if (this.hasChanges) {
+      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+    }
+    await this.git.checkout(branch);
+    await this.git.pull();
+    await this.git.subModule(["update", "--init"]);
+    if (submodule) {
+      await gitP(path.join(this.repositoryPath, submodule)).show([commitSha]);
+    } else {
+      await this.git.show([commitSha]);
+    }
+    return true;
   }
 
   async checkAncestor(submodulePath, target_commit_hash, submodulePointer) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     let isAncestor = true;
     try {
       const command_string = `cd ${submodulePath} && git merge-base --is-ancestor ${target_commit_hash} ${submodulePointer}`;
-      const { stdout, stderr } = await execPromise(command_string);
+      const { stderr } = await execPromise(command_string);
       if (stderr) {
         isAncestor = false;
         console.error("stderr:", stderr);
@@ -167,6 +209,12 @@ class VersionFinder {
    * @returns {Promise<string>} - A promise that resolves to the first commit SHA.
    */
   async getFirstCommitSha(target_commit_hash, branch, submodule) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
+    if (this.hasChanges) {
+      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+    }
     try {
       console.log(
         "In getFirstCommitSha: target_commit_hash=",
@@ -267,6 +315,12 @@ class VersionFinder {
    * @returns {Promise<Object[]>} - A promise that resolves to an array of log objects.
    */
   async getLogs(branch, submodule = null, commit_hash = "HEAD") {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
+    if (this.hasChanges) {
+      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+    }
     try {
       console.log("branch: ", branch);
       console.log("submodule: ", submodule);
@@ -291,7 +345,7 @@ class VersionFinder {
     } catch (error) {
       console.error("Error fetching logs.");
       console.error(error);
-      return error;
+      throw error;
     }
   }
 
@@ -303,11 +357,14 @@ class VersionFinder {
    * @returns {Promise<string|null>} - A promise that resolves to the first commit SHA that contains a version, or null if no such commit is found.
    */
   async getFirstCommitWithVersion(commitSHA, branch, submodule) {
+    console.log("In getFirstCommitWithVersion");
+    console.log("commitSHA: ", commitSHA);
+    console.log("branch: ", branch);
+    console.log("submodule: ", submodule);
+    if (this.hasChanges) {
+      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+    }
     try {
-      console.log("In getFirstCommitWithVersion");
-      console.log("commitSHA: ", commitSHA);
-      console.log("branch: ", branch);
-      console.log("submodule: ", submodule);
       const logs = await this.getLogs(branch, null, commitSHA);
       console.log("logs: ", logs);
       for (const log of logs.reverse()) {
@@ -319,9 +376,9 @@ class VersionFinder {
     } catch (error) {
       console.error(error);
       console.error("Error fetching first commit with version.");
-      return new Error("Error fetching first commit with version.");
+      throw error;
     }
   }
 }
 
-module.exports = VersionFinder;
+module.exports = {VersionFinder};

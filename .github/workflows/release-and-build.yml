@@ -1,0 +1,88 @@
+name: Manual Semantic Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      created: ${{ steps.semantic_release.outputs.released }}
+      upload_url: ${{ steps.semantic_release.outputs.upload_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+            node-version: 20.14.0
+
+      - name: Install dependencies
+        id: install_dependencies
+        run: npm ci
+        continue-on-error: true
+
+      - name: Run Semantic Release
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+            branch: main  # Specify the branch to release from if different from the default
+        env:
+            GITHUB_TOKEN: ${{ secrets.REPO_ACCESS }}
+            NPM_TOKEN: "Dummy value to avoid npm error"
+            DEBUG: semantic-release:*
+
+  build-and-attach-assets:
+    needs: release
+    if: ${{ needs.release.outputs.created == 'true' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.14.0
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build Assets
+        run: |
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            npm run build-mac
+          else
+            npm run build-linux
+          fi
+      - name: Archive Linux package
+        run: |
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            tar -czvf macos-package.tar.gz -C release-builds VersionFinder-darwin-x64
+          else
+            tar -czvf linux-package.tar.gz -C release-builds VersionFinder-linux-x64
+          fi
+
+      - name: Upload Linux Assets to Release
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }} # This is the URL for uploading assets to the GitHub release
+          asset_path: linux-package.tar.gz/linux-package.tar.gz
+          asset_name: linux-package.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload macOS package to release
+        if: ${{ matrix.os == 'macos-latest' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: macos-package.tar.gz/macos-package.tar.gz
+          asset_name: macos-package.tar.gz
+          asset_content_type: application/gzip

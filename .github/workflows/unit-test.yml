@@ -11,16 +11,20 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+                    - name: Checkout code
+                      uses: actions/checkout@v4
+                      # This step checks out the code from the repository.
 
-            - name: Set up Node.js
-              uses: actions/setup-node@v4
-              with:
-                node-version: 20.14.0
+                    - name: Set up Node.js
+                      uses: actions/setup-node@v4
+                      with:
+                        node-version: 20.14.0
+                      # This step sets up the Node.js environment with the specified version.
 
-            - name: Install dependencies
-              run: npm ci
+                    - name: Install dependencies
+                      run: npm ci
+                      # This step installs the project dependencies using npm ci.
 
-            - name: Run tests
-              run: npm run test
+                    - name: Run tests
+                      run: npm run test
+                      # This step runs the tests using the npm run test command.

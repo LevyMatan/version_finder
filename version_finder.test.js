@@ -16,12 +16,12 @@ describe("VersionFinder: Constructor", () => {
   });
 
   it("should throw an error if the provided path is not a valid git repository", async () => {
-    const noRepoPath = "/Users/matanlevy";
+    const noRepoPath = "/";
     const notRepoVersionFinder = new VersionFinder(noRepoPath);
     await expect(async () => {
       await notRepoVersionFinder.init();
     }).rejects.toThrow(
-      "The given path /Users/matanlevy is Not a git repository"
+      "The given path / is Not a git repository"
     );
   });
 });
@@ -122,7 +122,8 @@ describe("VersionFinder: Initialized", () => {
   });
 
   it("should check if branch is valid", async () => {
-    const validBranch = "main";
+    const branches = await versionFinder.getBranches();
+    const validBranch = branches[0];
     const invalidBranch = "fake-branch";
     const isValidBranch = await versionFinder.isValidBranch(validBranch);
     const isInvalidBranch = await versionFinder.isValidBranch(invalidBranch);

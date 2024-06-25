@@ -28,6 +28,7 @@ class VersionFinder {
     this.branches = [];
     this.searchPatternRegex = null;
     this.isInitialized = false;
+    this.hasChanges = false;
   }
 
   setSearchPattern(searchPattern) {
@@ -86,6 +87,19 @@ class VersionFinder {
       console.error("Error fetching branch information.");
       throw e;
     }
+
+    // Check if repository is "clean" (no uncommitted changes)
+    const status = await this.git.status();
+    if (status.files.length > 0) {
+      console.warn(
+        "Warning: The repository has uncommitted changes. This may affect the results."
+      );
+      this.hasChanges = true;
+    }
+    else {
+      this.hasChanges = false;
+    }
+
     this.isInitialized = true;
   }
 
@@ -146,6 +160,9 @@ class VersionFinder {
     if (!this.isInitialized) {
       throw new Error("VersionFinder is not initialized.");
     }
+    if (this.hasChanges) {
+      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+    }
     await this.git.checkout(branch);
     await this.git.pull();
     await this.git.subModule(["update", "--init"]);
@@ -186,6 +203,9 @@ class VersionFinder {
    * @returns {Promise<string>} - A promise that resolves to the first commit SHA.
    */
   async getFirstCommitSha(target_commit_hash, branch, submodule) {
+    if (this.hasChanges) {
+      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+    }
     try {
       console.log(
         "In getFirstCommitSha: target_commit_hash=",
@@ -286,6 +306,9 @@ class VersionFinder {
    * @returns {Promise<Object[]>} - A promise that resolves to an array of log objects.
    */
   async getLogs(branch, submodule = null, commit_hash = "HEAD") {
+    if (this.hasChanges) {
+      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+    }
     try {
       console.log("branch: ", branch);
       console.log("submodule: ", submodule);
@@ -326,6 +349,9 @@ class VersionFinder {
     console.log("commitSHA: ", commitSHA);
     console.log("branch: ", branch);
     console.log("submodule: ", submodule);
+    if (this.hasChanges) {
+      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+    }
     try {
       const logs = await this.getLogs(branch, null, commitSHA);
       console.log("logs: ", logs);

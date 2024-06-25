@@ -32,6 +32,17 @@ class VersionFinder {
   }
 
   setSearchPattern(searchPattern) {
+
+    // Validate the input is a string and not a regex
+    if (typeof searchPattern !== "string") {
+      throw new Error("The search pattern must be a string.");
+    }
+
+    // Validate the string is a valid regex
+    if (!searchPattern.startsWith("/") || searchPattern.lastIndexOf("/") === 0) {
+      throw new Error("The search pattern must be a valid regex.");
+    }
+
     console.log("searchPattern: ", searchPattern);
     const regexBody = searchPattern.slice(1, searchPattern.lastIndexOf("/"));
 
@@ -203,6 +214,9 @@ class VersionFinder {
    * @returns {Promise<string>} - A promise that resolves to the first commit SHA.
    */
   async getFirstCommitSha(target_commit_hash, branch, submodule) {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     if (this.hasChanges) {
       throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
     }
@@ -306,6 +320,9 @@ class VersionFinder {
    * @returns {Promise<Object[]>} - A promise that resolves to an array of log objects.
    */
   async getLogs(branch, submodule = null, commit_hash = "HEAD") {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
     if (this.hasChanges) {
       throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
     }

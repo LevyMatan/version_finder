@@ -19,9 +19,13 @@ class VersionFinder {
     this.repositoryPath = path.resolve(repositoryPath);
 
     if (!fs.existsSync(this.repositoryPath)) {
-      console.error(`The provided path "${this.repositoryPath}" does not exist.`);
+      console.error(
+        `The provided path "${this.repositoryPath}" does not exist.`
+      );
       // Handle the error appropriately. For example, you might want to throw an error or set an internal state.
-      throw new Error(`The provided path "${this.repositoryPath}" does not exist.`);
+      throw new Error(
+        `The provided path "${this.repositoryPath}" does not exist.`
+      );
     }
     this.git = gitP(this.repositoryPath);
     this.submodules = [];
@@ -32,14 +36,16 @@ class VersionFinder {
   }
 
   setSearchPattern(searchPattern) {
-
     // Validate the input is a string and not a regex
     if (typeof searchPattern !== "string") {
       throw new Error("The search pattern must be a string.");
     }
 
     // Validate the string is a valid regex
-    if (!searchPattern.startsWith("/") || searchPattern.lastIndexOf("/") === 0) {
+    if (
+      !searchPattern.startsWith("/") ||
+      searchPattern.lastIndexOf("/") === 0
+    ) {
       throw new Error("The search pattern must be a valid regex.");
     }
 
@@ -59,7 +65,9 @@ class VersionFinder {
   async init() {
     await this.git.checkIsRepo().then((isRepo) => {
       if (!isRepo) {
-        throw new Error(`The given path ${this.repositoryPath} is Not a git repository`);
+        throw new Error(
+          `The given path ${this.repositoryPath} is Not a git repository`
+        );
       }
     });
 
@@ -101,8 +109,7 @@ class VersionFinder {
         "Warning: The repository has uncommitted changes. This may affect the results."
       );
       this.hasChanges = true;
-    }
-    else {
+    } else {
       this.hasChanges = false;
     }
 
@@ -167,7 +174,9 @@ class VersionFinder {
       throw new Error("VersionFinder is not initialized.");
     }
     if (this.hasChanges) {
-      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+      throw new Error(
+        "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+      );
     }
     await this.git.checkout(branch);
     await this.git.pull();
@@ -213,7 +222,9 @@ class VersionFinder {
       throw new Error("VersionFinder is not initialized.");
     }
     if (this.hasChanges) {
-      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+      throw new Error(
+        "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+      );
     }
     try {
       console.log(
@@ -319,7 +330,9 @@ class VersionFinder {
       throw new Error("VersionFinder is not initialized.");
     }
     if (this.hasChanges) {
-      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+      throw new Error(
+        "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+      );
     }
     try {
       console.log("branch: ", branch);
@@ -362,7 +375,9 @@ class VersionFinder {
     console.log("branch: ", branch);
     console.log("submodule: ", submodule);
     if (this.hasChanges) {
-      throw new Error("The repository has uncommitted changes. Please commit or discard the changes before proceeding.");
+      throw new Error(
+        "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+      );
     }
     try {
       const logs = await this.getLogs(branch, null, commitSHA);
@@ -381,4 +396,4 @@ class VersionFinder {
   }
 }
 
-module.exports = {VersionFinder};
+module.exports = { VersionFinder };

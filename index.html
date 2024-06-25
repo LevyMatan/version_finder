@@ -1,123 +1,131 @@
 <!-- index.html -->
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'" />
-    <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
-    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/style.css" />
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'" />
+  <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-  <body>
-    <button id="settingsButton" style="position: absolute; top: 10px; right: 10px;">
-      <i class="fas fa-cog"></i> <!-- Assuming you're using FontAwesome for icons -->
-    </button>
-    <div class="container text-center">
-      <header class="header">
-        <h1>Version Finder</h1>
-      </header>
-      <div id="spinner-modal" style="display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-        <div style="position: relative; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-          <span id="loading-message" style="display: none;">...</span>
-          <div id="spinner-container" class="spinner-border text-primary" role="status"></div>
+
+<body>
+  <button id="settingsButton" style="position: absolute; top: 10px; right: 10px;">
+    <i class="fas fa-cog"></i> <!-- Assuming you're using FontAwesome for icons -->
+  </button>
+  <div class="container text-center">
+    <header class="header">
+      <h1>Version Finder</h1>
+    </header>
+    <div id="spinner-modal"
+      style="display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+      <div style="position: relative; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <span id="loading-message" style="display: none;">...</span>
+        <div id="spinner-container" class="spinner-border text-primary" role="status"></div>
+      </div>
+    </div>
+    <div id="error-alert-placeholder"></div>
+    <form id="version-finder-form" class="needs-validation">
+      <div class="row mb-3">
+        <div class="col-sm-3">
+          <label for="repo-path" id="open-directory-btn" class="btn btn-primary repo-btn">Repo Path</label>
+        </div>
+        <div class="col-sm-8">
+          <input type="text" class="form-control" id="repo-path">
         </div>
       </div>
-      <div id="error-alert-placeholder"></div>
-      <form id="version-finder-form" class="needs-validation">
-        <div class="row mb-3">
-          <div class="col-sm-3">
-            <label for="repo-path" id="open-directory-btn" class="btn btn-primary repo-btn">Repo Path</label>
-          </div>
-          <div class="col-sm-8">
-            <input type="text" class="form-control" id="repo-path">
-          </div>
-        </div>
-        <div class="row mb-3">
-          <label for="branch-name-input" class="col-sm-3 col-form-label">Branch Name</label>
-          <div class="col-sm-8 has-validation">
-            <input class="form-control" id="branch-name-input" list="branches-list" placeholder="Type to search..." required>
-            <div class="invalid-feedback">
-              Branch name is required.
-            </div>
-          </div>
-            <datalist id="branches-list"></datalist>
-        </div>
-        <div class="row mb-3">
-          <label for="submodule-name-input" class="col-sm-3 col-form-label">Submodule Name</label>
-          <div class="col-sm-8">
-            <input type="text" class="form-control" id="submodule-name-input" list="submodules-list" ="Type to search...">
-          </div>
-            <datalist id="submodules-list"></datalist>
-        </div>
-        <div class="row mb-3">
-          <label for="commit-sha" class="col-sm-3 col-form-label">Target commit</label>
-          <div class="col-sm-8">
-            <input type="text" class="form-control" id="commit-sha" name="commit-sha" value="HEAD~1" pattern="([0-9a-fA-F]{40}|[0-9a-fA-F]{4,}|HEAD(~[0-9]+)?)" required>
-            <div class="invalid-feedback">
-              A valid commit SHA is required.
-            </div>
+      <div class="row mb-3">
+        <label for="branch-name-input" class="col-sm-3 col-form-label">Branch Name</label>
+        <div class="col-sm-8 has-validation">
+          <input class="form-control" id="branch-name-input" list="branches-list" placeholder="Type to search..."
+            required>
+          <div class="invalid-feedback">
+            Branch name is required.
           </div>
         </div>
-        <button type="submit" class="btn btn-primary extra-top-space" id="find-version">Find Version</button>
-      </form>
+        <datalist id="branches-list"></datalist>
+      </div>
+      <div class="row mb-3">
+        <label for="submodule-name-input" class="col-sm-3 col-form-label">Submodule Name</label>
+        <div class="col-sm-8">
+          <input type="text" class="form-control" id="submodule-name-input" list="submodules-list"="Type to search...">
+        </div>
+        <datalist id="submodules-list"></datalist>
+      </div>
+      <div class="row mb-3">
+        <label for="commit-sha" class="col-sm-3 col-form-label">Target commit</label>
+        <div class="col-sm-8">
+          <input type="text" class="form-control" id="commit-sha" name="commit-sha" value="HEAD~1"
+            pattern="([0-9a-fA-F]{40}|[0-9a-fA-F]{4,}|HEAD(~[0-9]+)?)" required>
+          <div class="invalid-feedback">
+            A valid commit SHA is required.
+          </div>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary extra-top-space" id="find-version">Find Version</button>
+    </form>
 
-      <!-- Modal -->
-      <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollabl">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h1 class="modal-title fs-5" id="resultModalLabel">Commit Information</h1>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Modal -->
+    <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollabl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="resultModalLabel">Commit Information</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <!-- First Commit Section -->
+            <div class="card mb-3" id="validResultsFirstCommit" style="display: none;">
+              <div class="card-body">
+                <h5 class="card-title">First Commit</h5>
+                <div class="d-flex align-items-center mb-2">
+                  <button class="btn btn-outline-secondary btn-sm me-2" type="button" id="copyButton"
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard">
+                    <i class="fas fa-clipboard"></i>
+                  </button>
+                  <span id="firstCommitSha"></span>
+                </div>
+                <label>Commit message:</label><br>
+                <p class="card-text commit-message" id="firstCommitMessage"></p>
+              </div>
             </div>
-            <div class="modal-body">
-              <!-- First Commit Section -->
-              <div class="card mb-3" id="validResultsFirstCommit" style="display: none;">
-                <div class="card-body">
-                  <h5 class="card-title">First Commit</h5>
-                  <div class="d-flex align-items-center mb-2">
-                    <button class="btn btn-outline-secondary btn-sm me-2" type="button" id="copyButton" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard">
-                      <i class="fas fa-clipboard"></i>
-                    </button>
-                    <span id="firstCommitSha"></span>
-                  </div>
-                  <label>Commit message:</label><br>
-                  <p class="card-text commit-message" id="firstCommitMessage"></p>
+
+            <!-- First Version Section -->
+            <div class="card mb-3" id="validResultsVersion" style="display: none;">
+              <div class="card-body">
+                <h5 class="card-title">First Version</h5>
+                <div class="d-flex align-items-center mb-2">
+                  <button class="btn btn-outline-secondary btn-sm me-2" type="button" id="versionCopyButton"
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard">
+                    <i class="fas fa-clipboard"></i>
+                  </button>
+                  <span id="versionCommitSha"></span>
+                </div>
+                <label>Commit message:</label><br>
+                <p class="card-text commit-message" id="versionCommitMessage"></p>
+
+                <div class="alert alert-success text-center mt-3" id="versionFoundAlert">
+                  <span id="versionInfo"></span>
                 </div>
               </div>
+            </div>
 
-              <!-- First Version Section -->
-              <div class="card mb-3" id="validResultsVersion" style="display: none;">
-                <div class="card-body">
-                  <h5 class="card-title">First Version</h5>
-                  <div class="d-flex align-items-center mb-2">
-                    <button class="btn btn-outline-secondary btn-sm me-2" type="button" id="versionCopyButton" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard">
-                      <i class="fas fa-clipboard"></i>
-                    </button>
-                    <span id="versionCommitSha"></span>
-                  </div>
-                  <label>Commit message:</label><br>
-                  <p class="card-text commit-message" id="versionCommitMessage"></p>
-
-                  <div class="alert alert-success text-center mt-3" id="versionFoundAlert">
-                    <span id="versionInfo"></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Error Message Section -->
-              <div class="alert alert-danger" id="errorMessage" style="display: none;">
-                Hey, it appears that the commit is not included in super-repo.
-              </div>
+            <!-- Error Message Section -->
+            <div class="alert alert-danger" id="errorMessage" style="display: none;">
+              Hey, it appears that the commit is not included in super-repo.
             </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
   <footer class="credits">
     <a id="linkedin_ref" href="https://www.linkedin.com/in/matan-levy-119a36173" target="_blank">by Matan Levy</a>
   </footer>
-  </body>
-  <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="renderer.js"></script>
+</body>
+<script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="renderer.js"></script>
+
 </html>

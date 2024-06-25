@@ -4,7 +4,6 @@ const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const { dialog } = require("electron");
 const fs = require("fs");
 
-
 // Global Variables:
 
 /**
@@ -22,7 +21,7 @@ let mainWindow;
 const repoStruct = {
   repoPath: "",
   repoHandler: null,
-}
+};
 
 /**
  * The logger variable is used for logging messages.
@@ -100,15 +99,18 @@ function createDefaultSearchPatternSettings() {
  * @returns {Object} The default logger settings.
  */
 function createDefaultLoggerSettings() {
-  const os = require('os');
+  const os = require("os");
   const tempDir = os.tmpdir();
-  const timeString = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
+  const timeString = new Date()
+    .toISOString()
+    .replace(/:/g, "-")
+    .replace(/\./g, "-");
   const logFilePath = `${tempDir}/version_finder_${timeString}.log`;
   const settings_logger_options = {
-    logLevel: isDevMode ? "debug": "info",
+    logLevel: isDevMode ? "debug" : "info",
     logFile: logFilePath,
     logConsole: isDevMode,
-  }
+  };
   return settings_logger_options;
 }
 
@@ -137,7 +139,11 @@ function createDefaultSettingsFile() {
  * @returns {Object} - The initialized logger object.
  */
 function initializeLogger(loggerOptions) {
-  const { addFileTransport, addConsoleTransport, logger} = require("./logger.js");
+  const {
+    addFileTransport,
+    addConsoleTransport,
+    logger,
+  } = require("./logger.js");
 
   // Initialize the logger
   logger.clear();
@@ -179,8 +185,6 @@ function initializeSettings() {
 
 initializeSettings();
 
-
-
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -212,19 +216,22 @@ app.on("window-all-closed", function () {
 });
 
 // Main IPC code
-ipcMain.on("init:repo", async(e, options) => {
+ipcMain.on("init:repo", async (e, options) => {
   logger.info("Got into init:repo");
   logger.debug("repoStruct.repoPath: ", repoStruct.repoPath);
   logger.debug("options.repoPath: ", options.repoPath);
 
   // Check if the repo was already initialized
-  if (repoStruct.repoHandler && repoStruct.repoPath && repoStruct.repoPath === options.repoPath) {
+  if (
+    repoStruct.repoHandler &&
+    repoStruct.repoPath &&
+    repoStruct.repoPath === options.repoPath
+  ) {
     logger.debug("repoStruct: ", repoStruct.repoPath);
     logger.debug("Repo already initialized");
     mainWindow.webContents.send("init:done");
     return;
-  }
-  else {
+  } else {
     const form = {
       repositoryPath: options.repoPath,
     };
@@ -241,16 +248,22 @@ ipcMain.on("search:version", (e, options) => {
 });
 
 async function initRepo({ form }) {
-
   if (!form.repositoryPath) {
     sendError("Invalid repository path", new Error("Repository path is empty"));
     return null;
   }
   if (!fs.existsSync(form.repositoryPath)) {
-    sendError("Invalid repository path", new Error("Repository path does not exist"));
+    sendError(
+      "Invalid repository path",
+      new Error("Repository path does not exist")
+    );
     return null;
   }
-  if (repoStruct.repoHandler && repoStruct.repoPath && repoStruct.repoPath == form.repositoryPath) {
+  if (
+    repoStruct.repoHandler &&
+    repoStruct.repoPath &&
+    repoStruct.repoPath == form.repositoryPath
+  ) {
     logger.info("Repo already initialized");
     logger.debug("repoStruct: ", repoStruct);
 
@@ -259,21 +272,22 @@ async function initRepo({ form }) {
   }
 
   try {
-    const {VersionFinder} = require("./version_finder.js");
+    const { VersionFinder } = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
-    await versionFinder
-      .init()
-      .then(() => {
-        logger.info("init done");
-        const branches = versionFinder.getBranches();
-        const submodules = versionFinder.getSubmodules();
-        logger.info("from initRepo: branches: ", branches);
-        logger.info("from initRepo: submodules: ", submodules);
-        mainWindow.webContents.send("init:done::updated-lists", { branches, submodules });
-        repoStruct.repoPath = form.repositoryPath;
-        repoStruct.repoHandler = versionFinder;
-        return true;
+    await versionFinder.init().then(() => {
+      logger.info("init done");
+      const branches = versionFinder.getBranches();
+      const submodules = versionFinder.getSubmodules();
+      logger.info("from initRepo: branches: ", branches);
+      logger.info("from initRepo: submodules: ", submodules);
+      mainWindow.webContents.send("init:done::updated-lists", {
+        branches,
+        submodules,
       });
+      repoStruct.repoPath = form.repositoryPath;
+      repoStruct.repoHandler = versionFinder;
+      return true;
+    });
   } catch (err) {
     sendError("Failed to initialize repository", err);
     return null;
@@ -348,7 +362,9 @@ async function findFirstCommit(versionFinder, form) {
       if (result) {
         const commit_hash = result.hash;
         const commit_message = result.message;
-        const version = result.message.match(versionFinder.searchPatternRegex)[1];
+        const version = result.message.match(
+          versionFinder.searchPatternRegex
+        )[1];
         searchResultStructure.isValidVersionCommit = true;
         searchResultStructure.shortShaVersionCommit = commit_hash;
         searchResultStructure.commitMessageVersionCommit = commit_message;
@@ -373,17 +389,15 @@ async function findFirstCommit(versionFinder, form) {
 async function searchVersion(form) {
   logger.info("form = ", form);
   try {
-    const {VersionFinder} = require("./version_finder.js");
+    const { VersionFinder } = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
     const searchPattern = getSelectedSearchPattern();
     logger.info("searchPattern: ", searchPattern);
     versionFinder.setSearchPattern(searchPattern);
-    await versionFinder
-      .init()
-      .then(() => {
-        logger.info("init done");
-        findFirstCommit(versionFinder, form);
-      })
+    await versionFinder.init().then(() => {
+      logger.info("init done");
+      findFirstCommit(versionFinder, form);
+    });
   } catch (err) {
     sendError("Failed to initialize repository", err);
   }
@@ -514,12 +528,11 @@ function getSelectedSearchPattern() {
 ipcMain.on("open:log-file", () => {
   logger.info("Got into open:log-file");
   shell.openPath(settings.loggerOptions.logFile);
-}
-);
+});
 
 ipcMain.on("update-logger-configurations", (event, { type, value }) => {
   // Check if the type is valid to avoid updating non-existing properties
-  if (['logLevel', 'logConsole', 'logFile'].includes(type)) {
+  if (["logLevel", "logConsole", "logFile"].includes(type)) {
     // Update the corresponding setting
     settings.loggerOptions[type] = value;
     // Reinitialize the logger with updated settings

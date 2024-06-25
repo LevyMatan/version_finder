@@ -1,6 +1,7 @@
 <!-- settings.html -->
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,6 +11,7 @@
   <link rel="stylesheet" href="css/style.css" />
   <title>Settings</title>
 </head>
+
 <body>
   <div data-bs-theme="dark">
     <button id="closeButton" type="button" class="btn-close" aria-label="Close"></button>
@@ -20,7 +22,8 @@
       <form id="settingsForm">
         <div class="input-group-by-matan card settings-card" id="searchPatternInputGroup">
           <strong>Version search pattern</strong>
-          <p style="font-size: 0.9em;"><em>Customize the regular expression used for identifying version numbers in commit messages. Adjust it to match the specific format used in your project's commits.</em></p>
+          <p style="font-size: 0.9em;"><em>Customize the regular expression used for identifying version numbers in
+              commit messages. Adjust it to match the specific format used in your project's commits.</em></p>
         </div>
         <div class="input-group-by-matan card settings-card" id="loggerInputGroup">
           <strong>Logging Options</strong>
@@ -33,5 +36,6 @@
 
   <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="settings.js"></script>
-  </body>
+</body>
+
 </html>

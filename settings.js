@@ -132,13 +132,11 @@ window.onload = () => {
       newPatternButtonDiv.style.display = "block";
       newPatternName.value = "";
       newPatternRegEx.value = "";
-
     });
 
     newPatternDiv.appendChild(createNewPatternButton);
     addNewPatternDiv.appendChild(newPatternDiv);
     searchPatternInputGroup.appendChild(addNewPatternDiv);
-
 
     // Manually initialize collapse components for dynamically added elements
     document.querySelectorAll(".collapse").forEach((collapseElement) => {
@@ -161,7 +159,6 @@ window.onload = () => {
   }
 
   if (settings && settings.loggerOptions) {
-
     // There are three logger options:
     // 1. Log level: input of type select from all the options available in Winston
     // 2. File to log to: path input field
@@ -187,7 +184,6 @@ window.onload = () => {
     // [checkbox] Log to console
 
     const loggerOptions = settings.loggerOptions;
-
 
     // Create a div to hold the logger options
     const loggerOptionsDiv = document.getElementById("loggerInputGroup");
@@ -217,7 +213,15 @@ window.onload = () => {
       loggerOptions.logLevel = e.target.value;
       updateLoggerConfiguration("logLevel", loggerOptions.logLevel);
     });
-    const logLevels = ["error", "warn", "info", "http", "verbose", "debug", "silly"];
+    const logLevels = [
+      "error",
+      "warn",
+      "info",
+      "http",
+      "verbose",
+      "debug",
+      "silly",
+    ];
     logLevels.forEach((level) => {
       const option = document.createElement("option");
       option.value = level;
@@ -235,7 +239,6 @@ window.onload = () => {
     logLevelDiv.appendChild(logLevelHelp);
 
     loggerOptionsDiv.appendChild(logLevelDiv);
-
 
     // logFileDiv will contain:
     // <div class="mb-3">
@@ -281,19 +284,20 @@ window.onload = () => {
     const logFileHelp = document.createElement("div");
     logFileHelp.id = "logFileHelp";
     logFileHelp.className = "form-text settings-input-helper";
-    logFileHelp.textContent = "Choose location to save log file (please provide full path).";
+    logFileHelp.textContent =
+      "Choose location to save log file (please provide full path).";
     logFileDiv.appendChild(logFileHelp);
 
     // Append the container to the loggerOptionsDiv or any other desired parent element
     loggerOptionsDiv.appendChild(logFileDiv);
 
     // Event listener to update the text input with the file name when a file is selected
-    logFileInput.addEventListener('change', function() {
-        if (this.files.length > 0) {
-            fileNameDisplay.value = this.files[0].name;
-        }
-        loggerOptions.logFile = this.files[0].path;
-        updateLoggerConfiguration("logFile", loggerOptions.logFile);
+    logFileInput.addEventListener("change", function () {
+      if (this.files.length > 0) {
+        fileNameDisplay.value = this.files[0].name;
+      }
+      loggerOptions.logFile = this.files[0].path;
+      updateLoggerConfiguration("logFile", loggerOptions.logFile);
     });
 
     // logConsoleDiv will contain:
@@ -324,11 +328,11 @@ window.onload = () => {
     // Insert the checkbox at the beginning of the label element
     logConsoleLabel.insertBefore(logConsoleInput, logConsoleLabel.firstChild);
 
-
     const logConsoleHelp = document.createElement("div");
     logConsoleHelp.id = "logConsoleHelp";
     logConsoleHelp.className = "form-text settings-input-helper";
-    logConsoleHelp.textContent = "Toggle whether to log all messages both to the file and the console.";
+    logConsoleHelp.textContent =
+      "Toggle whether to log all messages both to the file and the console.";
 
     logConsoleDiv.appendChild(logConsoleLabel); // Now the label contains the checkbox
     logConsoleDiv.appendChild(logConsoleHelp);
@@ -344,7 +348,6 @@ window.onload = () => {
       ipcRenderer.send("open:log-file", loggerOptions.logFile);
     });
     loggerOptionsDiv.appendChild(openLogFileButton);
-
   }
 };
 
@@ -358,7 +361,6 @@ settingsForm.addEventListener("submit", (e) => {
   ipcRenderer.send("save-settings", settings);
   closeButton.click();
 });
-
 
 closeButton.addEventListener("click", () => {
   ipcRenderer.send("close-settings");

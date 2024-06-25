@@ -379,7 +379,7 @@ async function findFirstCommit(versionFinder, form) {
 async function searchVersion(form) {
   logger.info("form = ", form);
   try {
-    const VersionFinder = require("./version_finder.js");
+    const {VersionFinder} = require("./version_finder.js");
     const versionFinder = new VersionFinder(form.repositoryPath);
     const searchPattern = getSelectedSearchPattern();
     logger.info("searchPattern: ", searchPattern);

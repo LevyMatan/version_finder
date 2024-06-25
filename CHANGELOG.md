@@ -1,3 +1,18 @@
+# [2.1.0](https://github.com/LevyMatan/version_finder/compare/v2.0.0...v2.1.0) (2024-06-25)
+
+
+### Bug Fixes
+
+* **main:** import the version finder class ([b1a443c](https://github.com/LevyMatan/version_finder/commit/b1a443c874690e9d1a5afbe00653bf2ef3accb17))
+
+
+### Features
+
+* Add check for uncommitted changes in VersionFinder initialization ([52a9f85](https://github.com/LevyMatan/version_finder/commit/52a9f85c01770aa3e331602dbaead4e3dadfa0c9))
+* Add validation for search pattern in VersionFinder ([44e7438](https://github.com/LevyMatan/version_finder/commit/44e7438e5d8e202b3cc1e2b674fed2a2f9638ac5))
+* **lint:** Add eslint ([e8b4920](https://github.com/LevyMatan/version_finder/commit/e8b4920b376d2b76042027b45c3ad30957743114))
+* **version-finder:** Initialize VersionFinder in the constructor to set the 'isInitialized' flag to false. This ensures that the VersionFinder object is properly initialized before any method is called that relies on its initialization state. ([27f4750](https://github.com/LevyMatan/version_finder/commit/27f475036625f65ab33feddd4578a441feadea61))
+
 # [2.0.0](https://github.com/LevyMatan/version_finder/compare/v1.1.0...v2.0.0) (2024-06-22)
 
 

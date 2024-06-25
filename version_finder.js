@@ -56,11 +56,6 @@ class VersionFinder {
    * Initializes the VersionFinder object by checking if the repository is valid and fetching submodule and branch information.
    * @returns {Promise<Error|null>} - A promise that resolves to null if initialization is successful, or an Error object if there is an error.
    */
-  /**
-   * Initializes the version finder by checking if the current directory is a git repository,
-   * fetching submodule information, and fetching branch information.
-   * @returns {Promise<Error>} An error object if any error occurs during initialization.
-   */
   async init() {
     await this.git.checkIsRepo().then((isRepo) => {
       if (!isRepo) {

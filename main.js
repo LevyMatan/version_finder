@@ -273,15 +273,9 @@ async function initRepo({ form }) {
         repoStruct.repoPath = form.repositoryPath;
         repoStruct.repoHandler = versionFinder;
         return true;
-      })
-      .catch((err) => {
-        sendError(
-          "Failed to initialize repository",
-          err
-        );
       });
   } catch (err) {
-    sendError("Invalid repository path", err);
+    sendError("Failed to initialize repository", err);
     return null;
   }
 }
@@ -390,12 +384,6 @@ async function searchVersion(form) {
         logger.info("init done");
         findFirstCommit(versionFinder, form);
       })
-      .catch((err) => {
-        sendError(
-          "Failed to initialize repository",
-          err
-        );
-      });
   } catch (err) {
     sendError("Failed to initialize repository", err);
   }

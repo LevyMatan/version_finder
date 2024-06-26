@@ -1,3 +1,10 @@
+## [2.1.4](https://github.com/LevyMatan/version_finder/compare/v2.1.3...v2.1.4) (2024-06-26)
+
+
+### Bug Fixes
+
+* **ci:** Split release-and-build workflow ([b08835d](https://github.com/LevyMatan/version_finder/commit/b08835d91a60dae5607f07fb0a570779f0974215))
+
 ## [2.1.3](https://github.com/LevyMatan/version_finder/compare/v2.1.2...v2.1.3) (2024-06-26)
 
 

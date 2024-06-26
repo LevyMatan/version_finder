@@ -1,3 +1,10 @@
+## [2.1.5](https://github.com/LevyMatan/version_finder/compare/v2.1.4...v2.1.5) (2024-06-26)
+
+
+### Bug Fixes
+
+* **ci:** adjust the upload file path ([af1a721](https://github.com/LevyMatan/version_finder/commit/af1a721906f479f5d268a48d4d5c99a3623f0dc6))
+
 ## [2.1.4](https://github.com/LevyMatan/version_finder/compare/v2.1.3...v2.1.4) (2024-06-26)
 
 

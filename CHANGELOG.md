@@ -1,3 +1,33 @@
+## [2.1.5](https://github.com/LevyMatan/version_finder/compare/v2.1.4...v2.1.5) (2024-06-26)
+
+
+### Bug Fixes
+
+* **ci:** adjust the upload file path ([af1a721](https://github.com/LevyMatan/version_finder/commit/af1a721906f479f5d268a48d4d5c99a3623f0dc6))
+
+## [2.1.4](https://github.com/LevyMatan/version_finder/compare/v2.1.3...v2.1.4) (2024-06-26)
+
+
+### Bug Fixes
+
+* **ci:** Split release-and-build workflow ([b08835d](https://github.com/LevyMatan/version_finder/commit/b08835d91a60dae5607f07fb0a570779f0974215))
+
+## [2.1.3](https://github.com/LevyMatan/version_finder/compare/v2.1.2...v2.1.3) (2024-06-26)
+
+
+### Bug Fixes
+
+* **ci:** Attach assets when a new Version commit is created ([fbd2c19](https://github.com/LevyMatan/version_finder/commit/fbd2c192ea5f031b51cf1c94230ebecc05f08abd))
+
+## [2.1.2](https://github.com/LevyMatan/version_finder/compare/v2.1.1...v2.1.2) (2024-06-26)
+
+
+### Bug Fixes
+
+* **ci:** Disable the "Release" workflow ([3f8a9b6](https://github.com/LevyMatan/version_finder/commit/3f8a9b6cc5463c5796c2f11cde05bfe89138ca5f))
+* **lint:** Add jest and bootstrap globals ([e513cae](https://github.com/LevyMatan/version_finder/commit/e513cae7da7b5d2a678b0467af6c3b4a61d49854))
+* Update VersionFinder constructor to use dynamic branch for validation ([51835c2](https://github.com/LevyMatan/version_finder/commit/51835c250598b9ec84895d1aac527288dc6f32bf))
+
 ## [2.1.1](https://github.com/LevyMatan/version_finder/compare/v2.1.0...v2.1.1) (2024-06-25)
 
 

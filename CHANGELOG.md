@@ -1,3 +1,12 @@
+## [2.1.2](https://github.com/LevyMatan/version_finder/compare/v2.1.1...v2.1.2) (2024-06-26)
+
+
+### Bug Fixes
+
+* **ci:** Disable the "Release" workflow ([3f8a9b6](https://github.com/LevyMatan/version_finder/commit/3f8a9b6cc5463c5796c2f11cde05bfe89138ca5f))
+* **lint:** Add jest and bootstrap globals ([e513cae](https://github.com/LevyMatan/version_finder/commit/e513cae7da7b5d2a678b0467af6c3b4a61d49854))
+* Update VersionFinder constructor to use dynamic branch for validation ([51835c2](https://github.com/LevyMatan/version_finder/commit/51835c250598b9ec84895d1aac527288dc6f32bf))
+
 ## [2.1.1](https://github.com/LevyMatan/version_finder/compare/v2.1.0...v2.1.1) (2024-06-25)
 
 

@@ -1,3 +1,10 @@
+## [2.1.3](https://github.com/LevyMatan/version_finder/compare/v2.1.2...v2.1.3) (2024-06-26)
+
+
+### Bug Fixes
+
+* **ci:** Attach assets when a new Version commit is created ([fbd2c19](https://github.com/LevyMatan/version_finder/commit/fbd2c192ea5f031b51cf1c94230ebecc05f08abd))
+
 ## [2.1.2](https://github.com/LevyMatan/version_finder/compare/v2.1.1...v2.1.2) (2024-06-26)
 
 

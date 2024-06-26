@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ADMIN_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,7 +33,7 @@ jobs:
         with:
             branch: main  # Specify the branch to release from if different from the default
         env:
-            GITHUB_TOKEN: ${{ secrets.REPO_ACCESS }}
+            GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
             NPM_TOKEN: "Dummy value to avoid npm error"
             DEBUG: semantic-release:*
 
@@ -69,7 +71,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
         with:
           upload_url: ${{ needs.release.outputs.upload_url }} # This is the URL for uploading assets to the GitHub release
           asset_path: linux-package.tar.gz/linux-package.tar.gz
@@ -80,7 +82,7 @@ jobs:
         if: ${{ matrix.os == 'macos-latest' }}
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: macos-package.tar.gz/macos-package.tar.gz

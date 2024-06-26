@@ -38,8 +38,7 @@ jobs:
             DEBUG: semantic-release:*
 
   build-and-attach-assets:
-    needs: release
-    if: ${{ needs.release.outputs.created == 'true' }}
+    if: ${{ github.event_name == 'push' && contains(join(github.event.commits.*.message, '\n'), 'Version:') }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -67,13 +66,28 @@ jobs:
             tar -czvf linux-package.tar.gz -C release-builds VersionFinder-linux-x64
           fi
 
+      - name: Get Latest Release
+        id: get_release
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const response = await github.rest.releases.getLatest({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            return response.data.upload_url;
+      - name: Use the Upload URL
+        run: |
+          echo "The upload URL is ${{ steps.get_release.outputs.result }}"
+
       - name: Upload Linux Assets to Release
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
         with:
-          upload_url: ${{ needs.release.outputs.upload_url }} # This is the URL for uploading assets to the GitHub release
+          upload_url: ${{ steps.get_release.outputs.result }} # This is the URL for uploading assets to the GitHub release
           asset_path: linux-package.tar.gz/linux-package.tar.gz
           asset_name: linux-package.tar.gz
           asset_content_type: application/gzip
@@ -84,7 +98,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          upload_url: ${{ steps.get_release.outputs.result }}
           asset_path: macos-package.tar.gz/macos-package.tar.gz
           asset_name: macos-package.tar.gz
           asset_content_type: application/gzip

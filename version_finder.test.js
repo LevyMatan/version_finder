@@ -152,6 +152,12 @@ describe("VersionFinder: Repo with changes", () => {
 
   });
 
+  afterEach(() => {
+    // remove the new line added to this file
+    const fs = require("fs");
+    fs.truncateSync(path.join(process.cwd(), "test.txt"), 0);
+  });
+
   it("should throw an error of uncommitted changes", async () => {
     await expect(
       versionFinderWithChanges.getLogs("master", "test.txt")

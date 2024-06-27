@@ -228,6 +228,9 @@ class VersionFinder {
       // Iterate over all submodules
       console.log("this.submodules: ", this.submodules);
       for (const submodule of this.submodules) {
+        if(submodule === "No submodules in Repo"){
+          continue;
+        }
         const submodulePath = path.join(this.repositoryPath, submodule);
         console.log("submodulePath: ", submodulePath);
         const gitRepo = gitP(submodulePath);

@@ -190,5 +190,16 @@ describe("VersionFinder: Repo with changes", () => {
     );
   });
 
+  it("should indicate the repository is dirty", async () => {
+    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    expect(isDirty).toBe(true);
+  });
+
+  it("should save repo snapshot", async () => {
+    await versionFinderWithChanges.saveRepoSnapshot();
+    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    expect(isDirty).toBe(false);
+  });
+
 
 });

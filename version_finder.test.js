@@ -143,12 +143,13 @@ describe("VersionFinder: Repo with changes", () => {
   let versionFinderWithChanges;
 
   beforeEach(async () => {
-    versionFinderWithChanges = new VersionFinder();
-    await versionFinderWithChanges.init();
-
     // append a new line to this file
     const fs = require("fs");
     fs.appendFileSync(path.join(process.cwd(), "test.txt"), "\n");
+
+    versionFinderWithChanges = new VersionFinder();
+    await versionFinderWithChanges.init();
+
   });
 
   it("should throw an error of uncommitted changes", async () => {

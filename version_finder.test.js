@@ -158,11 +158,37 @@ describe("VersionFinder: Repo with changes", () => {
     fs.writeFileSync(path.join(process.cwd(), "test.txt"), "Hello World!");
   });
 
-  it("should throw an error of uncommitted changes", async () => {
+  it("should throw an error of uncommitted changes when calling getLogs", async () => {
     await expect(
       versionFinderWithChanges.getLogs("master", "test.txt")
     ).rejects.toThrow(
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     );
   });
+
+  it("should throw an error of uncommitted changes when calling getFirstCommitSha", async () => {
+    await expect(
+      versionFinderWithChanges.getFirstCommitSha("master", "test.txt")
+    ).rejects.toThrow(
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    );
+  });
+
+  it("should throw an error of uncommitted changes when calling isValidCommitSha", async () => {
+    await expect(
+      versionFinderWithChanges.isValidCommitSha("master", "test.txt")
+    ).rejects.toThrow(
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    );
+  });
+
+  it("should throw an error of uncommitted changes when calling getFirstCommitWithVersion", async () => {
+    await expect(
+      versionFinderWithChanges.getFirstCommitWithVersion("master", "test.txt")
+    ).rejects.toThrow(
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    );
+  });
+
+
 });

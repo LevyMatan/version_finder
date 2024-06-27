@@ -201,6 +201,7 @@ function createMainWindow() {
   if (isDevMode) {
     mainWindow.webContents.openDevTools();
   }
+  mainWindow.versionFinder = null;
 }
 
 app.whenReady().then(() => {
@@ -328,6 +329,7 @@ async function findFirstCommit(versionFinder, form) {
   logger.info("Entered findFirstCommit");
   logger.info("form: ", form);
   try {
+    console.log("versionFinder: ", versionFinder);
     const firstCommitstruct = await versionFinder.getFirstCommitSha(
       form.commitSHA,
       form.branch,
@@ -344,12 +346,21 @@ async function findFirstCommit(versionFinder, form) {
     }
     logger.info("searchResultStructure: ", searchResultStructure);
   } catch (err) {
-    sendError("Invalid commit SHA", err);
+    if (
+      err.message ==
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    ) {
+      const action_button = { label: "Stash changes", action: "stash" };
+      sendWarning("Git repository has uncommitted changes.", action_button);
+    } else {
+      sendError("Invalid commit SHA", err);
+    }
     return;
   }
   // Try and get first version commit
   try {
     if (searchResultStructure.isValidFirstCommit) {
+      console.log("versionFinder: ", versionFinder);
       const result = await versionFinder.getFirstCommitWithVersion(
         searchResultStructure.shortShaFirstCommit,
         form.branch,
@@ -389,15 +400,30 @@ async function findFirstCommit(versionFinder, form) {
 async function searchVersion(form) {
   logger.info("form = ", form);
   try {
-    const { VersionFinder } = require("./version_finder.js");
-    const versionFinder = new VersionFinder(form.repositoryPath);
+    let versionFinder;
+    if (!form.repositoryPath) {
+      sendError(
+        "Invalid repository path",
+        new Error("Repository path is empty")
+      );
+      return;
+    }
+    if (repoStruct.repoHandler && repoStruct.repoPath == form.repositoryPath) {
+      logger.info("Repo already initialized");
+      versionFinder = repoStruct.repoHandler;
+    } else {
+      const { VersionFinder } = require("./version_finder.js");
+      versionFinder = new VersionFinder(form.repositoryPath);
+    }
     const searchPattern = getSelectedSearchPattern();
     logger.info("searchPattern: ", searchPattern);
     versionFinder.setSearchPattern(searchPattern);
-    await versionFinder.init().then(() => {
+    await versionFinder.init().then(async () => {
       logger.info("init done");
-      findFirstCommit(versionFinder, form);
+      repoStruct.repoHandler = versionFinder;
+      await findFirstCommit(versionFinder, form);
     });
+    await repoStruct.repoHandler.restoreRepoSnapshot();
   } catch (err) {
     sendError("Failed to initialize repository", err);
   }
@@ -435,6 +461,22 @@ function sendError(message, error) {
   mainWindow.webContents.send("error", {
     message,
     error: errorToSend,
+  });
+}
+
+function sendWarning(message, action_button) {
+  console.warn(message, action_button);
+  console.warn("label: ", action_button.label);
+  console.warn("action: ", action_button.action);
+  // Convert the error object into a plain object including message and stack
+  const actionButtonToSend = {
+    label: action_button.label,
+    action: action_button.action,
+    // Include any other properties you need
+  };
+  mainWindow.webContents.send("warning", {
+    message,
+    action_button: actionButtonToSend,
   });
 }
 
@@ -539,5 +581,16 @@ ipcMain.on("update-logger-configurations", (event, { type, value }) => {
     initializeLogger(settings.loggerOptions);
   } else {
     console.error(`Invalid logger configuration type: ${type}`);
+  }
+});
+
+ipcMain.on("stash", async () => {
+  logger.info("Got into stash");
+
+  // Check if the repo was already initialized
+  if (repoStruct.repoHandler && repoStruct.repoPath) {
+    await repoStruct.repoHandler.saveRepoSnapshot();
+    mainWindow.webContents.send("stash:done");
+    return;
   }
 });

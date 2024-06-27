@@ -231,8 +231,6 @@ ipcRenderer.on("init:done", () => {
   hideProcessingMessage();
 });
 
-
-
 ipcRenderer.on("init:error:invalid-repo-path", () => {
   branchList.disabled = submoduleList.disabled = true;
   hideProcessingMessage();
@@ -248,7 +246,7 @@ function sendOpwnDirectory() {
   ipcRenderer.send("open:directory");
 }
 
-ipcRenderer.on("error", (event, {message, error }) => {
+ipcRenderer.on("error", (event, { message, error }) => {
   // Hide the spinner
   hideProcessingMessage();
 
@@ -285,6 +283,43 @@ ipcRenderer.on("error", (event, {message, error }) => {
   const placeholder = document.getElementById("error-alert-placeholder");
   placeholder.innerHTML = ""; // Clear previous alerts if any
   placeholder.appendChild(alertDiv);
+});
+
+ipcRenderer.on("warning", (event, { message, action_button }) => {
+  console.log("Warning message received: ", message, action_button);
+  // Hide the spinner
+  hideProcessingMessage();
+
+  // Generate a unique ID for the button
+  const uniqueId = `action-button-${Date.now()}`;
+
+  // Create the alert div
+  const alertDiv = document.createElement("div");
+  alertDiv.className = "alert alert-warning alert-dismissible text-start";
+  alertDiv.role = "alert";
+
+  // Set the inner HTML of the alert with the title, message, and a "take action" button
+  alertDiv.innerHTML = `
+      <strong>Warning</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      <p>${message}</p>
+      <button id="${uniqueId}" class="btn btn-primary">${action_button.label}</button>
+  `;
+
+  // Append the alert div to the placeholder
+  const placeholder = document.getElementById("error-alert-placeholder");
+  placeholder.innerHTML = ""; // Clear previous alerts if any
+  placeholder.appendChild(alertDiv);
+
+  // Optionally, add an event listener to the "take action" button
+  const actionButton = document.getElementById(uniqueId);
+  actionButton.addEventListener("click", () => {
+    ipcRenderer.send(action_button.action);
+    // Define what happens when the "take action" button is clicked
+    console.log("Take action button clicked");
+    // Hide the alert
+    alertDiv.style.display = "none";
+  });
 });
 
 document.getElementById("version-finder-form").addEventListener(

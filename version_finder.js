@@ -33,6 +33,7 @@ class VersionFinder {
     this.searchPatternRegex = null;
     this.isInitialized = false;
     this.hasChanges = false;
+    this.snapshot = null;
   }
 
   setSearchPattern(searchPattern) {
@@ -63,6 +64,9 @@ class VersionFinder {
    * @returns {Promise<Error|null>} - A promise that resolves to null if initialization is successful, or an Error object if there is an error.
    */
   async init() {
+    if (this.isInitialized) {
+      return;
+    }
     await this.git.checkIsRepo().then((isRepo) => {
       if (!isRepo) {
         throw new Error(
@@ -160,6 +164,132 @@ class VersionFinder {
       throw new Error("VersionFinder is not initialized.");
     }
     return this.submodules.includes(submodule);
+  }
+
+  async takeRepoSnapshot(gitRepo) {
+    const snapshot = {
+      commitHash: null,
+      branch: null,
+      stashId: null,
+    };
+    const status = await gitRepo.status();
+    if (status.files.length > 0) {
+      // Stash the changes
+      const stash = await gitRepo.stash(["save", "VersionFinder snapshot"]);
+      console.log("stash: ", stash);
+      // Get the id by fetching the list of stashes
+      const stashList = await gitRepo.stash(["list"]);
+      for (const stashEntry of stashList.split("\n")) {
+        console.log("stashEntry: ", stashEntry);
+        if (stashEntry.includes("VersionFinder snapshot")) {
+          snapshot.stashId = stashEntry.match(/stash@\{0\}/)[0];
+          break;
+        }
+      }
+    } else {
+      snapshot.stashId = null;
+    }
+    let branch = await gitRepo.revparse(["--abbrev-ref", "HEAD"]);
+    if (branch === "HEAD") {
+      branch = null;
+    }
+    const commitHash = await gitRepo.revparse(["HEAD"]);
+    snapshot.commitHash = commitHash;
+    snapshot.branch = branch;
+
+    return snapshot;
+  }
+
+  async saveRepoSnapshot() {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
+    console.log("In saveRepoSnapshot");
+    if (this.hasChanges) {
+      console.log("In saveRepoSnapshot: hasChanges");
+      /**
+       * Save the current state of the repository to a snapshot.
+       * Iterate over all submodules and save the current commit hash and branch name if exists.
+       * If a submodule has uncommited changes, stash the changes and save the stash id.
+       * Do the same for the main repository.
+       */
+      const snapshot = {
+        mainRepo: {
+          commitHash: "",
+          branch: "",
+          stashId: "",
+        },
+        submodules: {},
+      };
+
+      // Iterate over all submodules
+      console.log("this.submodules: ", this.submodules);
+      for (const submodule of this.submodules) {
+        const submodulePath = path.join(this.repositoryPath, submodule);
+        console.log("submodulePath: ", submodulePath);
+        const gitRepo = gitP(submodulePath);
+        snapshot.submodules[submodule] = await this.takeRepoSnapshot(gitRepo);
+      }
+
+      // Save the state of the main repository
+      snapshot.mainRepo = await this.takeRepoSnapshot(this.git);
+
+      // Save the snapshow to this.snapshot
+      this.snapshot = snapshot;
+      this.hasChanges = false;
+
+      console.log("snapshot: ", snapshot);
+    }
+  }
+
+  async restoreRepoSnapshot() {
+    if (!this.isInitialized) {
+      throw new Error("VersionFinder is not initialized.");
+    }
+    console.log("In restoreRepoSnapshot");
+    if (this.snapshot) {
+      console.log("In restoreRepoSnapshot: snapshot");
+      console.log("snapshot: ", this.snapshot);
+      /**
+       * Restore the repository to the state saved in the snapshot.
+       * Iterate over all submodules and restore the commit hash and branch name if exists.
+       * If a submodule had uncommited changes, restore the stash.
+       * Do the same for the main repository.
+       */
+      const snapshot = this.snapshot;
+
+      // Iterate over all submodules
+      for (const submodule of this.submodules) {
+        const submodulePath = path.join(this.repositoryPath, submodule);
+        const gitRepo = gitP(submodulePath);
+        const submoduleSnapshot = snapshot.submodules[submodule];
+        if (submoduleSnapshot.branch) {
+          await gitRepo.checkout(submoduleSnapshot.branch);
+        } else {
+          await gitRepo.checkout(submoduleSnapshot.commitHash);
+        }
+        if (submoduleSnapshot.stashId) {
+          // Restore the stash
+          await gitRepo.stash(["pop", submoduleSnapshot.stashId]);
+        }
+      }
+
+      // Restore the state of the main repository
+      const mainRepoSnapshot = snapshot.mainRepo;
+      if (mainRepoSnapshot.branch) {
+        await this.git.checkout(mainRepoSnapshot.branch);
+      } else {
+        await this.git.checkout(mainRepoSnapshot.commitHash);
+      }
+      if (mainRepoSnapshot.stashId) {
+        // Restore the stash
+        await this.git.stash(["pop", mainRepoSnapshot.stashId]);
+      }
+
+      // Clear the snapshot
+      this.snapshot = null;
+      this.hasChanges = true;
+    }
   }
 
   /**

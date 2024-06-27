@@ -1,3 +1,4 @@
+const path = require("path");
 const { VersionFinder } = require("./version_finder");
 
 describe("VersionFinder: Constructor", () => {
@@ -145,16 +146,16 @@ describe("VersionFinder: Repo with changes", () => {
     versionFinderWithChanges = new VersionFinder();
     await versionFinderWithChanges.init();
 
-    // Create a new file
+    // append a new line to this file
     const fs = require("fs");
-    fs.writeFileSync("test.txt", "Hello World!");
+    fs.appendFileSync(path.join(process.cwd(), "test.txt"), "\n");
   });
 
-  it("should throw an error of unknown file", async () => {
+  it("should throw an error of uncommitted changes", async () => {
     await expect(
       versionFinderWithChanges.getLogs("master", "test.txt")
     ).rejects.toThrow(
-      "error: pathspec 'master' did not match any file(s) known to git"
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     );
   });
 });

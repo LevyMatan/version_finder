@@ -59,6 +59,18 @@ class VersionFinder {
     this.searchPatternRegex = new RegExp(regexBody, regexFlags);
     console.log("searchPatternRegex: ", this.searchPatternRegex);
   }
+
+  async isRepoDirty(gitRepo){
+    const status = await gitRepo.status(["-uno"]);
+    let isDirty = false;
+    if (status.files.length > 0) {
+      console.warn(
+        "Warning: The repository has uncommitted changes. This may affect the results."
+      );
+      isDirty = true;
+    }
+    return isDirty;
+  }
   /**
    * Initializes the VersionFinder object by checking if the repository is valid and fetching submodule and branch information.
    * @returns {Promise<Error|null>} - A promise that resolves to null if initialization is successful, or an Error object if there is an error.
@@ -107,15 +119,7 @@ class VersionFinder {
     }
 
     // Check if repository is "clean" (no uncommitted changes)
-    const status = await this.git.status();
-    if (status.files.length > 0) {
-      console.warn(
-        "Warning: The repository has uncommitted changes. This may affect the results."
-      );
-      this.hasChanges = true;
-    } else {
-      this.hasChanges = false;
-    }
+    this.hasChanges = await this.isRepoDirty(this.git);
 
     this.isInitialized = true;
   }
@@ -172,8 +176,7 @@ class VersionFinder {
       branch: null,
       stashId: null,
     };
-    const status = await gitRepo.status();
-    if (status.files.length > 0) {
+    if (await this.isRepoDirty(gitRepo)) {
       // Stash the changes
       const stash = await gitRepo.stash(["save", "VersionFinder snapshot"]);
       console.log("stash: ", stash);

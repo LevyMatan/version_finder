@@ -8,8 +8,8 @@ describe("VersionFinder: Constructor", () => {
     expect(versionFinder.repositoryPath).toBe(process.cwd());
   });
 
-  it('should throw an error if the provided path is not valid', () => {
-    const invalidPath = '/path/that/does/not/exist';
+  it("should throw an error if the provided path is not valid", () => {
+    const invalidPath = "/path/that/does/not/exist";
     expect(() => {
       new VersionFinder(invalidPath);
     }).toThrow('The provided path "/path/that/does/not/exist" does not exist.');
@@ -20,9 +20,7 @@ describe("VersionFinder: Constructor", () => {
     const notRepoVersionFinder = new VersionFinder(noRepoPath);
     await expect(async () => {
       await notRepoVersionFinder.init();
-    }).rejects.toThrow(
-      "The given path / is Not a git repository"
-    );
+    }).rejects.toThrow("The given path / is Not a git repository");
   });
 });
 
@@ -137,5 +135,26 @@ describe("VersionFinder: Initialized", () => {
       invalidSubmodule
     );
     expect(isInvalidSubmodule).toBe(false);
+  });
+});
+
+describe("VersionFinder: Repo with changes", () => {
+  let versionFinderWithChanges;
+
+  beforeEach(async () => {
+    versionFinderWithChanges = new VersionFinder();
+    await versionFinderWithChanges.init();
+
+    // Create a new file
+    const fs = require("fs");
+    fs.writeFileSync("test.txt", "Hello World!");
+  });
+
+  it("should throw an error of uncommitted changes", async () => {
+    await expect(
+      versionFinderWithChanges.getLogs("master", "test.txt")
+    ).rejects.toThrow(
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    );
   });
 });

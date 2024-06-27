@@ -1,3 +1,4 @@
+const path = require("path");
 const { VersionFinder } = require("./version_finder");
 
 describe("VersionFinder: Constructor", () => {
@@ -8,8 +9,8 @@ describe("VersionFinder: Constructor", () => {
     expect(versionFinder.repositoryPath).toBe(process.cwd());
   });
 
-  it('should throw an error if the provided path is not valid', () => {
-    const invalidPath = '/path/that/does/not/exist';
+  it("should throw an error if the provided path is not valid", () => {
+    const invalidPath = "/path/that/does/not/exist";
     expect(() => {
       new VersionFinder(invalidPath);
     }).toThrow('The provided path "/path/that/does/not/exist" does not exist.');
@@ -20,9 +21,7 @@ describe("VersionFinder: Constructor", () => {
     const notRepoVersionFinder = new VersionFinder(noRepoPath);
     await expect(async () => {
       await notRepoVersionFinder.init();
-    }).rejects.toThrow(
-      "The given path / is Not a git repository"
-    );
+    }).rejects.toThrow("The given path / is Not a git repository");
   });
 });
 
@@ -138,4 +137,78 @@ describe("VersionFinder: Initialized", () => {
     );
     expect(isInvalidSubmodule).toBe(false);
   });
+});
+
+describe("VersionFinder: Repo with changes", () => {
+  let versionFinderWithChanges;
+
+  beforeEach(async () => {
+    // append a new line to this file
+    const fs = require("fs");
+    fs.writeFileSync(path.join(process.cwd(), "test.txt"), "I am a changed file!");
+
+    versionFinderWithChanges = new VersionFinder();
+    await versionFinderWithChanges.init();
+
+  });
+
+  afterEach(() => {
+    // remove the new line added to this file
+    const fs = require("fs");
+    fs.writeFileSync(path.join(process.cwd(), "test.txt"), "Hello World!");
+  });
+
+  it("should throw an error of uncommitted changes when calling getLogs", async () => {
+    await expect(
+      versionFinderWithChanges.getLogs("master", "test.txt")
+    ).rejects.toThrow(
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    );
+  });
+
+  it("should throw an error of uncommitted changes when calling getFirstCommitSha", async () => {
+    await expect(
+      versionFinderWithChanges.getFirstCommitSha("master", "test.txt")
+    ).rejects.toThrow(
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    );
+  });
+
+  it("should throw an error of uncommitted changes when calling isValidCommitSha", async () => {
+    await expect(
+      versionFinderWithChanges.isValidCommitSha("master", "test.txt")
+    ).rejects.toThrow(
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    );
+  });
+
+  it("should throw an error of uncommitted changes when calling getFirstCommitWithVersion", async () => {
+    await expect(
+      versionFinderWithChanges.getFirstCommitWithVersion("master", "test.txt")
+    ).rejects.toThrow(
+      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+    );
+  });
+
+  it("should indicate the repository is dirty", async () => {
+    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    expect(isDirty).toBe(true);
+  });
+
+  it("should saveRepoSnapshot and indicate repo is clean", async () => {
+    await versionFinderWithChanges.saveRepoSnapshot();
+    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    expect(isDirty).toBe(false);
+  });
+
+  it("should saveRepoSnapshot and indicate repo is clean then restore", async () => {
+    await versionFinderWithChanges.saveRepoSnapshot();
+    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    expect(isDirty).toBe(false);
+    await versionFinderWithChanges.restoreRepoSnapshot();
+    const isDirtyAfterRestore = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    expect(isDirtyAfterRestore).toBe(true);
+  });
+
+
 });

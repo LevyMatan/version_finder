@@ -10,6 +10,9 @@ const fs = require("fs");
 /**
  * Represents a VersionFinder object that provides methods to interact with a git repository.
  */
+/**
+ * Represents a VersionFinder object that is used to find versions in a Git repository.
+ */
 class VersionFinder {
   /**
    * Creates a new VersionFinder object.
@@ -36,6 +39,11 @@ class VersionFinder {
     this.snapshot = null;
   }
 
+  /**
+   * Sets the search pattern for the version finder.
+   * @param {string} searchPattern - The search pattern to set.
+   * @throws {Error} If the search pattern is not a string or is not a valid regex.
+   */
   setSearchPattern(searchPattern) {
     // Validate the input is a string and not a regex
     if (typeof searchPattern !== "string") {
@@ -60,7 +68,12 @@ class VersionFinder {
     console.log("searchPatternRegex: ", this.searchPatternRegex);
   }
 
-  async isRepoDirty(gitRepo){
+  /**
+   * Checks if a Git repository is dirty (has uncommitted changes).
+   * @param {SimpleGit} gitRepo - The SimpleGit instance representing the Git repository.
+   * @returns {Promise<boolean>} - A Promise that resolves to `true` if the repository is dirty, or `false` otherwise.
+   */
+  async isRepoDirty(gitRepo) {
     const status = await gitRepo.status(["-uno"]);
     let isDirty = false;
     if (status.files.length > 0) {
@@ -71,6 +84,7 @@ class VersionFinder {
     }
     return isDirty;
   }
+
   /**
    * Initializes the VersionFinder object by checking if the repository is valid and fetching submodule and branch information.
    * @returns {Promise<Error|null>} - A promise that resolves to null if initialization is successful, or an Error object if there is an error.
@@ -170,6 +184,12 @@ class VersionFinder {
     return this.submodules.includes(submodule);
   }
 
+  /**
+   * Takes a snapshot of the given git repository.
+   *
+   * @param {GitRepo} gitRepo - The git repository object.
+   * @returns {Promise<Object>} A promise that resolves to an object containing the snapshot information.
+   */
   async takeRepoSnapshot(gitRepo) {
     const snapshot = {
       commitHash: null,
@@ -203,48 +223,65 @@ class VersionFinder {
     return snapshot;
   }
 
+  /**
+   * Saves the current state of the repository to a snapshot.
+   *
+   * @throws {Error} If VersionFinder is not initialized.
+   */
   async saveRepoSnapshot() {
     if (!this.isInitialized) {
       throw new Error("VersionFinder is not initialized.");
     }
     console.log("In saveRepoSnapshot");
-    if (this.hasChanges) {
-      console.log("In saveRepoSnapshot: hasChanges");
-      /**
-       * Save the current state of the repository to a snapshot.
-       * Iterate over all submodules and save the current commit hash and branch name if exists.
-       * If a submodule has uncommited changes, stash the changes and save the stash id.
-       * Do the same for the main repository.
-       */
-      const snapshot = {
-        mainRepo: {
-          commitHash: "",
-          branch: "",
-          stashId: "",
-        },
-        submodules: {},
-      };
-
-      // Iterate over all submodules
-      console.log("this.submodules: ", this.submodules);
-      for (const submodule of this.submodules) {
-        const submodulePath = path.join(this.repositoryPath, submodule);
-        console.log("submodulePath: ", submodulePath);
-        const gitRepo = gitP(submodulePath);
-        snapshot.submodules[submodule] = await this.takeRepoSnapshot(gitRepo);
-      }
-
-      // Save the state of the main repository
-      snapshot.mainRepo = await this.takeRepoSnapshot(this.git);
-
-      // Save the snapshow to this.snapshot
-      this.snapshot = snapshot;
-      this.hasChanges = false;
-
-      console.log("snapshot: ", snapshot);
+    if (this.snapshot) {
+      console.log("In saveRepoSnapshot: snapshot already exists");
+      return;
     }
+    /**
+     * Save the current state of the repository to a snapshot.
+     * Iterate over all submodules and save the current commit hash and branch name if exists.
+     * If a submodule has uncommitted changes, stash the changes and save the stash id.
+     * Do the same for the main repository.
+     */
+    const snapshot = {
+      mainRepo: {
+        commitHash: "",
+        branch: "",
+        stashId: "",
+      },
+      submodules: {},
+    };
+
+    // Iterate over all submodules
+    console.log("this.submodules: ", this.submodules);
+    for (const submodule of this.submodules) {
+      const submodulePath = path.join(this.repositoryPath, submodule);
+      console.log("submodulePath: ", submodulePath);
+      const gitSubmoduleRepo = gitP(submodulePath);
+      snapshot.submodules[submodule] = await this.takeRepoSnapshot(
+        gitSubmoduleRepo
+      );
+    }
+
+    // Save the state of the main repository
+    snapshot.mainRepo = await this.takeRepoSnapshot(this.git);
+
+    // Save the snapshot to this.snapshot
+    this.snapshot = snapshot;
+    this.hasChanges = false;
+
+    console.log("snapshot: ", snapshot);
   }
 
+  /**
+   * Undoes a repository snapshot by checking out the branch or commit hash and restoring the stash if applicable.
+   * @param {GitRepo} gitRepo - The Git repository object.
+   * @param {Object} snapshot - The snapshot object containing information about the snapshot.
+   * @param {string} [snapshot.branch] - The branch to check out.
+   * @param {string} [snapshot.commitHash] - The commit hash to check out.
+   * @param {string} [snapshot.stashId] - The stash ID to restore.
+   * @returns {Promise<void>} - A promise that resolves when the snapshot is undone.
+   */
   async undoRepoSnapshot(gitRepo, snapshot) {
     console.log("In undoRepoSnapshot");
     if (snapshot.branch) {
@@ -258,6 +295,13 @@ class VersionFinder {
     }
   }
 
+  /**
+   * Restores the repository to the state saved in the snapshot.
+   * Iterates over all submodules and restores the commit hash and branch name if they exist.
+   * If a submodule had uncommitted changes, restores the stash.
+   * Does the same for the main repository.
+   * @throws {Error} If VersionFinder is not initialized.
+   */
   async restoreRepoSnapshot() {
     if (!this.isInitialized) {
       throw new Error("VersionFinder is not initialized.");
@@ -308,6 +352,7 @@ class VersionFinder {
         "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
       );
     }
+    this.saveRepoSnapshot(this.git);
     await this.git.checkout(branch);
     await this.git.pull();
     await this.git.subModule(["update", "--init"]);
@@ -316,9 +361,19 @@ class VersionFinder {
     } else {
       await this.git.show([commitSha]);
     }
+    this.restoreRepoSnapshot();
     return true;
   }
 
+  /**
+   * Checks if a submodule is an ancestor of a target commit hash.
+   *
+   * @param {string} submodulePath - The path to the submodule.
+   * @param {string} target_commit_hash - The target commit hash.
+   * @param {string} submodulePointer - The submodule pointer.
+   * @returns {boolean} - Returns true if the submodule is an ancestor, false otherwise.
+   * @throws {Error} - Throws an error if VersionFinder is not initialized.
+   */
   async checkAncestor(submodulePath, target_commit_hash, submodulePointer) {
     if (!this.isInitialized) {
       throw new Error("VersionFinder is not initialized.");
@@ -357,6 +412,7 @@ class VersionFinder {
       );
     }
     try {
+      this.saveRepoSnapshot(this.git);
       console.log(
         "In getFirstCommitSha: target_commit_hash=",
         target_commit_hash,
@@ -446,6 +502,8 @@ class VersionFinder {
       console.error("Error fetching first commit SHA.");
       console.error(error);
       throw error;
+    } finally {
+      this.restoreRepoSnapshot();
     }
   }
 
@@ -465,6 +523,7 @@ class VersionFinder {
       );
     }
     try {
+      this.saveRepoSnapshot(this.git);
       console.log("branch: ", branch);
       console.log("submodule: ", submodule);
       await this.git.checkout(branch);
@@ -489,6 +548,8 @@ class VersionFinder {
       console.error("Error fetching logs.");
       console.error(error);
       throw error;
+    } finally {
+      this.restoreRepoSnapshot();
     }
   }
 

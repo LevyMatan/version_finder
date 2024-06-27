@@ -145,7 +145,7 @@ describe("VersionFinder: Repo with changes", () => {
   beforeEach(async () => {
     // append a new line to this file
     const fs = require("fs");
-    fs.appendFileSync(path.join(process.cwd(), "test.txt"), "\n");
+    fs.writeFileSync(path.join(process.cwd(), "test.txt"), "I am a changed file!");
 
     versionFinderWithChanges = new VersionFinder();
     await versionFinderWithChanges.init();
@@ -155,7 +155,7 @@ describe("VersionFinder: Repo with changes", () => {
   afterEach(() => {
     // remove the new line added to this file
     const fs = require("fs");
-    fs.truncateSync(path.join(process.cwd(), "test.txt"), 0);
+    fs.writeFileSync(path.join(process.cwd(), "test.txt"), "Hello World!");
   });
 
   it("should throw an error of uncommitted changes", async () => {

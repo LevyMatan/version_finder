@@ -107,7 +107,7 @@ class VersionFinder {
     }
 
     try {
-      let branches = await this.git.branch();
+      let branches = await this.git.branch(["-r"]);
       this.branches = branches.all.map((branch) =>
         branch.replace("origin/", "").replace("remotes/", "")
       );

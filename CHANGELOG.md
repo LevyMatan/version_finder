@@ -1,3 +1,27 @@
+# [3.0.0](https://github.com/LevyMatan/version_finder/compare/v2.1.5...v3.0.0) (2024-06-27)
+
+
+### Bug Fixes
+
+* Add test.txt file with "Hello World!" content ([a78c10a](https://github.com/LevyMatan/version_finder/commit/a78c10ae4a1baacdd73698dcc1791aba458e9e73))
+* **submodule-list:** handle empty list in renderer ([4bfb415](https://github.com/LevyMatan/version_finder/commit/4bfb415717d86347eefd68e5ef6e1bb21d079727))
+* **submodules list:** return empty list when no submodules ([16e7675](https://github.com/LevyMatan/version_finder/commit/16e7675e11705f0161d3b3847b6cce29f764428a))
+* **test:** modify an existing file instead of creating a new file ([4244c37](https://github.com/LevyMatan/version_finder/commit/4244c3760a22df27b89633fc95408db25c75f55a))
+* **test:** reorder changing files to git init ([ab00b5d](https://github.com/LevyMatan/version_finder/commit/ab00b5dd02af05da0864bc674fbcd8f28fecd6e7))
+* **test:** rewrite the file ([acbbd9b](https://github.com/LevyMatan/version_finder/commit/acbbd9bae902a6862998f436852c89639f9ad7eb))
+
+
+### Features
+
+* **core:** Add snapshot mechanisim for dirty repos ([c015bc8](https://github.com/LevyMatan/version_finder/commit/c015bc8764b61e36bd7ba89c48d76e2ec22a4350))
+
+
+### BREAKING CHANGES
+
+* **submodules list:** Instead returning a list with the value: "No submodules in Repo"
+return an empty list
+* **core:** The change introduced will stash any changes and save the current commit hash. After it finishes the operations, it restores all.
+
 ## [2.1.5](https://github.com/LevyMatan/version_finder/compare/v2.1.4...v2.1.5) (2024-06-26)
 
 

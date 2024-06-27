@@ -245,6 +245,19 @@ class VersionFinder {
     }
   }
 
+  async undoRepoSnapshot(gitRepo, snapshot) {
+    console.log("In undoRepoSnapshot");
+    if (snapshot.branch) {
+      await gitRepo.checkout(snapshot.branch);
+    } else {
+      await gitRepo.checkout(snapshot.commitHash);
+    }
+    if (snapshot.stashId) {
+      // Restore the stash
+      await gitRepo.stash(["pop", snapshot.stashId]);
+    }
+  }
+
   async restoreRepoSnapshot() {
     if (!this.isInitialized) {
       throw new Error("VersionFinder is not initialized.");
@@ -266,28 +279,12 @@ class VersionFinder {
         const submodulePath = path.join(this.repositoryPath, submodule);
         const gitRepo = gitP(submodulePath);
         const submoduleSnapshot = snapshot.submodules[submodule];
-        if (submoduleSnapshot.branch) {
-          await gitRepo.checkout(submoduleSnapshot.branch);
-        } else {
-          await gitRepo.checkout(submoduleSnapshot.commitHash);
-        }
-        if (submoduleSnapshot.stashId) {
-          // Restore the stash
-          await gitRepo.stash(["pop", submoduleSnapshot.stashId]);
-        }
+        await this.undoRepoSnapshot(gitRepo, submoduleSnapshot);
       }
 
       // Restore the state of the main repository
       const mainRepoSnapshot = snapshot.mainRepo;
-      if (mainRepoSnapshot.branch) {
-        await this.git.checkout(mainRepoSnapshot.branch);
-      } else {
-        await this.git.checkout(mainRepoSnapshot.commitHash);
-      }
-      if (mainRepoSnapshot.stashId) {
-        // Restore the stash
-        await this.git.stash(["pop", mainRepoSnapshot.stashId]);
-      }
+      await this.undoRepoSnapshot(this.git, mainRepoSnapshot);
 
       // Clear the snapshot
       this.snapshot = null;

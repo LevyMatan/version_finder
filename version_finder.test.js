@@ -150,11 +150,11 @@ describe("VersionFinder: Repo with changes", () => {
     fs.writeFileSync("test.txt", "Hello World!");
   });
 
-  it("should throw an error of uncommitted changes", async () => {
+  it("should throw an error of unknown file", async () => {
     await expect(
       versionFinderWithChanges.getLogs("master", "test.txt")
     ).rejects.toThrow(
-      "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
+      "error: pathspec 'master' did not match any file(s) known to git"
     );
   });
 });

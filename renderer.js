@@ -215,7 +215,7 @@ ipcRenderer.on("selected:directory", (event, selectedDirectoryPath) => {
 ipcRenderer.on("init:done::updated-lists", (event, args) => {
   updateList("branches-list", args.branches);
   updateList("submodules-list", args.submodules);
-  if (args.submodules[0] === "No submodules in Repo") {
+  if (args.submodules.length === 0) {
     submoduleList.disabled = true;
     submoduleList.value = "No submodules in Repository";
   }

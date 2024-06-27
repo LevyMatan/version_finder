@@ -195,10 +195,19 @@ describe("VersionFinder: Repo with changes", () => {
     expect(isDirty).toBe(true);
   });
 
-  it("should save repo snapshot", async () => {
+  it("should saveRepoSnapshot and indicate repo is clean", async () => {
     await versionFinderWithChanges.saveRepoSnapshot();
     const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
     expect(isDirty).toBe(false);
+  });
+
+  it("should saveRepoSnapshot and indicate repo is clean then restore", async () => {
+    await versionFinderWithChanges.saveRepoSnapshot();
+    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    expect(isDirty).toBe(false);
+    await versionFinderWithChanges.restoreRepoSnapshot();
+    const isDirtyAfterRestore = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    expect(isDirtyAfterRestore).toBe(true);
   });
 
 

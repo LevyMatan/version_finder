@@ -1,3 +1,15 @@
+# [3.1.0](https://github.com/LevyMatan/version_finder/compare/v3.0.0...v3.1.0) (2024-06-28)
+
+
+### Bug Fixes
+
+* Remove unused mainWindow.versionFinder property ([a1c7404](https://github.com/LevyMatan/version_finder/commit/a1c74049e0b09d1a106cf53f849fb0c6dde98d0d))
+
+
+### Features
+
+* **core:** Store repo state, if any checkout occures, the state is restored ([3f41f6b](https://github.com/LevyMatan/version_finder/commit/3f41f6bb6887bbb97d12c2e98920407828412d09))
+
 # [3.0.0](https://github.com/LevyMatan/version_finder/compare/v2.1.5...v3.0.0) (2024-06-27)
 
 

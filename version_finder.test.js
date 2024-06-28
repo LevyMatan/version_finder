@@ -160,7 +160,7 @@ describe("VersionFinder: Repo with changes", () => {
 
   it("should throw an error of uncommitted changes when calling getLogs", async () => {
     await expect(
-      versionFinderWithChanges.getLogs("master", "test.txt")
+      versionFinderWithChanges.getLogs("main")
     ).rejects.toThrow(
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     );

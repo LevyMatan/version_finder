@@ -212,7 +212,7 @@ class VersionFinder {
       branch: null,
       stashId: null,
     };
-    if (await this.isRepoDirty(gitRepo) && allow_to_stash) {
+    if ((await this.isRepoDirty(gitRepo)) && allow_to_stash) {
       // Stash the changes
       const stash = await gitRepo.stash(["save", "VersionFinder snapshot"]);
       console.log("stash: ", stash);
@@ -269,7 +269,8 @@ class VersionFinder {
       console.log("submodulePath: ", submodulePath);
       const gitSubmoduleRepo = gitP(submodulePath);
       snapshot.submodules[submodule] = await this.takeRepoSnapshot(
-        gitSubmoduleRepo, allow_to_stash
+        gitSubmoduleRepo,
+        allow_to_stash
       );
     }
 

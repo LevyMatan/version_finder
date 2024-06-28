@@ -187,7 +187,11 @@ describe("VersionFinder: Repo with changes", () => {
     const branchName = "main";
     const submoduleName = "submodule";
     await expect(
-      versionFinderWithChanges.isValidCommitSha(targetCommitHash, branchName, submoduleName)
+      versionFinderWithChanges.isValidCommitSha(
+        targetCommitHash,
+        branchName,
+        submoduleName
+      )
     ).rejects.toThrow(
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     );

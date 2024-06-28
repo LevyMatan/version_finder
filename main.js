@@ -349,7 +349,10 @@ async function findFirstCommit(versionFinder, form) {
       err.message ==
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     ) {
-      const action_button = { label: "Stash changes", action: "save-repo-state" };
+      const action_button = {
+        label: "Stash changes",
+        action: "save-repo-state",
+      };
       sendWarning("Git repository has uncommitted changes.", action_button);
     } else {
       sendError("Invalid commit SHA", err);

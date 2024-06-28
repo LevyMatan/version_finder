@@ -48,7 +48,7 @@ class VersionFinder {
     this.branches = null;
     this.searchPatternRegex = null;
     this.isInitialized = null;
-    this.hasChanges = null;
+    this.hasChanges = false;
   }
 
   /**
@@ -143,9 +143,6 @@ class VersionFinder {
       console.error("Error fetching branch information.");
       throw e;
     }
-
-    // Check if repository is "clean" (no uncommitted changes)
-    this.hasChanges = await this.isRepoDirty(this.git);
 
     // Save the repo status
     await this.saveRepoSnapshot(false);
@@ -343,7 +340,7 @@ class VersionFinder {
 
       // Clear the snapshot
       this.snapshot = null;
-      this.hasChanges = true;
+      this.hasChanges = await this.isRepoDirty(this.git);
     }
   }
 

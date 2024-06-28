@@ -39,9 +39,9 @@ class VersionFinder {
     this.snapshot = null;
   }
 
-  destructor() {
+  async destructor() {
     console.log("In destructor");
-    this.restoreRepoSnapshot();
+    await this.restoreRepoSnapshot();
     this.repositoryPath = null;
     this.git = null;
     this.submodules = null;

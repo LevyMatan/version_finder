@@ -36,14 +36,14 @@ describe("VersionFinder: Not initialized", () => {
     expect(versionFinderNotInitialized.isInitialized).toBe(false);
   });
 
-  it("should throw an error if trying to get submodules", async () => {
-    await expect(versionFinderNotInitialized.getSubmodules()).rejects.toThrow(
+  it("should throw an error if trying to get submodules", () => {
+    expect(() => versionFinderNotInitialized.getSubmodules()).toThrow(
       "VersionFinder is not initialized"
     );
   });
 
-  it("should throw an error if trying to get branches", async () => {
-    await expect(versionFinderNotInitialized.getBranches()).rejects.toThrow(
+  it("should throw an error if trying to get branches", () => {
+    expect(() => versionFinderNotInitialized.getBranches()).toThrow(
       "VersionFinder is not initialized"
     );
   });
@@ -182,8 +182,11 @@ describe("VersionFinder: Repo with changes", () => {
   });
 
   it("should throw an error of uncommitted changes when calling isValidCommitSha", async () => {
+    const targetCommitHash = "f7f3f6d";
+    const branchName = "main";
+    const submoduleName = "submodule";
     await expect(
-      versionFinderWithChanges.isValidCommitSha("master", "test.txt")
+      versionFinderWithChanges.isValidCommitSha(targetCommitHash, branchName, submoduleName)
     ).rejects.toThrow(
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     );

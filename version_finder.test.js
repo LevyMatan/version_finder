@@ -37,15 +37,15 @@ describe("VersionFinder: Not initialized", () => {
   });
 
   it("should throw an error if trying to get submodules", async () => {
-    await expect(async () => {
-      versionFinderNotInitialized.getSubmodules();
-    }).rejects.toThrow("VersionFinder is not initialized");
+    await expect(versionFinderNotInitialized.getSubmodules()).rejects.toThrow(
+      "VersionFinder is not initialized"
+    );
   });
 
   it("should throw an error if trying to get branches", async () => {
-    await expect(async () => {
-      versionFinderNotInitialized.getBranches();
-    }).rejects.toThrow("VersionFinder is not initialized");
+    await expect(versionFinderNotInitialized.getBranches()).rejects.toThrow(
+      "VersionFinder is not initialized"
+    );
   });
 
   it("should throw an error if trying to get logs", async () => {
@@ -167,12 +167,15 @@ describe("VersionFinder: Repo with changes", () => {
   });
 
   it("should throw an error of uncommitted changes when calling getFirstCommitSha", async () => {
-    await expect(async () => {
-      const targetCommitHash = "f7f3f6d";
-      const branchName = "main";
-      const submoduleName = "submodule";
-      return versionFinderWithChanges.getFirstCommitSha(targetCommitHash, branchName, submoduleName);
-    }
+    const targetCommitHash = "f7f3f6d";
+    const branchName = "main";
+    const submoduleName = "submodule";
+    await expect(
+      versionFinderWithChanges.getFirstCommitSha(
+        targetCommitHash,
+        branchName,
+        submoduleName
+      )
     ).rejects.toThrow(
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     );

@@ -362,7 +362,7 @@ class VersionFinder {
         "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
       );
     }
-    this.saveRepoSnapshot();
+    await this.saveRepoSnapshot();
     await this.git.checkout(branch);
     await this.git.pull();
     await this.git.subModule(["update", "--init"]);
@@ -371,7 +371,7 @@ class VersionFinder {
     } else {
       await this.git.show([commitSha]);
     }
-    this.restoreRepoSnapshot();
+    await this.restoreRepoSnapshot();
     return true;
   }
 
@@ -422,7 +422,7 @@ class VersionFinder {
       );
     }
     try {
-      this.saveRepoSnapshot();
+      await this.saveRepoSnapshot();
       console.log(
         "In getFirstCommitSha: target_commit_hash=",
         target_commit_hash,
@@ -513,7 +513,7 @@ class VersionFinder {
       console.error(error);
       throw error;
     } finally {
-      this.restoreRepoSnapshot();
+      await this.restoreRepoSnapshot();
     }
   }
 
@@ -533,7 +533,7 @@ class VersionFinder {
       );
     }
     try {
-      this.saveRepoSnapshot();
+      await this.saveRepoSnapshot();
       console.log("branch: ", branch);
       console.log("submodule: ", submodule);
       await this.git.checkout(branch);
@@ -559,7 +559,7 @@ class VersionFinder {
       console.error(error);
       throw error;
     } finally {
-      this.restoreRepoSnapshot();
+      await this.restoreRepoSnapshot();
     }
   }
 

@@ -145,11 +145,13 @@ describe("VersionFinder: Repo with changes", () => {
   beforeEach(async () => {
     // append a new line to this file
     const fs = require("fs");
-    fs.writeFileSync(path.join(process.cwd(), "test.txt"), "I am a changed file!");
+    fs.writeFileSync(
+      path.join(process.cwd(), "test.txt"),
+      "I am a changed file!"
+    );
 
     versionFinderWithChanges = new VersionFinder();
     await versionFinderWithChanges.init();
-
   });
 
   afterEach(() => {
@@ -159,16 +161,18 @@ describe("VersionFinder: Repo with changes", () => {
   });
 
   it("should throw an error of uncommitted changes when calling getLogs", async () => {
-    await expect(
-      versionFinderWithChanges.getLogs("main")
-    ).rejects.toThrow(
+    await expect(versionFinderWithChanges.getLogs("main")).rejects.toThrow(
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     );
   });
 
   it("should throw an error of uncommitted changes when calling getFirstCommitSha", async () => {
-    await expect(
-      versionFinderWithChanges.getFirstCommitSha("master", "test.txt")
+    await expect(async () => {
+      const targetCommitHash = "f7f3f6d";
+      const branchName = "main";
+      const submoduleName = "submodule";
+      return versionFinderWithChanges.getFirstCommitSha(targetCommitHash, branchName, submoduleName);
+    }
     ).rejects.toThrow(
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     );
@@ -191,24 +195,30 @@ describe("VersionFinder: Repo with changes", () => {
   });
 
   it("should indicate the repository is dirty", async () => {
-    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    const isDirty = await versionFinderWithChanges.isRepoDirty(
+      versionFinderWithChanges.git
+    );
     expect(isDirty).toBe(true);
   });
 
   it("should saveRepoSnapshot and indicate repo is clean", async () => {
     await versionFinderWithChanges.saveRepoSnapshot();
-    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    const isDirty = await versionFinderWithChanges.isRepoDirty(
+      versionFinderWithChanges.git
+    );
     expect(isDirty).toBe(false);
   });
 
   it("should saveRepoSnapshot and indicate repo is clean then restore", async () => {
     await versionFinderWithChanges.saveRepoSnapshot();
-    const isDirty = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    const isDirty = await versionFinderWithChanges.isRepoDirty(
+      versionFinderWithChanges.git
+    );
     expect(isDirty).toBe(false);
     await versionFinderWithChanges.restoreRepoSnapshot();
-    const isDirtyAfterRestore = await versionFinderWithChanges.isRepoDirty(versionFinderWithChanges.git);
+    const isDirtyAfterRestore = await versionFinderWithChanges.isRepoDirty(
+      versionFinderWithChanges.git
+    );
     expect(isDirtyAfterRestore).toBe(true);
   });
-
-
 });

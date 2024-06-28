@@ -201,7 +201,6 @@ function createMainWindow() {
   if (isDevMode) {
     mainWindow.webContents.openDevTools();
   }
-  mainWindow.versionFinder = null;
 }
 
 app.whenReady().then(() => {
@@ -585,7 +584,7 @@ ipcMain.on("update-logger-configurations", (event, { type, value }) => {
 });
 
 ipcMain.on("save-repo-state", async () => {
-  logger.info("Got into stash");
+  logger.info("save-repo-state");
 
   // Check if the repo was already initialized
   if (repoStruct.repoHandler && repoStruct.repoPath) {

@@ -237,7 +237,6 @@ ipcMain.on("init:repo", async (e, options) => {
     };
     logger.info(form);
     await initRepo({ form });
-    logger.debug("repoStruct.repoHandler: ", repoStruct.repoHandler);
   }
 });
 

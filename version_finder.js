@@ -279,7 +279,7 @@ class VersionFinder {
 
     // Save the snapshot to this.snapshot
     this.snapshot = snapshot;
-    this.hasChanges = this.isRepoDirty(this.git);
+    this.hasChanges = await this.isRepoDirty(this.git);
 
     console.log("snapshot: ", snapshot);
   }

@@ -6,14 +6,18 @@ const logFormat = printf(
     // Initialize the return string with the timestamp, level, and message
     let return_string = `${timestamp} [${level}]: ${message}`;
 
-    // Check if there are additional arguments (splat) and format them
-    if (splat) {
-      const additionalData = splat
-        .map((data) =>
-          typeof data === "object" ? JSON.stringify(data, null, 2) : data
-        )
-        .join(" ");
-      return_string += ` ${additionalData}`;
+    try {
+      // Check if there are additional arguments (splat) and format them
+      if (splat) {
+        const additionalData = splat
+          .map((data) =>
+            typeof data === "object" ? JSON.stringify(data, null, 2) : data
+          )
+          .join(" ");
+        return_string += ` ${additionalData}`;
+      }
+    } catch (error) {
+      console.error("Error parsing additional data: ", error);
     }
 
     return return_string;

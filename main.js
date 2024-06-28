@@ -201,7 +201,6 @@ function createMainWindow() {
   if (isDevMode) {
     mainWindow.webContents.openDevTools();
   }
-  mainWindow.versionFinder = null;
 }
 
 app.whenReady().then(() => {
@@ -237,8 +236,7 @@ ipcMain.on("init:repo", async (e, options) => {
       repositoryPath: options.repoPath,
     };
     logger.info(form);
-    initRepo({ form });
-    logger.debug("repoStruct.repoHandler: ", repoStruct.repoHandler);
+    await initRepo({ form });
   }
 });
 
@@ -350,7 +348,10 @@ async function findFirstCommit(versionFinder, form) {
       err.message ==
       "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
     ) {
-      const action_button = { label: "Stash changes", action: "stash" };
+      const action_button = {
+        label: "Stash changes",
+        action: "save-repo-state",
+      };
       sendWarning("Git repository has uncommitted changes.", action_button);
     } else {
       sendError("Invalid commit SHA", err);
@@ -584,13 +585,13 @@ ipcMain.on("update-logger-configurations", (event, { type, value }) => {
   }
 });
 
-ipcMain.on("stash", async () => {
-  logger.info("Got into stash");
+ipcMain.on("save-repo-state", async () => {
+  logger.info("save-repo-state");
 
   // Check if the repo was already initialized
   if (repoStruct.repoHandler && repoStruct.repoPath) {
     await repoStruct.repoHandler.saveRepoSnapshot();
-    mainWindow.webContents.send("stash:done");
+    mainWindow.webContents.send("save-repo-state:done");
     return;
   }
 });

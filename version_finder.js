@@ -39,6 +39,18 @@ class VersionFinder {
     this.snapshot = null;
   }
 
+  destructor() {
+    console.log("In destructor");
+    this.restoreRepoSnapshot();
+    this.repositoryPath = null;
+    this.git = null;
+    this.submodules = null;
+    this.branches = null;
+    this.searchPatternRegex = null;
+    this.isInitialized = null;
+    this.hasChanges = null;
+  }
+
   /**
    * Sets the search pattern for the version finder.
    * @param {string} searchPattern - The search pattern to set.
@@ -135,6 +147,10 @@ class VersionFinder {
     // Check if repository is "clean" (no uncommitted changes)
     this.hasChanges = await this.isRepoDirty(this.git);
 
+    // Save the repo status
+    await this.saveRepoSnapshot(false);
+
+    // Set the initialized flag
     this.isInitialized = true;
   }
 
@@ -190,13 +206,13 @@ class VersionFinder {
    * @param {GitRepo} gitRepo - The git repository object.
    * @returns {Promise<Object>} A promise that resolves to an object containing the snapshot information.
    */
-  async takeRepoSnapshot(gitRepo) {
+  async takeRepoSnapshot(gitRepo, allow_to_stash = true) {
     const snapshot = {
       commitHash: null,
       branch: null,
       stashId: null,
     };
-    if (await this.isRepoDirty(gitRepo)) {
+    if (await this.isRepoDirty(gitRepo) && allow_to_stash) {
       // Stash the changes
       const stash = await gitRepo.stash(["save", "VersionFinder snapshot"]);
       console.log("stash: ", stash);
@@ -228,22 +244,16 @@ class VersionFinder {
    *
    * @throws {Error} If VersionFinder is not initialized.
    */
-  async saveRepoSnapshot() {
-    if (!this.isInitialized) {
-      throw new Error("VersionFinder is not initialized.");
-    }
+  async saveRepoSnapshot(allow_to_stash = true) {
     console.log("In saveRepoSnapshot");
-    if (this.snapshot) {
+    if (this.snapshot && this.snapshot.isAllowedToStash === true) {
       console.log("In saveRepoSnapshot: snapshot already exists");
       return;
     }
-    /**
-     * Save the current state of the repository to a snapshot.
-     * Iterate over all submodules and save the current commit hash and branch name if exists.
-     * If a submodule has uncommitted changes, stash the changes and save the stash id.
-     * Do the same for the main repository.
-     */
+
+    // Create a snapshot object
     const snapshot = {
+      isAllowedToStash: allow_to_stash,
       mainRepo: {
         commitHash: "",
         branch: "",
@@ -259,12 +269,12 @@ class VersionFinder {
       console.log("submodulePath: ", submodulePath);
       const gitSubmoduleRepo = gitP(submodulePath);
       snapshot.submodules[submodule] = await this.takeRepoSnapshot(
-        gitSubmoduleRepo
+        gitSubmoduleRepo, allow_to_stash
       );
     }
 
     // Save the state of the main repository
-    snapshot.mainRepo = await this.takeRepoSnapshot(this.git);
+    snapshot.mainRepo = await this.takeRepoSnapshot(this.git, allow_to_stash);
 
     // Save the snapshot to this.snapshot
     this.snapshot = snapshot;
@@ -352,7 +362,7 @@ class VersionFinder {
         "The repository has uncommitted changes. Please commit or discard the changes before proceeding."
       );
     }
-    this.saveRepoSnapshot(this.git);
+    this.saveRepoSnapshot();
     await this.git.checkout(branch);
     await this.git.pull();
     await this.git.subModule(["update", "--init"]);
@@ -412,7 +422,7 @@ class VersionFinder {
       );
     }
     try {
-      this.saveRepoSnapshot(this.git);
+      this.saveRepoSnapshot();
       console.log(
         "In getFirstCommitSha: target_commit_hash=",
         target_commit_hash,
@@ -523,7 +533,7 @@ class VersionFinder {
       );
     }
     try {
-      this.saveRepoSnapshot(this.git);
+      this.saveRepoSnapshot();
       console.log("branch: ", branch);
       console.log("submodule: ", submodule);
       await this.git.checkout(branch);

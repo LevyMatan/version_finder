@@ -1,3 +1,10 @@
+# [3.2.0](https://github.com/LevyMatan/version_finder/compare/v3.1.0...v3.2.0) (2024-06-30)
+
+
+### Features
+
+* Update icons for macOS and Linux platforms ([f899d0b](https://github.com/LevyMatan/version_finder/commit/f899d0b527e64296199270c66a852374062c0a66))
+
 # [3.1.0](https://github.com/LevyMatan/version_finder/compare/v3.0.0...v3.1.0) (2024-06-28)
 
 

@@ -1,5 +1,7 @@
 # Version Finder
 
+![App Logo](assets/icons/version-finder-iconset/icon.iconset/icon_256x256.png)
+
 The Version Finder is a tool designed to help developers determine the earliest version (commit or tag) in which a specific commit from a submodule was introduced in a Git project. It’s particularly useful when working with projects that use submodules and need to track the history of submodule changes.
 
 There are two flavors for the Version Finder tool:

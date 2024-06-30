@@ -4,14 +4,17 @@
   "description": "Find the first version including a specific commit in a Git Repository with multiply submodules.",
   "main": "main.js",
   "scripts": {
-    "start": "electron --inspect .",
+    "start": "electron-forge start",
     "dev": "NODE_ENV=development nodemon --exec electron .",
     "docs": "jsdoc -r .",
     "build-mac": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=./assets/icons/version-finder-icon.icns --out=release-builds",
     "build-linux": "electron-packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=./assets/icons/version-finder-iconset/icon.iconset/icon_512x512.png --out=release-builds",
     "test": "jest",
     "semantic-release": "semantic-release",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prepackage": "rm -rf out",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "build": {
     "appId": "com.matanlevy.version_finder",
@@ -26,7 +29,14 @@
   "author": "Matan Levy",
   "license": "MIT",
   "devDependencies": {
-    "@electron/packager": "^18.3.3",
+    "@electron-forge/cli": "^7.4.0",
+    "@electron-forge/maker-deb": "^7.4.0",
+    "@electron-forge/maker-rpm": "^7.4.0",
+    "@electron-forge/maker-squirrel": "^7.4.0",
+    "@electron-forge/maker-zip": "^7.4.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.4.0",
+    "@electron-forge/plugin-fuses": "^7.4.0",
+    "@electron/fuses": "^1.8.0",
     "@eslint/js": "^9.5.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
@@ -43,6 +53,7 @@
     "@fortawesome/fontawesome-free": "^6.5.2",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
+    "electron-squirrel-startup": "^1.0.1",
     "simple-git": "^3.24.0",
     "winston": "^3.13.0"
   },

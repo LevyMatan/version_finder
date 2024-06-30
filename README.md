@@ -74,4 +74,5 @@ The Electron app provides a graphical user interface (GUI) for the Version Finde
 
 ### Installation
 
-To install the Electron app:
+Download the latest version of the app from the [Releases](https://github.com/LevyMatan/version_finder/releases) page.
+Please note that the app is only available for macOS and Linux.

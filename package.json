@@ -1,14 +1,14 @@
 {
   "name": "version_finder",
-  "version": "0.0.0-development",
-  "description": "App to assist developer find the first version including a specific commit in a Git Repository with multiply submodules.",
+  "version": "3.2.1",
+  "description": "Find the first version including a specific commit in a Git Repository with multiply submodules.",
   "main": "main.js",
   "scripts": {
     "start": "electron --inspect .",
     "dev": "NODE_ENV=development nodemon --exec electron .",
     "docs": "jsdoc -r .",
     "build-mac": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=./assets/icons/version-finder-icon.icns --out=release-builds",
-    "build-linux": "electron/packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=./assets/icons/version-finder-iconset/icon.iconset/Icon --out=release-builds",
+    "build-linux": "electron-packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=./assets/icons/version-finder-iconset/icon.iconset/icon_512x512.png --out=release-builds",
     "test": "jest",
     "semantic-release": "semantic-release",
     "lint": "eslint ."

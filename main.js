@@ -193,7 +193,7 @@ function createMainWindow() {
       nodeIntegration: true,
       contextIsolation: false,
     },
-    icon: path.join(__dirname, "icon-jinny.icns"),
+    icon: path.join(__dirname, "version-finder-icon.icns"),
   });
 
   // Open the DevTools when the app is started

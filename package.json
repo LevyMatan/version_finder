@@ -7,8 +7,8 @@
     "start": "electron --inspect .",
     "dev": "NODE_ENV=development nodemon --exec electron .",
     "docs": "jsdoc -r .",
-    "build-mac": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=./assets/icons/icon-jinny.icns --out=release-builds --prune=true --asar",
-    "build-linux": "electron-packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=./assets/icons/ic_launcher.png --out=release-builds --prune=true --asar",
+    "build-mac": "electron-packager . VersionFinder --platform=darwin --arch=x64 --overwrite --icon=./assets/icons/version-finder-icon.icns --out=release-builds",
+    "build-linux": "electron/packager . VersionFinder --platform=linux --arch=x64 --overwrite --icon=./assets/icons/version-finder-iconset/icon.iconset/Icon --out=release-builds",
     "test": "jest",
     "semantic-release": "semantic-release",
     "lint": "eslint ."
@@ -17,21 +17,21 @@
     "appId": "com.matanlevy.version_finder",
     "productName": "Version Finder",
     "mac": {
-      "icon": "/Users/matanlevy/GitHub/version_finder/assets/icons/icon-jinny.icns"
+      "icon": "assets/icons/version-finder-icon.icns"
     },
     "linux": {
-      "icon": "/Users/matanlevy/GitHub/version_finder/assets/icons/ic_launcher.png"
+      "icon": "assets/icons/version-finder-iconset/icon.iconset/Icon"
     }
   },
   "author": "Matan Levy",
   "license": "MIT",
   "devDependencies": {
+    "@electron/packager": "^18.3.3",
     "@eslint/js": "^9.5.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^10.0.6",
     "electron": "^30.0.9",
-    "electron-packager": "^17.1.2",
     "eslint": "^9.5.0",
     "globals": "^15.6.0",
     "jest": "^29.7.0",
@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.5.2",
+    "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
     "simple-git": "^3.24.0",
     "winston": "^3.13.0"

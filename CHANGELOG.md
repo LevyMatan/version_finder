@@ -1,3 +1,11 @@
+## [3.2.1](https://github.com/LevyMatan/version_finder/compare/v3.2.0...v3.2.1) (2024-06-30)
+
+
+### Bug Fixes
+
+* **ci:** When a single platform build fails, continue with others. ([49012d5](https://github.com/LevyMatan/version_finder/commit/49012d54c003942abdb9c18a90db4d74bc0fd601))
+* linux packaging command ([d75c076](https://github.com/LevyMatan/version_finder/commit/d75c0764d56a5ef2570d442ef08e43dd4a4db4d8))
+
 # [3.2.0](https://github.com/LevyMatan/version_finder/compare/v3.1.0...v3.2.0) (2024-06-30)
 
 

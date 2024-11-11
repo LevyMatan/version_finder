@@ -36,8 +36,8 @@ class GitRepositoryNotClean(GitError):
 class VersionFinder:
     """A class to handle git repository operations and version finding."""
 
-    def __init__(self, 
-                 path: Optional[str] = None, 
+    def __init__(self,
+                 path: Optional[str] = None,
                  config: Optional[GitConfig] = None,
                  logger: Optional[LoggerProtocol] = None) -> None:
         """
@@ -53,7 +53,7 @@ class VersionFinder:
         self.submodules: List[str] = []
         self.branches: List[str] = []
         self.logger = logger or NullLogger()  # Use NullLogger if no logger provided
-        
+
         self.__validate_repository()
         self.__load_repository_info()
 
@@ -65,7 +65,7 @@ class VersionFinder:
         except GitCommandError as e:
             # Convert GitCommandError to InvalidGitRepository
             raise InvalidGitRepository(f"Path {self.repository_path} is not a valid git repository: {str(e)}") from e
-            
+
         if not self.__is_clean_git_repo():
             raise GitRepositoryNotClean("Repository has uncommitted changes")
 
@@ -116,6 +116,7 @@ class VersionFinder:
         """Load git branches information."""
         try:
             output = self.__execute_git_command(["branch", "-r"])
+            self.logger.debug(f"Loaded branches output: {output}")
             self.branches = [
                 branch.strip().split('/')[-1]
                 for branch in output.decode("utf-8").splitlines()
@@ -162,12 +163,12 @@ class VersionFinder:
         try:
             self.__execute_git_command(["checkout", branch])
             self.__execute_git_command(["pull", "origin", branch])
-            
+
             if self.config.parallel_submodule_fetch and self.submodules:
                 self.__update_submodules_parallel()
             else:
                 self.__execute_git_command(["submodule", "update", "--init", "--recursive"])
-                
+
         except GitCommandError as e:
             self.logger.error(f"Failed to update repository: {e}")
             raise
@@ -184,7 +185,7 @@ class VersionFinder:
         with ThreadPoolExecutor() as executor:
             # Submit all submodule update tasks
             futures = [executor.submit(update_submodule, submodule) for submodule in self.submodules]
-            
+
             # Wait for all tasks to complete
             for future in futures:
                 future.result(timeout=self.config.timeout)
@@ -220,4 +221,3 @@ class VersionFinder:
         except GitCommandError as e:
             self.logger.error(f"Failed to get commit info for {commit_sha}: {e}")
             raise
-

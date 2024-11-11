@@ -1,11 +1,10 @@
 # version_finder/__main__.py
 import argparse
 import logging
-import os
 import subprocess
 import sys
 import shutil
-from typing import Optional, List
+from typing import List
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 
@@ -19,7 +18,7 @@ def verify_git_dependency(logger: LoggerProtocol) -> None:
     Verify that git is installed and accessible.
     """
     git_path = shutil.which('git')
-    
+
     if git_path is None:
         logger.error("""
 Git is not found in your system PATH. Please ensure that:
@@ -33,13 +32,13 @@ After installing:
 2. Verify installation with: git --version
 """)
         sys.exit(1)
-    
+
     try:
-        subprocess.run([git_path, "--version"], 
-                      check=True, 
-                      stdout=subprocess.PIPE, 
+        subprocess.run([git_path, "--version"],
+                      check=True,
+                      stdout=subprocess.PIPE,
                       stderr=subprocess.PIPE)
-        
+
     except subprocess.CalledProcessError as e:
         logger.error(f"""
 Git was found at {git_path} but failed to execute.
@@ -67,25 +66,25 @@ Examples:
   %(prog)s --timeout 60                     # Set git operation timeout to 60 seconds
   %(prog)s --retries 3                      # Set number of retries for git operations
 """)
-    
-    parser.add_argument("-p", "--path", 
+
+    parser.add_argument("-p", "--path",
                        help="Repository path (defaults to current directory)")
-    
-    parser.add_argument("-v", "--verbose", 
-                       action="store_true", 
+
+    parser.add_argument("-v", "--verbose",
+                       action="store_true",
                        help="Enable verbose output")
-    
-    parser.add_argument("--timeout", 
-                       type=int, 
-                       default=30, 
+
+    parser.add_argument("--timeout",
+                       type=int,
+                       default=30,
                        help="Git operation timeout in seconds (default: 30)")
-    
-    parser.add_argument("--retries", 
-                       type=int, 
-                       default=0, 
+
+    parser.add_argument("--retries",
+                       type=int,
+                       default=0,
                        help="Number of retries for git operations (default: 0)")
-    
-    parser.add_argument('--version', 
+
+    parser.add_argument('--version',
                        action='version',
                        version=f'%(prog)s {__version__}',
                        help="Show program's version number and exit")
@@ -105,33 +104,33 @@ Examples:
 def get_branch_selection(branches: List[str], logger: LoggerProtocol) -> str:
     """
     Get branch selection from user with auto-completion.
-    
+
     Args:
         branches: List of available branches
         logger: Logger instance
-    
+
     Returns:
         Selected branch name
     """
     branch_completer = WordCompleter(branches, ignore_case=True)
-    
+
     while True:
         try:
-            logger.info("\nAvailable branches:")
+            logger.debug("\nAvailable branches:")
             for branch in branches:
-                logger.info(f"  - {branch}")
-            
+                logger.debug(f"  - {branch}")
+
             branch = prompt(
                 "\nEnter branch name (Tab for completion): ",
                 completer=branch_completer,
                 complete_while_typing=True
             ).strip()
-            
+
             if branch in branches:
                 return branch
-            
+
             logger.error("Invalid branch selected")
-            
+
         except (KeyboardInterrupt, EOFError):
             logger.info("\nOperation cancelled by user")
             sys.exit(0)
@@ -140,11 +139,11 @@ def main() -> int:
     """Main entry point for the version finder CLI."""
     # Parse arguments
     args = parse_arguments()
-    
+
     # Setup logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logger = setup_logger(__name__, level=log_level)
-    
+
     logger.debug("Starting Version Finder")
     logger.debug(f"Arguments: {args}")
 
@@ -177,30 +176,6 @@ def main() -> int:
         logger.info("\nSelect first branch for comparison:")
         branch1 = get_branch_selection(branches, logger)
         logger.info(f"Selected first branch: {branch1}")
-        
-        logger.info("\nSelect second branch for comparison:")
-        branch2 = get_branch_selection(branches, logger)
-        logger.info(f"Selected second branch: {branch2}")
-
-        # Compare versions between branches
-        logger.info("\nComparing versions between branches...")
-        comparison = finder.compare_versions(branch1, branch2)
-        
-        # Display results
-        logger.info("\nVersion comparison results:")
-        differences_found = False
-        
-        for file_path, (ver1, ver2) in comparison.items():
-            if ver1 != ver2:
-                differences_found = True
-                logger.info(f"\nFile: {file_path}")
-                logger.info(f"  {branch1}: {ver1 or 'Not found'}")
-                logger.info(f"  {branch2}: {ver2 or 'Not found'}")
-        
-        if not differences_found:
-            logger.info("No version differences found between branches")
-
-        return 0
 
     except GitError as e:
         logger.error(f"Git error: {str(e)}")

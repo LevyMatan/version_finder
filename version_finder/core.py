@@ -122,7 +122,7 @@ class VersionFinder:
                 for branch in output.decode("utf-8").splitlines()
                 if "->" not in branch and "*" not in branch
             ]
-            self.branches = list(set(self.branches))
+            self.branches = list(set(self.branches)).sort()
             self.logger.debug(f"Loaded branches: {self.branches}")
         except GitCommandError as e:
             self.logger.error(f"Failed to load branches: {e}")

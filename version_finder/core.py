@@ -120,7 +120,7 @@ class VersionFinder:
             self.branches = [
                 branch.strip().replace('remotes/origin/', '')
                 for branch in output.decode("utf-8").splitlines()
-                if "->" not in branch or "*" not in branch
+                if "->" not in branch and "*" not in branch
             ]
             self.branches = list(set(self.branches))
             self.logger.debug(f"Loaded branches: {self.branches}")

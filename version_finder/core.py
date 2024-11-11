@@ -115,7 +115,7 @@ class VersionFinder:
     def __load_branches(self) -> None:
         """Load git branches information."""
         try:
-            output = self.__execute_git_command(["branch", "-r"])
+            output = self.__execute_git_command(["branch", "-a"])
             self.logger.debug(f"Loaded branches output: {output}")
             self.branches = [
                 branch.strip().replace('origin/', '')

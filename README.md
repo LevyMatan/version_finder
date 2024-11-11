@@ -1,78 +1,96 @@
+
 # Version Finder
 
-![App Logo](assets/icons/version-finder-iconset/icon.iconset/icon_256x256.png)
+Version Finder is a command-line utility for finding and comparing versions in Git repositories. It provides an easy way to manage and analyze version information across multiple branches and submodules.
 
-The Version Finder is a tool designed to help developers determine the earliest version (commit or tag) in which a specific commit from a submodule was introduced in a Git project. It’s particularly useful when working with projects that use submodules and need to track the history of submodule changes.
+## Installation
 
-There are two flavors for the Version Finder tool:
+To install Version Finder, follow these steps:
 
-- [version_finder.py](version_finder.py): A command-line tool that fetches information about submodules and branches from the main project repository.
-- Electron based app: A graphical user interface (GUI) version of the tool that provides a more user-friendly experience.
+1. Ensure you have Python 3.6 or higher installed on your system.
+2. Clone the repository:
+
+   ```bash
+   git clone https://github.com/yourusername/version_finder.git
+   cd version_finder
+   ```
+
+3. Install the package using pip:
+
+   ```bash
+   pip install .
+   ```
+
+## Usage
+
+After installation, you can use the `version_finder` command-line tool. Here are some example commands:
+
+```bash
+version_finder -p /path/to/repo                 # Find versions in specified repository
+version_finder -v                               # Run with verbose output
+version_finder --timeout 60                     # Set git operation timeout to 60 seconds
+```
+
+For a full list of options, run:
+
+```bash
+version_finder --help
+```
 
 ## Features
 
-- Fetches information about submodules and branches from the main project repository.
-- Allows the user to select a specific branch and submodule.
-- Accepts a commit SHA as input.
-- Determines the earliest version where the given submodule commit appears.
+- Find and compare versions across different branches in a Git repository
+- Handle Git submodules
+- Verify commit signatures
+- Retrieve detailed commit information
 
-## CLI
+## Code Structure
 
-### Prerequisites
+The Version Finder utility is structured as follows:
 
-- Python 3.x
-- Git (installed and configured)
+- `version_finder/__main__.py`: Contains the main CLI logic and argument parsing
+- `version_finder/core.py`: Implements the `VersionFinder` class, which handles Git operations
+- `version_finder/logger.py`: Sets up logging for the application
+- `version_finder/protocols.py`: Defines protocol classes for type hinting
 
-### Installation and Usage
+### Core Components
 
-Using the CLI option:
+1. `VersionFinder` class:
+   - Manages Git repository operations
+   - Handles submodules and branches
+   - Performs version comparisons and retrieves commit information
 
-- Download the version_finder.py script.
-- Open a terminal and navigate to the project directory.
-- Run the version_finder.py script.
+2. CLI Interface:
+   - Parses command-line arguments
+   - Provides an interactive interface for selecting branches
+   - Executes version finding operations based on user input
 
-   ```bash
-   python version_finder.py
-   ```
+## Contributing
 
-- Follow the prompts to provide the necessary information:
-  - Choose a branch.
-  - Enter the submodule path (e.g., sub-module-A).
-  - Supply the commit SHA.
-- The tool will display the earliest version where the specified submodule commit appears.
+Contributions to Version Finder are welcome! Here are some ways you can contribute:
 
-#### Example
+1. Report bugs or request features by opening issues
+2. Submit pull requests with bug fixes or new features
+3. Improve documentation or add examples
 
-```bash
-$ python version_finder.py
+When contributing code, please ensure that you:
 
-Available submodules:
-- sub-module-A
-- sub-module-B
+- Follow the existing code style and conventions
+- Write appropriate tests for new features or bug fixes
+- Update the documentation as necessary
 
-Available branches:
-- main
-- feature/awesome-feature
-- release/v1.0
+To set up a development environment:
 
-Enter the branch name: main
-Enter the submodule path: sub-module-A
-Enter the commit SHA: abc123456
+1. Clone the repository
+2. Create a virtual environment: `python -m venv venv`
+3. Activate the virtual environment:
+   - On Windows: `venv\Scripts\activate`
+   - On Unix or MacOS: `source venv/bin/activate`
+4. Install the package in editable mode: `pip install -e .`
+5. Install development dependencies: `pip install -r requirements-dev.txt` (if available)
 
-Submodule commit abc123456 introduced in version: 1234567 (commit message)
-```
+Before submitting a pull request, please ensure that all tests pass and the code adheres to the project's coding standards.
 
-Notes
-Make sure you have the necessary permissions to access the Git repository.
-The tool assumes that the submodule commit exists in the main project’s history.
-License
-This project is licensed under the MIT License - see the LICENSE file for details.
+## License
 
-## Electron App
-
-The Electron app provides a graphical user interface (GUI) for the Version Finder tool. It offers a more user-friendly experience and is suitable for users who prefer a visual interface.
-
-### Installation
-
-Download the latest version of the app from the [Releases](https://github.com/LevyMatan/version_finder/releases) page.
-Please note that the app is only available for macOS and Linux.
+[Include license information here]

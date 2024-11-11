@@ -118,10 +118,11 @@ class VersionFinder:
             output = self.__execute_git_command(["branch", "-a"])
             self.logger.debug(f"Loaded branches output: {output}")
             self.branches = [
-                branch.strip().replace('origin/', '')
+                branch.strip().replace('remotes/origin/', '')
                 for branch in output.decode("utf-8").splitlines()
-                if "->" not in branch
+                if "->" not in branch or "*" not in branch
             ]
+            self.branches = list(set(self.branches))
             self.logger.debug(f"Loaded branches: {self.branches}")
         except GitCommandError as e:
             self.logger.error(f"Failed to load branches: {e}")

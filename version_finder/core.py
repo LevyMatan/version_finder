@@ -118,7 +118,7 @@ class VersionFinder:
             output = self.__execute_git_command(["branch", "-r"])
             self.logger.debug(f"Loaded branches output: {output}")
             self.branches = [
-                branch.strip().split('/')[-1]
+                branch.strip().replace('origin/', '')
                 for branch in output.decode("utf-8").splitlines()
                 if "->" not in branch
             ]

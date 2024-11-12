@@ -71,6 +71,7 @@ class VersionFinder:
 
     def __load_repository_info(self) -> None:
         """Load repository information including submodules and branches."""
+        self.__fetch_repository()
         self.__load_submodules()
         self.__load_branches()
 
@@ -111,6 +112,14 @@ class VersionFinder:
         except GitCommandError as e:
             self.logger.error(f"Failed to load submodules: {e}")
             self.submodules = []
+
+    def __fetch_repository(self) -> None:
+        """Fetch latest changes from remote repository."""
+        try:
+            output = self.__execute_git_command(["fetch", "--all"])
+            self.logger.debug(f"Fetch output: {output}")
+        except GitCommandError as e:
+            self.logger.error(f"Failed to fetch repository: {e}")
 
     def __load_branches(self) -> None:
         """Load git branches information."""

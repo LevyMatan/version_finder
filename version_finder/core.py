@@ -126,13 +126,21 @@ class VersionFinder:
         try:
             output = self.__execute_git_command(["branch", "-a"])
             self.logger.debug(f"Loaded branches output: {output}")
+            # TODO: Might wish to optimize the branch filtering
+            # Time how long it takes to filter the branch output in mili-seconds
+            start_time = time.time()
             self.branches = [
-                branch.strip().replace('remotes/origin/', '')
+                branch.strip().replace('remotes/origin/', '').replace('* ', '').replace('HEAD-> ', '')
                 for branch in output.decode("utf-8").splitlines()
-                if "->" not in branch and "*" not in branch
             ]
+            filtering_time = time.time()
             self.branches = list(set(self.branches))
+            remove_duplicates_time = time.time()
             self.branches.sort()
+            sort_time = time.time()
+            self.logger.debug(f"Branch filtering took {filtering_time - start_time} seconds")
+            self.logger.debug(f"Removing duplicates took {remove_duplicates_time - filtering_time} seconds")
+            self.logger.debug(f"Sorting took {sort_time - remove_duplicates_time} seconds")
             self.logger.debug(f"Loaded branches: {self.branches}")
         except GitCommandError as e:
             self.logger.error(f"Failed to load branches: {e}")

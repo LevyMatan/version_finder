@@ -135,6 +135,54 @@ def get_branch_selection(branches: List[str], logger: LoggerProtocol) -> str:
             logger.info("\nOperation cancelled by user")
             sys.exit(0)
 
+def process_commit_search(finder: VersionFinder, branch: str, logger: LoggerProtocol):
+    """
+    Process commit search by getting user input and displaying results.
+
+    Args:
+        finder: VersionFinder instance
+        branch: Name of the branch to search
+        logger: Logger instance
+
+    Returns:
+        int: 0 on success, 1 on error
+    """
+    try:
+        logger.info("Enter text to search for in commits (Ctrl+C to cancel):")
+        text = input().strip()
+
+        if not text:
+            logger.warning("Search text cannot be empty")
+            return 1
+
+        logger.info("Searching for commits containing: %s", text)
+        commits = finder.find_commits_by_text(branch, text)
+
+        if not commits:
+            logger.info("No commits found containing: %s", text)
+            return 0
+
+        max_commits = 50  # Define reasonable limit
+        if len(commits) > max_commits:
+            logger.warning(
+                "Found %d commits. Please refine your search text (max: %d)",
+                len(commits), max_commits
+            )
+            return 1
+
+        logger.info("\nFound %d commits:", len(commits))
+        for i, commit in enumerate(commits, 1):
+            logger.info("  %d. %s", i, commit)
+
+        return 0
+
+    except KeyboardInterrupt:
+        logger.info("\nSearch cancelled by user")
+        return 1
+    except Exception as e:
+        logger.error("Error during commit search: %s", str(e))
+        return 1
+
 def main() -> int:
     """Main entry point for the version finder CLI."""
     # Parse arguments
@@ -181,18 +229,7 @@ def main() -> int:
         # Look for a commit in the branch
         finder.update_repository(branch)
         logger.info("Repository updated to branch: %s", branch)
-        logger.info("Enter text to search for in commits:")
-        text = input()
-        logger.info("Searching for commits containing: %s", text)
-        commits = finder.find_commits_by_text(branch, text)
-        if not commits:
-            logger.info("No commits found containing: %s", text)
-            return 0
-
-        logger.info("\nFound commits:")
-        for commit in commits:
-            logger.info("  - %s", commit)
-
+        process_commit_search(finder, branch, logger)
 
 
 

@@ -145,7 +145,7 @@ def main() -> int:
     logger = setup_logger(__name__, level=log_level)
 
     logger.debug("Starting Version Finder")
-    logger.debug(f"Arguments: {args}")
+    logger.debug("Arguments: %s", args)
 
     # Verify git installation
     verify_git_dependency(logger)
@@ -158,7 +158,8 @@ def main() -> int:
         )
 
         # Initialize VersionFinder
-        logger.debug(f"Initializing VersionFinder with path: {args.path}")
+        logger.debug("Initializing VersionFinder with path: %s ", args.path)
+
         finder = VersionFinder(
             path=args.path,
             config=config,
@@ -173,14 +174,32 @@ def main() -> int:
             return 1
 
         # Get branch selections for comparison
-        logger.info("\nSelect first branch for comparison:")
-        branch1 = get_branch_selection(branches, logger)
-        logger.info(f"Selected first branch: {branch1}")
+        logger.info("\nSelect branch:")
+        branch = get_branch_selection(branches, logger)
+        logger.info("Selected branch: %s", branch)
+
+        # Look for a commit in the branch
+        finder.update_repository(branch)
+        logger.info("Repository updated to branch: %s", branch)
+        logger.info("Enter text to search for in commits:")
+        text = input()
+        logger.info("Searching for commits containing: %s", text)
+        commits = finder.find_commits_by_text(branch, text)
+        if not commits:
+            logger.info("No commits found containing: %s", text)
+            return 0
+
+        logger.info("\nFound commits:")
+        for commit in commits:
+            logger.info("  - %s", commit)
+
+
+
+
 
     except GitError as e:
         logger.error(f"Git error: {str(e)}")
         return 1
-    except KeyboardInterrupt:
         logger.info("\nOperation cancelled by user")
         return 0
     except Exception as e:

@@ -5,7 +5,7 @@ import os
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 from .protocols import LoggerProtocol, NullLogger
 
@@ -57,6 +57,14 @@ class VersionFinder:
         self.__validate_repository()
         self.__load_repository_info()
 
+    def __has_remote(self) -> bool:
+        """Check if the repository has any remotes configured."""
+        try:
+            output = self.__execute_git_command(["remote"])
+            return bool(output.strip())
+        except GitCommandError:
+            return False
+
     def __validate_repository(self) -> None:
         """Validate the git repository and its state."""
         try:
@@ -66,12 +74,19 @@ class VersionFinder:
             # Convert GitCommandError to InvalidGitRepository
             raise InvalidGitRepository(f"Path {self.repository_path} is not a valid git repository: {str(e)}") from e
 
+        # Store remote status
+        self._has_remote = self.__has_remote()
+        self.logger.debug(f"Repository has remote: {self._has_remote}")
+
         if not self.__is_clean_git_repo():
             raise GitRepositoryNotClean("Repository has uncommitted changes")
 
+
     def __load_repository_info(self) -> None:
         """Load repository information including submodules and branches."""
-        self.__fetch_repository()
+        if self._has_remote:
+            self.logger.info(f"Fetching latest changes from remote repository: {self.repository_path}")
+            self.__fetch_repository()
         self.__load_submodules()
         self.__load_branches()
 
@@ -181,8 +196,8 @@ class VersionFinder:
 
         try:
             self.__execute_git_command(["checkout", branch])
-            self.__execute_git_command(["pull", "origin", branch])
-
+            if self._has_remote:
+                self.__execute_git_command(["pull", "origin", branch])
             if self.config.parallel_submodule_fetch and self.submodules:
                 self.__update_submodules_parallel()
             else:
@@ -208,12 +223,106 @@ class VersionFinder:
             # Wait for all tasks to complete
             for future in futures:
                 future.result(timeout=self.config.timeout)
-    def verify_commit_signature(self, commit_sha: str) -> bool:
+
+    def find_commits_by_text(self, branch: str, text: str) -> List[str]:
+        """
+        Find commits in the specified branch that contain the given text.
+
+        Args:
+            branch: Branch name to search.
+            text: Text to search for in commit messages.
+
+        Returns:
+            List of commit hashes.
+
+        Raises:
+            GitCommandError: If the git command fails.
+        """
         try:
-            self.__execute_git_command(["verify-commit", commit_sha])
+            self.logger.debug(f"Finding commits by text: {text} in branch: {branch}")
+            output = self.__execute_git_command(["log", "--format=%H", branch])
+            commit_hashes = output.decode("utf-8").splitlines()
+
+            matching_commits = []
+            for commit_hash in commit_hashes:
+                commit_info = self.get_commit_info(commit_hash)
+                if text.lower() in commit_info["subject"].lower():
+                    matching_commits.append(commit_hash)
+
+            return matching_commits
+        except GitCommandError as e:
+            self.logger.error(f"Failed to find commits by text: {e}")
+            raise
+
+    def commit_exists(self, commit_sha: str) -> bool:
+        """
+        Check if a commit exists in the repository.
+
+        Args:
+            commit_sha: The commit SHA to check.
+
+        Returns:
+            bool: True if the commit exists, False otherwise.
+        """
+        try:
+            # -e flag just checks for existence, -t type check is also good
+            self.__execute_git_command(["cat-file", "-e", commit_sha])
             return True
         except GitCommandError:
             return False
+
+
+    def check_commit(self, commit_sha: str) -> Dict[str, Any]:
+        """
+        Check if a commit exists and get its type.
+
+        Args:
+            commit_sha: The commit SHA to check.
+
+        Returns:
+            Dict containing:
+                - exists (bool): Whether the object exists
+                - type (str): Type of the object (if it exists)
+                - error (str): Error message (if check failed)
+        """
+        try:
+            # -t returns the type of the object
+            output = self.__execute_git_command(["cat-file", "-t", commit_sha])
+            return {
+                "exists": True,
+                "type": output.decode("utf-8").strip(),
+                "error": None
+            }
+        except GitCommandError as e:
+            return {
+                "exists": False,
+                "type": None,
+                "error": str(e)
+            }
+
+    def verify_commit_signature(self, commit_sha: str) -> bool:
+        """
+        Verify the GPG signature of a git commit.
+
+        Args:
+            commit_sha: The commit SHA to verify.
+
+        Returns:
+            bool: True if signature is valid, False otherwise.
+        """
+        try:
+            output = self.__execute_git_command(["verify-commit", "--raw", commit_sha])
+            return {
+                "verified": True,
+                "status": "valid",
+                "raw_output": output.decode("utf-8")
+            }
+        except GitCommandError as e:
+            return {
+                "verified": False,
+                "status": "invalid",
+                "error": str(e)
+            }
 
     def get_commit_info(self, commit_sha: str) -> Dict[str, str]:
         """
@@ -225,8 +334,8 @@ class VersionFinder:
         Returns:
             Dictionary containing commit information.
         """
-        if not self.verify_commit_signature(commit_sha):
-            raise GitCommandError(f"Invalid commit signature: {commit_sha}")
+        if not self.commit_exists(commit_sha):
+            raise GitCommandError(f"Invalid commit: {commit_sha}")
         try:
             output = self.__execute_git_command(["show", "-s", "--format=%H%n%an%n%ae%n%at%n%s", commit_sha])
             hash_, author, email, timestamp, subject = output.decode("utf-8").strip().split("\n")

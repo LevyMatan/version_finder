@@ -13,6 +13,7 @@ from .logger.logger import setup_logger
 from .protocols import LoggerProtocol
 from ._version import __version__
 
+
 def verify_git_dependency(logger: LoggerProtocol) -> None:
     """
     Verify that git is installed and accessible.
@@ -35,9 +36,9 @@ After installing:
 
     try:
         subprocess.run([git_path, "--version"],
-                      check=True,
-                      stdout=subprocess.PIPE,
-                      stderr=subprocess.PIPE)
+                       check=True,
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
 
     except subprocess.CalledProcessError as e:
         logger.error(f"""
@@ -54,6 +55,7 @@ An unexpected error occurred while running git:
 
     logger.debug(f"Git found at: {git_path}")
 
+
 def parse_arguments() -> argparse.Namespace:
     """Parse and validate command line arguments."""
     parser = argparse.ArgumentParser(
@@ -68,26 +70,26 @@ Examples:
 """)
 
     parser.add_argument("-p", "--path",
-                       help="Repository path (defaults to current directory)")
+                        help="Repository path (defaults to current directory)")
 
     parser.add_argument("-v", "--verbose",
-                       action="store_true",
-                       help="Enable verbose output")
+                        action="store_true",
+                        help="Enable verbose output")
 
     parser.add_argument("--timeout",
-                       type=int,
-                       default=30,
-                       help="Git operation timeout in seconds (default: 30)")
+                        type=int,
+                        default=30,
+                        help="Git operation timeout in seconds (default: 30)")
 
     parser.add_argument("--retries",
-                       type=int,
-                       default=0,
-                       help="Number of retries for git operations (default: 0)")
+                        type=int,
+                        default=0,
+                        help="Number of retries for git operations (default: 0)")
 
     parser.add_argument('--version',
-                       action='version',
-                       version=f'%(prog)s {__version__}',
-                       help="Show program's version number and exit")
+                        action='version',
+                        version=f'%(prog)s {__version__}',
+                        help="Show program's version number and exit")
 
     args = parser.parse_args()
 
@@ -100,6 +102,7 @@ Examples:
         parser.error("Number of retries cannot be negative")
 
     return args
+
 
 def get_branch_selection(branches: List[str], logger: LoggerProtocol) -> str:
     """
@@ -134,6 +137,7 @@ def get_branch_selection(branches: List[str], logger: LoggerProtocol) -> str:
         except (KeyboardInterrupt, EOFError):
             logger.info("\nOperation cancelled by user")
             sys.exit(0)
+
 
 def process_commit_search(finder: VersionFinder, branch: str, logger: LoggerProtocol):
     """
@@ -183,6 +187,7 @@ def process_commit_search(finder: VersionFinder, branch: str, logger: LoggerProt
         logger.error("Error during commit search: %s", str(e))
         return 1
 
+
 def main() -> int:
     """Main entry point for the version finder CLI."""
     # Parse arguments
@@ -231,9 +236,6 @@ def main() -> int:
         logger.info("Repository updated to branch: %s", branch)
         process_commit_search(finder, branch, logger)
 
-
-
-
     except GitError as e:
         logger.error(f"Git error: {str(e)}")
         return 1
@@ -244,6 +246,7 @@ def main() -> int:
     #     if args.verbose:
     #         logger.debug(traceback.format_exc())
     #     return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

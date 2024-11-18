@@ -87,6 +87,11 @@ To set up a development environment:
    - On Windows: `venv\Scripts\activate`
    - On Unix or MacOS: `source venv/bin/activate`
 4. Install the package in editable mode: `pip install -e .[dev]`
+5. Run tests: `pytest ./tests`
+6. flake8: `flake8 ./src/`
+7. flake8: `flake8 ./tests/`
+8. autopep8: `autopep8 --in-place --aggressive --max-line-length 120 src/**/*.py`
+9. autopep8: `autopep8 --in-place --aggressive --max-line-length 120 tests/**/*.py`
 
 Before submitting a pull request, please ensure that all tests pass and the code adheres to the project's coding standards.
 

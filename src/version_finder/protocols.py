@@ -1,23 +1,28 @@
 # version_finder/protocols.py
-from typing import Protocol
+from dataclasses import dataclass
+from typing import Protocol, Optional
+
 
 class LoggerProtocol(Protocol):
     """Protocol defining the logger interface"""
+
     def debug(self, msg: str) -> None: ...
     def info(self, msg: str) -> None: ...
     def warning(self, msg: str) -> None: ...
     def error(self, msg: str) -> None: ...
 
+
 class NullLogger:
     """A logger that does nothing, used as default when no logger is provided."""
+
     def debug(self, msg: str) -> None: pass
     def info(self, msg: str) -> None: pass
     def warning(self, msg: str) -> None: pass
     def error(self, msg: str) -> None: pass
 
+
 # version_finder/protocols.py
-from typing import Protocol, Optional
-from dataclasses import dataclass
+
 
 @dataclass
 class Version:
@@ -40,7 +45,7 @@ class Version:
     def from_string(cls, version_str: str) -> 'Version':
         """Parse version string into Version object"""
         import re
-        
+
         pattern = r"""
             ^
             (?P<major>0|[1-9]\d*)\.
@@ -56,7 +61,7 @@ class Version:
         match = re.match(pattern, version_str.strip(), re.VERBOSE)
         if not match:
             raise ValueError(f"Invalid version string: {version_str}")
-        
+
         return cls(
             major=int(match.group('major')),
             minor=int(match.group('minor')),

@@ -4,14 +4,17 @@ import random
 from pathlib import Path
 from datetime import datetime, timedelta
 
+
 def run_command(command, cwd=None):
     """Execute a git command and return its output"""
     return subprocess.run(command, shell=True, cwd=cwd,
-                         capture_output=True, text=True, check=True)
+                          capture_output=True, text=True, check=True)
+
 
 def generate_random_version():
     """Generate a random version number in format XX_XX_XXXX"""
     return f"{random.randint(1,99):02d}_{random.randint(1,99):02d}_{random.randint(1,9999):04d}"
+
 
 def create_commits_in_branch(repo_path, branch_name, num_commits=1000):
     """Create specified number of commits in a branch"""
@@ -35,6 +38,7 @@ def create_commits_in_branch(repo_path, branch_name, num_commits=1000):
         commit_count += 1
         if commit_count % 100 == 0:
             print(f"Created {commit_count} commits in {branch_name}")
+
 
 def create_test_repo():
     # Create and initialize a new test repository
@@ -83,6 +87,7 @@ def create_test_repo():
     print(run_command("git log --oneline -n 10", cwd=repo_path).stdout)
     print("\nTotal number of commits:")
     print(run_command("git rev-list --all --count", cwd=repo_path).stdout)
+
 
 if __name__ == "__main__":
     create_test_repo()

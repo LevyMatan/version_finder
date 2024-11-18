@@ -10,6 +10,7 @@ from version_finder.core import (
     GitCommandError
 )
 
+
 class TestVersionFinder:
     @pytest.fixture
     def test_repo(self):

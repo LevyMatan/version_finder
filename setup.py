@@ -24,7 +24,7 @@ setup(
         "prompt_toolkit>=3.0.0",
     ],
     extras_require={
-        "dev": ["pytest", "pytest-cov", "flake8"],  # Development tools
+        "dev": ["pytest", "pytest-cov", "flake8", "autopep8"],  # Development tools
         "docs": ["sphinx", "sphinx_rtd_theme"],  # Documentation tools
     },
     entry_points={

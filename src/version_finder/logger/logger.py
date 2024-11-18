@@ -3,6 +3,7 @@ import logging
 import sys
 from typing import Optional
 
+
 class ColorFormatter(logging.Formatter):
     COLORS = {
         'DEBUG': '\033[94m',
@@ -19,6 +20,7 @@ class ColorFormatter(logging.Formatter):
         result = super().format(record)
         record.levelname = orig_levelname
         return result
+
 
 def setup_logger(name: Optional[str] = None, level: int = logging.INFO) -> logging.Logger:
     logger = logging.getLogger(name)

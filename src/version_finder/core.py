@@ -9,6 +9,7 @@ from typing import List, Optional, Dict, Any
 
 from .protocols import LoggerProtocol, NullLogger
 
+
 @dataclass
 class GitConfig:
     """Configuration settings for git operations"""
@@ -17,21 +18,26 @@ class GitConfig:
     retry_delay: int = 1
     parallel_submodule_fetch: bool = True
 
+
 class GitError(Exception):
     """Base exception for git operations"""
     pass
+
 
 class InvalidGitRepository(GitError):
     """Raised when the repository path is invalid"""
     pass
 
+
 class GitCommandError(GitError):
     """Raised when a git command fails"""
     pass
 
+
 class GitRepositoryNotClean(GitError):
     """Raised when the repository has uncommitted changes"""
     pass
+
 
 class VersionFinder:
     """A class to handle git repository operations and version finding."""
@@ -80,7 +86,6 @@ class VersionFinder:
 
         if not self.__is_clean_git_repo():
             raise GitRepositoryNotClean("Repository has uncommitted changes")
-
 
     def __load_repository_info(self) -> None:
         """Load repository information including submodules and branches."""
@@ -263,14 +268,15 @@ class VersionFinder:
                     commit_hash, subject, body = commit_parts
                     # Search in both subject and body
                     if (text.lower() in subject.lower() or
-                        text.lower() in body.lower()):
+                            text.lower() in body.lower()):
                         matching_commits.append(commit_hash)
 
             return matching_commits
         except GitCommandError as e:
             self.logger.error(f"Failed to find commits by text: {e}")
             raise
-    def get_commit_surrounding_versions(self, commit_sha: str) -> List[str]:
+
+    def get_commit_surrounding_versions(self, commit_sha: str) -> List[Optional[str]]:
         """
         Get the commit SHA of the previous and next commits.
 
@@ -298,7 +304,7 @@ class VersionFinder:
 
             return [previous_commit, next_commit]
         except GitCommandError as e:
-            raise GitCommandError(f"Failed to get commit surrounding versions: {e}")
+            raise GitCommandError(f"Failed to get commit surrounding versions: {e}") from e
 
     def commit_exists(self, commit_sha: str) -> bool:
         """
@@ -316,7 +322,6 @@ class VersionFinder:
             return True
         except GitCommandError:
             return False
-
 
     def check_commit(self, commit_sha: str) -> Dict[str, Any]:
         """

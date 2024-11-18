@@ -9,7 +9,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 
 from .core import VersionFinder, GitConfig, GitError
-from .logger import setup_logger
+from .logger.logger import setup_logger
 from .protocols import LoggerProtocol
 from ._version import __version__
 

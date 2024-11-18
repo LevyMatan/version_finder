@@ -21,12 +21,16 @@ setup(
     install_requires=[
         "prompt_toolkit>=3.0.0",
     ],
+    extras_require={
+        "dev": ["pytest", "pytest-cov", "flake8"],  # Development tools
+        "docs": ["sphinx", "sphinx_rtd_theme"],  # Documentation tools
+    },
     entry_points={
         "console_scripts": [
             "version-finder=version_finder.__main__:main",
         ],
     },
-    author="Your Name",
-    description="A tool for finding versions in Git repositories",
+    author="Matan Levy",
+    description="A utility for finding versions in Git repositories",
     python_requires=">=3.6",
 )

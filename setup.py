@@ -1,6 +1,6 @@
 # setup.py
-from setuptools import setup, find_packages
 import os
+from setuptools import setup, find_packages
 
 def get_version():
     version_file = os.path.join(
@@ -18,7 +18,8 @@ def get_version():
 setup(
     name="version-finder",
     version=get_version(),
-    packages=find_packages(),
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
     install_requires=[
         "prompt_toolkit>=3.0.0",
     ],

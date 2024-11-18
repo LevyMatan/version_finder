@@ -3,3 +3,4 @@ node_modules/**
 release-builds/**
 out/
 .DS_Store
+.vscode/launch.json

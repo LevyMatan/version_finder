@@ -278,33 +278,64 @@ class VersionFinder:
 
     def get_commit_surrounding_versions(self, commit_sha: str) -> List[Optional[str]]:
         """
-        Get the commit SHA of the previous and next commits.
+        Find the nearest version commits before and after the given commit.
 
         Args:
-            commit_sha: The commit SHA to get the surrounding versions for.
+            commit_sha: The commit SHA to get the surrounding version commits for.
 
         Returns:
-            List containing the previous and next commit SHAs.
+            List containing the previous and next version commit SHAs. Elements can be None.
         """
         try:
-            # Get the parent commit of the given commit
-            parent_commit = self.__execute_git_command(["rev-list", "--parents", "-n", "1", commit_sha])
-            parent_commit = parent_commit.decode("utf-8").strip().split(" ")[1]
+            # Get the target commit's position in history
+            commit_position = self.__execute_git_command([
+                "rev-list",
+                "--count",
+                commit_sha
+            ]).decode("utf-8").strip()
 
-            # Get the list of commits in the current branch
-            commits = self.__execute_git_command(["rev-list", "HEAD"])
-            commits = commits.decode("utf-8").strip().split("\n")
+            # Find nearest version commits using grep
+            prev_version = self.__execute_git_command([
+                "log",
+                "--grep=VERSION:",
+                "--format=%H",
+                "-n", "1",
+                f"HEAD~{commit_position}.."
+            ]).decode("utf-8").strip() or None
 
-            # Find the index of the given commit in the list
-            commit_index = commits.index(commit_sha)
+            next_version = self.__execute_git_command([
+                "log",
+                "--grep=VERSION:",
+                "--format=%H",
+                "-n", "1",
+                f"..HEAD~{int(commit_position) + 1}"
+            ]).decode("utf-8").strip() or None
 
-            # Get the previous and next commits
-            previous_commit = commits[commit_index + 1] if commit_index > 0 else None
-            next_commit = commits[commit_index - 1] if commit_index < len(commits) - 1 else None
-
-            return [previous_commit, next_commit]
+            return [prev_version, next_version]
         except GitCommandError as e:
-            raise GitCommandError(f"Failed to get commit surrounding versions: {e}") from e
+            raise GitCommandError(f"Failed to get version commits: {e}") from e
+
+    def get_commit_version(self, commit_sha: str) -> str:
+        """
+        Get the version of a specific commit.
+
+        Args:
+            commit_sha: The commit SHA to get the version for.
+
+        Returns:
+            str: The version of the commit.
+
+        Raises:
+            GitCommandError: If the commit does not exist or is not a version commit.
+        """
+        try:
+            output = self.__execute_git_command([
+                "show",
+                f"{commit_sha}:version.txt"
+            ])
+            return output.decode("utf-8").strip()
+        except GitCommandError as e:
+            raise GitCommandError(f"Failed to get version for commit {commit_sha}: {e}") from e
 
     def commit_exists(self, commit_sha: str) -> bool:
         """

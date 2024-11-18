@@ -237,13 +237,13 @@ def main() -> int:
     except GitError as e:
         logger.error(f"Git error: {str(e)}")
         return 1
-        logger.info("\nOperation cancelled by user")
-        return 0
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        if args.verbose:
-            logger.debug(traceback.format_exc())
-        return 1
+    #     logger.info("\nOperation cancelled by user")
+    #     return 0
+    # except Exception as e:
+    #     logger.error(f"Unexpected error: {str(e)}")
+    #     if args.verbose:
+    #         logger.debug(traceback.format_exc())
+    #     return 1
 
 if __name__ == "__main__":
     sys.exit(main())

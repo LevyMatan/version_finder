@@ -226,11 +226,11 @@ class VersionFinder:
 
     def find_commits_by_text(self, branch: str, text: str) -> List[str]:
         """
-        Find commits in the specified branch that contain the given text.
+        Find commits in the specified branch that contain the given text in either title or description.
 
         Args:
             branch: Branch name to search.
-            text: Text to search for in commit messages.
+            text: Text to search for in commit messages (title and description).
 
         Returns:
             List of commit hashes.
@@ -240,19 +240,65 @@ class VersionFinder:
         """
         try:
             self.logger.debug(f"Finding commits by text: {text} in branch: {branch}")
-            output = self.__execute_git_command(["log", "--format=%H", branch])
-            commit_hashes = output.decode("utf-8").splitlines()
+            # Use --format to get hash, subject and body in one command
+            # %H: commit hash
+            # %s: subject (title)
+            # %b: body (description)
+            # Using ASCII delimiter (0x1F) to separate fields
+            output = self.__execute_git_command([
+                "log",
+                "--format=%H%x1F%s%x1F%b",
+                branch
+            ])
 
+            commits = output.decode("utf-8").strip().split("\n")
             matching_commits = []
-            for commit_hash in commit_hashes:
-                commit_info = self.get_commit_info(commit_hash)
-                if text.lower() in commit_info["subject"].lower():
-                    matching_commits.append(commit_hash)
+
+            for commit in commits:
+                if not commit:  # Skip empty lines
+                    continue
+                # Split the commit info using the ASCII delimiter
+                commit_parts = commit.split("\x1F")
+                if len(commit_parts) >= 3:
+                    commit_hash, subject, body = commit_parts
+                    # Search in both subject and body
+                    if (text.lower() in subject.lower() or
+                        text.lower() in body.lower()):
+                        matching_commits.append(commit_hash)
 
             return matching_commits
         except GitCommandError as e:
             self.logger.error(f"Failed to find commits by text: {e}")
             raise
+    def get_commit_surrounding_versions(self, commit_sha: str) -> List[str]:
+        """
+        Get the commit SHA of the previous and next commits.
+
+        Args:
+            commit_sha: The commit SHA to get the surrounding versions for.
+
+        Returns:
+            List containing the previous and next commit SHAs.
+        """
+        try:
+            # Get the parent commit of the given commit
+            parent_commit = self.__execute_git_command(["rev-list", "--parents", "-n", "1", commit_sha])
+            parent_commit = parent_commit.decode("utf-8").strip().split(" ")[1]
+
+            # Get the list of commits in the current branch
+            commits = self.__execute_git_command(["rev-list", "HEAD"])
+            commits = commits.decode("utf-8").strip().split("\n")
+
+            # Find the index of the given commit in the list
+            commit_index = commits.index(commit_sha)
+
+            # Get the previous and next commits
+            previous_commit = commits[commit_index + 1] if commit_index > 0 else None
+            next_commit = commits[commit_index - 1] if commit_index < len(commits) - 1 else None
+
+            return [previous_commit, next_commit]
+        except GitCommandError as e:
+            raise GitCommandError(f"Failed to get commit surrounding versions: {e}")
 
     def commit_exists(self, commit_sha: str) -> bool:
         """

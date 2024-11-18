@@ -86,8 +86,7 @@ To set up a development environment:
 3. Activate the virtual environment:
    - On Windows: `venv\Scripts\activate`
    - On Unix or MacOS: `source venv/bin/activate`
-4. Install the package in editable mode: `pip install -e .`
-5. Install development dependencies: `pip install -r requirements-dev.txt` (if available)
+4. Install the package in editable mode: `pip install -e .[dev]`
 
 Before submitting a pull request, please ensure that all tests pass and the code adheres to the project's coding standards.
 

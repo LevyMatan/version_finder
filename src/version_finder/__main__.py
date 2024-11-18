@@ -178,6 +178,36 @@ def process_commit_search(finder: VersionFinder, branch: str, logger: LoggerProt
         for i, commit in enumerate(commits, 1):
             logger.info("  %d. %s", i, commit)
 
+        logger.info("\nSelect commit to view surrounding versions (Ctrl+C to cancel):")
+        while True:
+            try:
+                selection = input("Enter commit number: ").strip()
+                if not selection.isdigit():
+                    logger.error("Invalid input. Please enter a number.")
+                    continue
+
+                index = int(selection) - 1
+                if index < 0 or index >= len(commits):
+                    logger.error("Invalid commit number selected")
+                    continue
+
+                selected_commit = commits[index]
+                logger.info("Selected commit: %s", selected_commit)
+
+                versions = finder.get_commit_surrounding_versions(selected_commit)
+                logger.info("\nSurrounding versions:")
+                logger.info("  Previous version: %s", finder.get_commit_version(versions[0]) or "None")
+                logger.info("  Next version: %s", finder.get_commit_version(versions[1]) or "None")
+                logger.info("  Previous version: %s", versions[0] or "None")
+                logger.info("  Next version: %s", versions[1] or "None")
+
+                break  # Exit loop if valid selection is made
+
+            except KeyboardInterrupt:
+                logger.info("\nOperation cancelled by user")
+                return 0
+            except Exception as e:
+                logger.error("Error during version search: %s", str(e))
         return 0
 
     except KeyboardInterrupt:

@@ -287,12 +287,8 @@ class VersionFinder:
             List containing the previous and next version commit SHAs. Elements can be None.
         """
         try:
-            # Get the target commit's position in history
-            commit_position = self.__execute_git_command([
-                "rev-list",
-                "--count",
-                commit_sha
-            ]).decode("utf-8").strip()
+            if not self.commit_exists(commit_sha):
+                raise GitCommandError(f"Commit {commit_sha} does not exist")
 
             # Find nearest version commits using grep
             prev_version = self.__execute_git_command([
@@ -300,7 +296,7 @@ class VersionFinder:
                 "--grep=VERSION:",
                 "--format=%H",
                 "-n", "1",
-                f"HEAD~{commit_position}.."
+                f"{commit_sha}~1"
             ]).decode("utf-8").strip() or None
 
             next_version = self.__execute_git_command([
@@ -308,7 +304,7 @@ class VersionFinder:
                 "--grep=VERSION:",
                 "--format=%H",
                 "-n", "1",
-                f"..HEAD~{int(commit_position) + 1}"
+                f"{commit_sha}^1..HEAD"
             ]).decode("utf-8").strip() or None
 
             return [prev_version, next_version]
@@ -317,23 +313,34 @@ class VersionFinder:
 
     def get_commit_version(self, commit_sha: str) -> str:
         """
-        Get the version of a specific commit.
+        Get the version from the commit message.
 
         Args:
             commit_sha: The commit SHA to get the version for.
 
         Returns:
-            str: The version of the commit.
+            str: The version from the commit message.
 
         Raises:
-            GitCommandError: If the commit does not exist or is not a version commit.
+            GitCommandError: If the commit does not exist or version cannot be extracted.
         """
         try:
+            # Get the commit message using the pretty format
             output = self.__execute_git_command([
                 "show",
-                f"{commit_sha}:version.txt"
+                "-s",  # suppress diff output
+                "--format=%s",  # get subject/title only
+                commit_sha
             ])
-            return output.decode("utf-8").strip()
+            message = output.decode("utf-8").strip()
+
+            # Extract version from message (assuming format "VERSION: X.Y.Z")
+            if "VERSION:" in message:
+                version = message.split("VERSION:")[1].strip()
+                return version
+            else:
+                raise GitCommandError(f"Commit {commit_sha} does not contain version information")
+
         except GitCommandError as e:
             raise GitCommandError(f"Failed to get version for commit {commit_sha}: {e}") from e
 

@@ -2,7 +2,17 @@
 import os
 from setuptools import setup, find_packages
 
+
 def get_version():
+    """
+    Retrieves the version string from the `_version.py` file located in the `version_finder` module.
+
+    Returns:
+        str: The version string.
+
+    Raises:
+        RuntimeError: If the version string cannot be found in the `_version.py` file.
+    """
     version_file = os.path.join(
         os.path.dirname(__file__),
         'src',
@@ -14,6 +24,7 @@ def get_version():
             if line.startswith('__version__'):
                 return line.split('=')[1].strip().strip('"').strip("'")
     raise RuntimeError("Unable to find version string.")
+
 
 setup(
     name="version-finder",

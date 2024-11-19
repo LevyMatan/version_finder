@@ -453,3 +453,58 @@ class VersionFinder:
             return commits[0]
         else:
             return commits[left - 1]
+
+    def find_version_commit(self, branch: str, version: str) -> Optional[List[str]]:
+        """
+        Find the commit that indicates the specified version.
+        """
+        # Update the repository to the latest commit
+        self.update_repository(branch)
+
+        # Find the commit that indicates the specified version
+        commits = self.__execute_git_command(["log", "--grep", f"VERSION: {version}", "--format=%H"]).decode("utf-8").strip().split("\n")
+        if not commits:
+            return f"Version {version} not found"
+        return commits
+
+    def get_submodule_ptr_from_commit(self, commit: str, submodule: str, branch=None) -> Optional[str]:
+        """
+        Get the submodule pointer from a commit.
+        """
+        # Update the repository to the latest commit
+        if branch:
+            self.update_repository(branch)
+
+        if not self.commit_exists(commit):
+            self.logger.error(f"Commit {commit} does not exist")
+            raise GitCommandError(f"Commit {commit} does not exist")
+
+        # Get the submodule pointer from the commit
+        submodule_ptr = self.__execute_git_command(["ls-tree", "-r", "--full-tree", commit, submodule]).decode("utf-8").strip().split("\n")
+        if not submodule_ptr:
+            return None
+        return submodule_ptr[0].split()[2]
+
+    def get_commits_between_versions(self, branch: str, start_version: str, end_version: str, submodule=None) -> List[str]:
+        """
+        Get the list of commits between two versions.
+        """
+        # Update the repository to the latest commit
+        self.update_repository(branch)
+
+        start_commit = self.find_version_commit(branch, start_version)
+        end_commit = self.find_version_commit(branch, end_version)
+
+        if submodule:
+            first_submodule_pointer = self.get_submodule_ptr_from_commit(start_commit, submodule)
+            last_submodule_pointer = self.get_submodule_ptr_from_commit(end_commit, submodule)
+            if not first_submodule_pointer or not last_submodule_pointer:
+                return []
+            commits = self.__execute_git_command(["log", "--format=%H", f"{first_submodule_pointer}..{last_submodule_pointer}"]).decode("utf-8").strip().split("\n")
+        if not start_commit or not end_commit:
+            return []
+        # raise ValueError("Invalid version(s)")
+
+        # Get the list of commits between the two versions
+        commits = self.__execute_git_command(["log", "--format=%H", f"{start_commit}..{end_commit}"]).decode("utf-8").strip().split("\n")
+        return commits

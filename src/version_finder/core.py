@@ -4,9 +4,9 @@ from pathlib import Path
 import os
 import subprocess
 import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
 from version_finder.protocols import LoggerProtocol, NullLogger
+
 
 @dataclass
 class GitConfig:
@@ -201,31 +201,19 @@ class VersionFinder:
             self.__execute_git_command(["checkout", branch])
             if self._has_remote:
                 self.__execute_git_command(["pull", "origin", branch])
-            if self.config.parallel_submodule_fetch and self.submodules:
-                self.__update_submodules_parallel()
-            else:
-                self.__execute_git_command(["submodule", "update", "--init", "--recursive"])
+            self.__update_submodules()
 
         except GitCommandError as e:
             self.logger.error(f"Failed to update repository: {e}")
             raise
 
-    def __update_submodules_parallel(self) -> None:
-        """Update submodules in parallel using ThreadPoolExecutor."""
-        def update_submodule(submodule: str) -> None:
-            try:
-                self.__execute_git_command(["submodule", "update", "--init", "--recursive", submodule])
-            except GitCommandError as e:
-                self.logger.error(f"Failed to update submodule {submodule}: {e}")
-                raise
-
-        with ThreadPoolExecutor() as executor:
-            # Submit all submodule update tasks
-            futures = [executor.submit(update_submodule, submodule) for submodule in self.submodules]
-
-            # Wait for all tasks to complete
-            for future in futures:
-                future.result(timeout=self.config.timeout)
+    def __update_submodules(self) -> None:
+        """Update submodules recursively."""
+        try:
+            self.__execute_git_command(["submodule", "update", "--init", "--recursive"])
+        except GitCommandError as e:
+            self.logger.error(f"Failed to update submodules: {e}")
+            raise
 
     def find_commits_by_text(self, branch: str, text: str) -> List[str]:
         """
@@ -413,11 +401,12 @@ class VersionFinder:
             self.logger.error(f"Failed to get commit info for {commit_sha}: {e}")
             raise
 
-    def get_first_commit_including_submodule_changes(self, branch: str, submodule_path: str, submodule_target_commit: str) -> str:
+    def get_first_commit_including_submodule_changes(
+            self, branch: str, submodule_path: str, submodule_target_commit: str) -> str:
         """
         Get the first commit that includes changes in the specified submodule.
         """
-        #Update the repository to the specified branch
+        # Update the repository to the specified branch
         self.update_repository(branch)
 
         # Verify submodule path exists
@@ -425,7 +414,8 @@ class VersionFinder:
             raise GitCommandError(f"Invalid submodule path: {submodule_path}")
 
         # Get list of commits that touched submodule
-        commits = self.__execute_git_command(["log", "--format=%H", "--", submodule_path]).decode("utf-8").strip().split("\n")
+        commits = self.__execute_git_command(
+            ["log", "--format=%H", "--", submodule_path]).decode("utf-8").strip().split("\n")
 
         submodule_pointers = self.__execute_git_command([
             "ls-tree",
@@ -444,7 +434,8 @@ class VersionFinder:
         while left <= right:
             mid = (left + right) // 2
             submodule_ptr = pointers[mid]
-            if self.__execute_git_command(["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr]).returncode == 0:
+            if self.__execute_git_command(
+                    ["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr]).returncode == 0:
                 right = mid - 1
             else:
                 left = mid + 1
@@ -462,7 +453,8 @@ class VersionFinder:
         self.update_repository(branch)
 
         # Find the commit that indicates the specified version
-        commits = self.__execute_git_command(["log", "--grep", f"VERSION: {version}", "--format=%H"]).decode("utf-8").strip().split("\n")
+        commits = self.__execute_git_command(
+            ["log", "--grep", f"VERSION: {version}", "--format=%H"]).decode("utf-8").strip().split("\n")
         if not commits:
             return f"Version {version} not found"
         return commits
@@ -480,12 +472,14 @@ class VersionFinder:
             raise GitCommandError(f"Commit {commit} does not exist")
 
         # Get the submodule pointer from the commit
-        submodule_ptr = self.__execute_git_command(["ls-tree", "-r", "--full-tree", commit, submodule]).decode("utf-8").strip().split("\n")
+        submodule_ptr = self.__execute_git_command(
+            ["ls-tree", "-r", "--full-tree", commit, submodule]).decode("utf-8").strip().split("\n")
         if not submodule_ptr:
             return None
         return submodule_ptr[0].split()[2]
 
-    def get_commits_between_versions(self, branch: str, start_version: str, end_version: str, submodule=None) -> List[str]:
+    def get_commits_between_versions(self, branch: str, start_version: str,
+                                     end_version: str, submodule=None) -> List[str]:
         """
         Get the list of commits between two versions.
         """
@@ -496,15 +490,17 @@ class VersionFinder:
         end_commit = self.find_version_commit(branch, end_version)
 
         if submodule:
-            first_submodule_pointer = self.get_submodule_ptr_from_commit(start_commit, submodule)
-            last_submodule_pointer = self.get_submodule_ptr_from_commit(end_commit, submodule)
+            first_submodule_pointer = self.get_submodule_ptr_from_commit(start_commit, submodule, branch=branch)
+            last_submodule_pointer = self.get_submodule_ptr_from_commit(end_commit, submodule, branch=branch)
             if not first_submodule_pointer or not last_submodule_pointer:
                 return []
-            commits = self.__execute_git_command(["log", "--format=%H", f"{first_submodule_pointer}..{last_submodule_pointer}"]).decode("utf-8").strip().split("\n")
+            commits = self.__execute_git_command(
+                ["log", "--format=%H", f"{first_submodule_pointer}..{last_submodule_pointer}"]).decode("utf-8").strip().split("\n")
         if not start_commit or not end_commit:
             return []
         # raise ValueError("Invalid version(s)")
 
         # Get the list of commits between the two versions
-        commits = self.__execute_git_command(["log", "--format=%H", f"{start_commit}..{end_commit}"]).decode("utf-8").strip().split("\n")
+        commits = self.__execute_git_command(
+            ["log", "--format=%H", f"{start_commit}..{end_commit}"]).decode("utf-8").strip().split("\n")
         return commits

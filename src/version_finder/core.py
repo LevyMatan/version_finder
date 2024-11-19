@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 import os
+import re
 import subprocess
 import time
 from typing import List, Optional, Dict, Any
@@ -131,7 +132,7 @@ class VersionFinder:
                 self.logger.warning(f"Git command failed, retrying in {self.config.retry_delay}s: {e}")
                 time.sleep(self.config.retry_delay)
                 return self.__execute_git_command(command, retries + 1)
-            raise GitCommandError(f"Git command failed: {e}")
+            raise GitCommandError(f"Git command failed: {e}") from e
 
     def __load_submodules(self) -> None:
         """Load git submodules information."""
@@ -159,10 +160,11 @@ class VersionFinder:
             # TODO: Might wish to optimize the branch filtering
             # Time how long it takes to filter the branch output in mili-seconds
             start_time = time.time()
-            self.branches = [
-                branch.strip().replace('remotes/origin/', '').replace('* ', '').replace('HEAD-> ', '')
+            branch_pattern = re.compile(r'(?:remotes/origin/|\* |HEAD-> )')
+            self.branches = sorted(set(
+                branch_pattern.sub('', branch.strip())
                 for branch in output.decode("utf-8").splitlines()
-            ]
+            ))
             filtering_time = time.time()
             self.branches = list(set(self.branches))
             remove_duplicates_time = time.time()
@@ -358,60 +360,6 @@ class VersionFinder:
             return True
         except GitCommandError:
             return False
-
-    def check_commit(self, commit_sha: str) -> Dict[str, Any]:
-        """
-        Check if a commit exists and get its type.
-
-        Args:
-            commit_sha: The commit SHA to check.
-
-        Returns:
-            Dict containing:
-                - exists (bool): Whether the object exists
-                - type (str): Type of the object (if it exists)
-                - error (str): Error message (if check failed)
-        """
-        try:
-            # -t returns the type of the object
-            output = self.__execute_git_command(["cat-file", "-t", commit_sha])
-            return {
-                "exists": True,
-                "type": output.decode("utf-8").strip(),
-                "error": None
-            }
-        except GitCommandError as e:
-            return {
-                "exists": False,
-                "type": None,
-                "error": str(e)
-            }
-
-    def get_commit_info(self, commit_sha: str) -> Dict[str, str]:
-        """
-        Get detailed information about a commit.
-
-        Args:
-            commit_sha: The commit SHA to inspect.
-
-        Returns:
-            Dictionary containing commit information.
-        """
-        if not self.commit_exists(commit_sha):
-            raise GitCommandError(f"Invalid commit: {commit_sha}")
-        try:
-            output = self.__execute_git_command(["show", "-s", "--format=%H%n%an%n%ae%n%at%n%s", commit_sha])
-            hash_, author, email, timestamp, subject = output.decode("utf-8").strip().split("\n")
-            return {
-                "hash": hash_,
-                "author": author,
-                "email": email,
-                "timestamp": timestamp,
-                "subject": subject
-            }
-        except GitCommandError as e:
-            self.logger.error(f"Failed to get commit info for {commit_sha}: {e}")
-            raise
 
     def get_first_commit_including_submodule_changes(
             self, branch: str, submodule_path: str, submodule_target_commit: str) -> str:

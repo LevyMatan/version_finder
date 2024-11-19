@@ -101,6 +101,11 @@ Examples:
     if args.retries < 0:
         parser.error("Number of retries cannot be negative")
 
+    # Validate path if provided
+    if args.path:
+        if not shutil.os.path.exists(args.path):
+            parser.error(f"Invalid path: {args.path}")
+
     return args
 
 

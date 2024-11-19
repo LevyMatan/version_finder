@@ -16,6 +16,14 @@ class GitConfig:
     retry_delay: int = 1
     parallel_submodule_fetch: bool = True
 
+    def __post_init__(self):
+        if self.timeout <= 0:
+            raise ValueError("timeout must be positive")
+        if self.max_retries < 0:
+            raise ValueError("max_retries cannot be negative")
+        if self.retry_delay <= 0:
+            raise ValueError("retry_delay must be positive")
+
 
 class GitError(Exception):
     """Base exception for git operations"""
@@ -39,6 +47,10 @@ class GitRepositoryNotClean(GitError):
 
 class VersionFinder:
     """A class to handle git repository operations and version finding."""
+    repository_path: Path
+    submodules: List[str]
+    branches: List[str]
+    _has_remote: bool
 
     def __init__(self,
                  path: Optional[str] = None,

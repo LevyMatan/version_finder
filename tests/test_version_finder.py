@@ -2,6 +2,7 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
+import logging
 from src.version_finder.core import (
     VersionFinder,
     GitConfig,
@@ -9,6 +10,30 @@ from src.version_finder.core import (
     GitRepositoryNotClean,
     GitCommandError
 )
+from src.version_finder.logger.logger import setup_logger
+
+logger = setup_logger(__name__, level=logging.DEBUG)
+
+class TestGitConfig:
+    def test_init_with_defaults(self):
+        config = GitConfig()
+        assert config.timeout == 30
+        assert config.max_retries == 0
+        assert config.retry_delay == 1
+
+    def test_init_with_custom_values(self):
+        config = GitConfig(timeout=20, max_retries=5, retry_delay=2)
+        assert config.timeout == 20
+        assert config.max_retries == 5
+        assert config.retry_delay == 2
+
+    def test_init_with_invalid_timeout(self):
+        with pytest.raises(ValueError):
+            GitConfig(timeout=-1)
+
+    def test_init_with_invalid_max_retries(self):
+        with pytest.raises(ValueError):
+            GitConfig(max_retries=-1)
 
 
 class TestVersionFinder:
@@ -36,7 +61,7 @@ class TestVersionFinder:
         os.system(f"rm -rf {temp_dir}")
 
     def test_init_valid_repository(self, test_repo):
-        finder = VersionFinder(path=test_repo)
+        finder = VersionFinder(path=test_repo, logger=logger)
         assert finder.repository_path == Path(test_repo).resolve()
         assert isinstance(finder.config, GitConfig)
 
@@ -46,26 +71,26 @@ class TestVersionFinder:
                 VersionFinder(path=temp_dir)
 
     def test_get_branches(self, test_repo):
-        finder = VersionFinder(path=test_repo)
+        finder = VersionFinder(path=test_repo, logger=logger)
         branches = finder.get_branches()
         assert 'main' in branches or 'master' in branches
         assert 'dev' in branches
         assert 'feature' in branches
 
     def test_is_valid_branch(self, test_repo):
-        finder = VersionFinder(path=test_repo)
+        finder = VersionFinder(path=test_repo, logger=logger)
         assert finder.is_valid_branch('dev')
         assert not finder.is_valid_branch('nonexistent-branch')
 
     def test_update_repository_valid_branch(self, test_repo):
-        finder = VersionFinder(path=test_repo)
+        finder = VersionFinder(path=test_repo, logger=logger)
         finder.update_repository('dev')
         # Verify we're on dev branch
         result = os.popen('git branch --show-current').read().strip()
         assert result == 'dev'
 
     def test_update_repository_invalid_branch(self, test_repo):
-        finder = VersionFinder(path=test_repo)
+        finder = VersionFinder(path=test_repo, logger=logger)
         with pytest.raises(GitCommandError):
             finder.update_repository('nonexistent-branch')
 
@@ -75,20 +100,18 @@ class TestVersionFinder:
             f.write("modified content")
 
         with pytest.raises(GitRepositoryNotClean):
-            VersionFinder(path=test_repo)
+            VersionFinder(path=test_repo, logger=logger)
 
     def test_custom_config(self, test_repo):
         config = GitConfig(
             timeout=60,
             max_retries=3,
             retry_delay=2,
-            parallel_submodule_fetch=False
         )
         finder = VersionFinder(path=test_repo, config=config)
         assert finder.config.timeout == 60
         assert finder.config.max_retries == 3
         assert finder.config.retry_delay == 2
-        assert finder.config.parallel_submodule_fetch is False
 
     @pytest.fixture
     def repo_with_submodule(self, test_repo):
@@ -124,7 +147,7 @@ class TestVersionFinder:
     def test_get_submodules_empty(self, test_repo):
         # This test verifies that the VersionFinder can correctly handle the case where there are no submodules
         # It uses the test_repo fixture which creates a test repo without any submodules
-        finder = VersionFinder(path=test_repo)
+        finder = VersionFinder(path=test_repo, logger=logger)
         # Call get_submodules() to retrieve list of submodules in the repository
         submodules = finder.get_submodules()
         # Verify that the list of submodules is empty
@@ -133,7 +156,7 @@ class TestVersionFinder:
     def test_get_submodules_invalid_repo(self, test_repo):
         # This test verifies that the VersionFinder can correctly handle the case where the repository is invalid
         # It uses the test_repo fixture which creates a test repo without any submodules
-        finder = VersionFinder(path=test_repo)
+        finder = VersionFinder(path=test_repo, logger=logger)
         # Call get_submodules() to retrieve list of submodules in the repository
         submodules = finder.get_submodules()
         # Verify that the list of submodules is empty

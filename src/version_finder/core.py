@@ -6,9 +6,7 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
-
-from .protocols import LoggerProtocol, NullLogger
-
+from version_finder.protocols import LoggerProtocol, NullLogger
 
 @dataclass
 class GitConfig:
@@ -338,8 +336,8 @@ class VersionFinder:
             if "VERSION:" in message:
                 version = message.split("VERSION:")[1].strip()
                 return version
-            else:
-                raise GitCommandError(f"Commit {commit_sha} does not contain version information")
+
+            raise GitCommandError(f"Commit {commit_sha} does not contain version information")
 
         except GitCommandError as e:
             raise GitCommandError(f"Failed to get version for commit {commit_sha}: {e}") from e
@@ -389,30 +387,6 @@ class VersionFinder:
                 "error": str(e)
             }
 
-    def verify_commit_signature(self, commit_sha: str) -> bool:
-        """
-        Verify the GPG signature of a git commit.
-
-        Args:
-            commit_sha: The commit SHA to verify.
-
-        Returns:
-            bool: True if signature is valid, False otherwise.
-        """
-        try:
-            output = self.__execute_git_command(["verify-commit", "--raw", commit_sha])
-            return {
-                "verified": True,
-                "status": "valid",
-                "raw_output": output.decode("utf-8")
-            }
-        except GitCommandError as e:
-            return {
-                "verified": False,
-                "status": "invalid",
-                "error": str(e)
-            }
-
     def get_commit_info(self, commit_sha: str) -> Dict[str, str]:
         """
         Get detailed information about a commit.
@@ -438,3 +412,44 @@ class VersionFinder:
         except GitCommandError as e:
             self.logger.error(f"Failed to get commit info for {commit_sha}: {e}")
             raise
+
+    def get_first_commit_including_submodule_changes(self, branch: str, submodule_path: str, submodule_target_commit: str) -> str:
+        """
+        Get the first commit that includes changes in the specified submodule.
+        """
+        #Update the repository to the specified branch
+        self.update_repository(branch)
+
+        # Verify submodule path exists
+        if submodule_path not in self.submodules:
+            raise GitCommandError(f"Invalid submodule path: {submodule_path}")
+
+        # Get list of commits that touched submodule
+        commits = self.__execute_git_command(["log", "--format=%H", "--", submodule_path]).decode("utf-8").strip().split("\n")
+
+        submodule_pointers = self.__execute_git_command([
+            "ls-tree",
+            "-r",
+            "--full-tree",
+            commits,  # list of commit hashes
+            submodule_path
+        ]).decode("utf-8").strip().split("\n")
+
+        # Each line will contain: "<mode> commit <submodule_hash> <submodule_path>"
+        # Parse to get just the submodule hashes
+        pointers = [line.split()[2] for line in submodule_pointers]
+
+        # Apply binary search to find the first commit that points to an ancestor of the target commit
+        left, right = 0, len(commits) - 1
+        while left <= right:
+            mid = (left + right) // 2
+            submodule_ptr = pointers[mid]
+            if self.__execute_git_command(["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr]).returncode == 0:
+                right = mid - 1
+            else:
+                left = mid + 1
+        # If left is 0, it means the target commit is the first commit that includes changes in the submodule
+        if left == 0:
+            return commits[0]
+        else:
+            return commits[left - 1]

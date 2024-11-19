@@ -15,7 +15,6 @@ class GitConfig:
     timeout: int = 30
     max_retries: int = 0
     retry_delay: int = 1
-    parallel_submodule_fetch: bool = True
 
     def __post_init__(self):
         if self.timeout <= 0:

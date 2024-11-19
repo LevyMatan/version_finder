@@ -1,9 +1,15 @@
+"""
+main package for version_finder
+"""
+
+from typing import List
+
 # version_finder/__init__.py
 from .core import VersionFinder, GitConfig, GitError
 from .logger.logger import setup_logger
 from ._version import __version__
 
-__all__ = [
+__all__: List[str] = [
     'VersionFinder',
     'GitConfig',
     'GitError',

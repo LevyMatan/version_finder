@@ -145,13 +145,12 @@ class TestVersionFinder:
         submodule_ptr = finder.get_submodule_ptr_from_commit('master', 'sub_repo')
         # Verify that the submodule pointer is correct
 
-        #change dir to submodule
+        # change dir to submodule
         os.chdir(os.path.join(repo_with_submodule, 'sub_repo'))
 
         # get head commit
         head_commit = os.popen('git rev-parse HEAD').read().strip()
         assert submodule_ptr == head_commit
-
 
     @pytest.fixture
     def repo_with_versions(self, test_repo):

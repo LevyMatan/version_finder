@@ -14,6 +14,7 @@ from src.version_finder.logger.logger import setup_logger
 
 logger = setup_logger(__name__, level=logging.DEBUG)
 
+
 class TestGitConfig:
     def test_init_with_defaults(self):
         config = GitConfig()

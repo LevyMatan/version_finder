@@ -36,14 +36,18 @@ class GitConfig:
 class GitError(Exception):
     """Base exception for git operations"""
 
+
 class InvalidGitRepository(GitError):
     """Raised when the repository path is invalid"""
+
 
 class GitCommandError(GitError):
     """Raised when a git command fails"""
 
+
 class GitRepositoryNotClean(GitError):
     """Raised when the repository has uncommitted changes"""
+
 
 class VersionFinder:
     """A class to handle git repository operations and version finding."""

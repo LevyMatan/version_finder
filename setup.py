@@ -28,6 +28,7 @@ def get_version():
                 return line.split('=')[1].strip().strip('"').strip("'")
     raise RuntimeError("Unable to find version string.")
 
+
 setup(
     name="version-finder",
     version=get_version(),

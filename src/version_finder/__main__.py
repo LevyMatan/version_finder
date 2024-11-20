@@ -272,7 +272,7 @@ def main() -> int:
         process_commit_search(finder, branch, logger)
 
     except GitError as e:
-        logger.error(f"Git error: {str(e)}")
+        logger.error("Git error: %s", str(e))
         return 1
     #     logger.info("\nOperation cancelled by user")
     #     return 0

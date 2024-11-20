@@ -1,11 +1,19 @@
-# version_finder/core.py
+"""
+core.py
+====================================
+Core module for version_finder.
+This module contains the core functionality for finding versions in a git repository.
+It includes classes and functions for handling git operations and version finding.
+The module is designed to work with git repositories and provides a user-friendly interface for
+finding and comparing versions.
+"""
 from dataclasses import dataclass
 from pathlib import Path
 import os
 import re
 import subprocess
 import time
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from version_finder.protocols import LoggerProtocol, NullLogger
 
 
@@ -27,23 +35,15 @@ class GitConfig:
 
 class GitError(Exception):
     """Base exception for git operations"""
-    pass
-
 
 class InvalidGitRepository(GitError):
     """Raised when the repository path is invalid"""
-    pass
-
 
 class GitCommandError(GitError):
     """Raised when a git command fails"""
-    pass
-
 
 class GitRepositoryNotClean(GitError):
     """Raised when the repository has uncommitted changes"""
-    pass
-
 
 class VersionFinder:
     """A class to handle git repository operations and version finding."""
@@ -156,8 +156,7 @@ class VersionFinder:
         try:
             output = self.__execute_git_command(["branch", "-a"])
             self.logger.debug(f"Loaded branches output: {output}")
-            # TODO: Might wish to optimize the branch filtering
-            # Time how long it takes to filter the branch output in mili-seconds
+
             start_time = time.time()
             branch_pattern = re.compile(r'(?:remotes/origin/|\* |HEAD-> )')
             self.branches = sorted(set(

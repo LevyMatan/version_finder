@@ -1,4 +1,7 @@
-# setup.py
+"""
+setup.py for version_finder
+This file is used to package and distribute the version_finder module.
+"""
 import os
 from setuptools import setup, find_packages
 
@@ -19,12 +22,11 @@ def get_version():
         'version_finder',
         '_version.py'
     )
-    with open(version_file) as f:
+    with open(version_file, 'r', encoding='utf-8') as f:
         for line in f:
             if line.startswith('__version__'):
                 return line.split('=')[1].strip().strip('"').strip("'")
     raise RuntimeError("Unable to find version string.")
-
 
 setup(
     name="version-finder",

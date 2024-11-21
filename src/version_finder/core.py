@@ -118,7 +118,7 @@ class VersionFinder:
         self.__load_submodules()
         self.__load_branches()
 
-    def __execute_git_command(self, command: List[str], retries: int = 0) -> bytes:
+    def __execute_git_command(self, command: List[str], retries: int = 0, check: bool = True) -> bytes:
         """
         Execute a git command with retry logic and timeout.
 
@@ -133,13 +133,18 @@ class VersionFinder:
             GitCommandError: If the command fails after all retries.
         """
         try:
-            return subprocess.check_output(
+            output = subprocess.check_output(
                 ["git"] + command,
                 cwd=self.repository_path,
                 stderr=subprocess.PIPE,
                 timeout=self.config.timeout
             )
+            return output
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            if not check:
+                # create a struct with returncode and set it to 1
+                e.returncode = 1
+                return e
             if retries < self.config.max_retries:
                 self.logger.warning(f"Git command failed, retrying in {self.config.retry_delay}s: {e}")
                 time.sleep(self.config.retry_delay)
@@ -414,7 +419,7 @@ class VersionFinder:
             "ls-tree",
             "-r",
             "--full-tree",
-            commits,  # list of commit hashes
+            *commits,  # list of commit hashes
             submodule_path
         ]).decode("utf-8").strip().split("\n")
 
@@ -428,7 +433,7 @@ class VersionFinder:
             mid = (left + right) // 2
             submodule_ptr = pointers[mid]
             if self.__execute_git_command(
-                    ["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr]).returncode == 0:
+                    ["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr], check=False).returncode == 0:
                 right = mid - 1
             else:
                 left = mid + 1

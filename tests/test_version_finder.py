@@ -136,6 +136,15 @@ class TestVersionFinder:
 
         os.system(f"rm -rf {sub_dir}")
 
+    def test_get_first_commit_including_submodule_changes(self, repo_with_submodule):
+        # This test verifies that the VersionFinder can correctly identify the first commit
+        # that includes changes in the submodule
+        finder = VersionFinder(path=repo_with_submodule)
+        # Call get_first_commit_including_submodule_changes() to retrieve the first commit
+        first_commit = finder.get_first_commit_including_submodule_changes('main', 'sub_repo', 'HEAD')
+        # Verify that the first commit is correct
+        assert first_commit == os.popen('git rev-parse HEAD').read().strip()
+
     def test_get_submodules(self, repo_with_submodule):
         # This test verifies that the VersionFinder can correctly identify Git submodules
         # It uses the repo_with_submodule fixture which creates a test repo containing a submodule named 'sub1'

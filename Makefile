@@ -1,4 +1,4 @@
-.PHONY: test coverage format lint clean install install-dev
+.PHONY: test coverage format lint clean install install-dev uninstall
 
 install:
 	@echo "Choose an installation option:"
@@ -34,3 +34,7 @@ lint:
 clean:
 	rm -rf htmlcov/
 	rm -f .coverage
+
+uninstall:
+	pip uninstall -y version-finder
+	rm -rf build dist *.egg-info

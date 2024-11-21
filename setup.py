@@ -44,8 +44,8 @@ setup(
     entry_points={
         "console_scripts": [
             "version-finder=version_finder.__main__:main",
-            "version-finder-cli=version-finder.__cli__:main",
-            "version-finder-gui=version-finder.__gui__:main",
+            "version-finder-cli=version_finder.__cli__:main",
+            "version-finder-gui=version_finder.__gui__:main",
         ],
     },
     author="Matan Levy",

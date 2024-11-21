@@ -1,7 +1,9 @@
 from tkinter import filedialog, ttk
 import tkinter as tk
 from PIL import Image, ImageTk
+import argparse
 import os
+from .__common__ import parse_arguments
 os.environ['TK_SILENCE_DEPRECATION'] = '1'
 
 
@@ -218,11 +220,17 @@ class VersionFinderGUI:
     def bring_to_front(self):
         self.root.focus_force()
 
-def main():
+
+def gui_main(args: argparse.Namespace) -> int:
     root = tk.Tk()
     app = VersionFinderGUI(root)
     app.bring_to_front()
     app.run_mainloop()
+
+
+def main():
+    args = parse_arguments()
+    gui_main(args)
 
 
 if __name__ == "__main__":

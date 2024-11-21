@@ -166,7 +166,7 @@ class TestVersionFinder:
     def test_get_submodule_ptr_from_commit(self, repo_with_submodule):
         finder = VersionFinder(path=repo_with_submodule)
         # Call get_submodule_ptr_from_commit() to retrieve the submodule pointer from a specific commit
-        submodule_ptr = finder.get_submodule_ptr_from_commit('master', 'sub_repo')
+        submodule_ptr = finder.get_submodule_ptr_from_commit('main', 'sub_repo')
         # Verify that the submodule pointer is correct
 
         # change dir to submodule
@@ -180,7 +180,7 @@ class TestVersionFinder:
     def repo_with_versions(self, test_repo):
         # Add commits with different versions
         os.chdir(test_repo)
-        os.system("git checkout master")
+        os.system("git checkout main")
         os.system("git commit -m 'VERSION: 1_0_0' --allow-empty")
         os.system("touch file2")
         os.system("git add file2")
@@ -191,10 +191,10 @@ class TestVersionFinder:
 
     def test_find_version_commit(self, repo_with_versions):
         finder = VersionFinder(path=repo_with_versions)
-        commits = finder.find_version_commit('master', '1_0_0')
+        commits = finder.find_version_commit('main', '1_0_0')
         assert len(commits) == 1
         assert commits[0] == os.popen('git rev-parse HEAD~1').read().strip()
 
-        commits = finder.find_version_commit('master', '1_1_0')
+        commits = finder.find_version_commit('main', '1_1_0')
         assert len(commits) == 1
         assert commits[0] == os.popen('git rev-parse HEAD').read().strip()

@@ -1,5 +1,26 @@
-__pycache__/**
-node_modules/**
-release-builds/**
-out/
+# Python egg metadata
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.env
+.venv
+venv/
+ENV/
+
+# MacOS
 .DS_Store

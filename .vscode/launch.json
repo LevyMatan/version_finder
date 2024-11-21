@@ -14,6 +14,18 @@
         "cwd": "${workspaceFolder}",
         "console": "integratedTerminal",
         "program": "${workspaceFolder}/main.js"
+      },
+      {
+        "name": "Python: Debug Pytest",
+        "type": "python",
+        "request": "launch",
+        "module": "pytest",
+        "args": [
+          "-v"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": false
       }
+
     ]
 }

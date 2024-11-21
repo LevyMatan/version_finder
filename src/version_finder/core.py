@@ -189,6 +189,29 @@ class VersionFinder:
             self.logger.error(f"Failed to load branches: {e}")
             self.branches = []
 
+    def extract_version(self, commit_message: str) -> Optional[str]:
+        """
+        Extract version from commit message using various patterns.
+
+        Args:
+            commit_message: The commit message to parse
+
+        Returns:
+            Optional[str]: Extracted version or None if no version found
+        """
+        # Pattern matches:
+        # - Optional "Version: XX_" prefix
+        # - Year (2014)
+        # - Underscore or hyphen
+        # - Numbers
+        # - Optional "-" or "_" followed by additional numbers
+        version_pattern = r'(?:Version:\s*(?:XX_)?)?(\d{4}(?:[_-]\d+)+(?:[_-]\d+)?)'
+
+        match = re.search(version_pattern, commit_message)
+        if match:
+            return match.group(1)
+        return None
+
     def __is_clean_git_repo(self) -> bool:
         """Check if the git repository is clean."""
         try:
@@ -304,7 +327,7 @@ class VersionFinder:
             # Find nearest version commits using grep
             prev_version = self.__execute_git_command([
                 "log",
-                "--grep=VERSION:",
+                "--grep=Version:",
                 "--format=%H",
                 "-n", "1",
                 f"{commit_sha}~1"
@@ -312,7 +335,7 @@ class VersionFinder:
 
             next_version = self.__execute_git_command([
                 "log",
-                "--grep=VERSION:",
+                "--grep=Version:",
                 "--format=%H",
                 "-n", "1",
                 f"{commit_sha}^1..HEAD"
@@ -345,11 +368,10 @@ class VersionFinder:
             ])
             message = output.decode("utf-8").strip()
 
-            # Extract version from message (assuming format "VERSION: X.Y.Z")
-            if "VERSION:" in message:
-                version = message.split("VERSION:")[1].strip()
-                return version
-
+            # Extract version from message (assuming format "Version: X.Y.Z")
+            version_string = self.extract_version(message)
+            if version_string:
+                return version_string
             raise GitCommandError(f"Commit {commit_sha} does not contain version information")
 
         except GitCommandError as e:
@@ -425,7 +447,7 @@ class VersionFinder:
 
         # Find the commit that indicates the specified version
         commits = self.__execute_git_command(
-            ["log", "--grep", f"VERSION: {version}", "--format=%H"]).decode("utf-8").strip().split("\n")
+            ["log", "--grep", f"Version: {version}", "--format=%H"]).decode("utf-8").strip().split("\n")
         if not commits:
             return f"Version {version} not found"
         return commits

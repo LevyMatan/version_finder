@@ -36,10 +36,10 @@ setup(
     packages=find_packages(where="src"),
     extras_require={
         "dev": ["pytest", "pytest-cov", "flake8", "autopep8"],  # Development tools
-        "gui": ["customtkinter"],
+        "gui": ["customtkinter", "pillow"],
         "cli": ["prompt_toolkit>=3.0.0"],
-        "cli+gui": ["customtkinter", "prompt_toolkit>=3.0.0"],
-        "all": ["pytest", "pytest-cov", "flake8", "autopep8", "sphinx", "sphinx_rtd_theme", "customtkinter"],
+        "cli+gui": ["customtkinter", "prompt_toolkit>=3.0.0", "pillow"],
+        "all": ["pytest", "pytest-cov", "flake8", "autopep8", "customtkinter", "prompt_toolkit>=3.0.0", "pillow"],
     },
     entry_points={
         "console_scripts": [
@@ -50,5 +50,5 @@ setup(
     },
     author="Matan Levy",
     description="A utility for finding versions in Git repositories",
-    python_requires=">=3.6",
+    python_requires=">=3.7",
 )

@@ -19,6 +19,13 @@ Examples:
     parser.add_argument("-p", "--path",
                         help="Repository path (defaults to current directory)")
 
+    parser.add_argument("-c", "--commit",
+                        help="The commit hash to find the first that includes it")
+    parser.add_argument("-b", "--branch",
+                        help="The branch to find the first that includes it")
+    parser.add_argument("-s", "--submodule",
+                        help="The submodule to find the first that includes it")
+
     parser.add_argument("--cli", action="store_true", help="Run the CLI version")
     parser.add_argument("--gui", action="store_true", help="Run the GUI version")
 

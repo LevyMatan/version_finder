@@ -6,6 +6,8 @@ import os
 from .__common__ import parse_arguments
 os.environ['TK_SILENCE_DEPRECATION'] = '1'
 
+__gui_version__ = '0.1.0'
+
 
 class VersionFinderGUI:
     def __init__(self, root):

@@ -49,6 +49,15 @@ class GitRepositoryNotClean(GitError):
     """Raised when the repository has uncommitted changes"""
 
 
+class Commit:
+    """A class to represent a git commit."""
+    sha: str
+    message: str
+    author: str
+    timestamp: int
+    version: Optional[str] = None
+
+
 class VersionFinder:
     """A class to handle git repository operations and version finding."""
     repository_path: Path
@@ -466,3 +475,29 @@ class VersionFinder:
         commits = self.__execute_git_command(
             ["log", "--format=%H", f"{start_commit}..{end_commit}"]).decode("utf-8").strip().split("\n")
         return commits
+
+    def get_version_of_commit(self, branch: str, commit_sha: str, submodule=None) -> Optional[str]:
+        """
+        Get the first version which includes the given commit.
+        If submodule is provided, get the first version which includes the given commit in the submodule.
+        If no version is found, return None.
+        """
+
+        # Update the repository to the latest commit
+        self.update_repository(branch)
+
+        if not self.commit_exists(commit_sha):
+            self.logger.error(f"Commit {commit_sha} does not exist")
+            raise GitCommandError(f"Commit {commit_sha} does not exist")
+
+        target_commit = commit_sha
+
+        if submodule:
+            # Get the first commit that includes changes in the submodule
+            target_commit = self.get_first_commit_including_submodule_changes(branch, submodule, target_commit)
+
+        versions_commits = self.get_commit_surrounding_versions(target_commit)
+        if versions_commits is None or versions_commits[1] is None:
+            return None
+
+        return self.get_commit_version(versions_commits[1])

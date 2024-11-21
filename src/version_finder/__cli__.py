@@ -10,6 +10,8 @@ from .logger.logger import setup_logger
 from .protocols import LoggerProtocol
 from .__common__ import parse_arguments
 
+__cli_version__ = "0.1.0"
+
 
 def get_branch_selection(branches: List[str], logger: LoggerProtocol) -> str:
     """

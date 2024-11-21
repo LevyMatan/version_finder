@@ -1,9 +1,38 @@
-import customtkinter as ctk
-from PIL import Image, ImageTk
-import argparse
-import os
-from .__common__ import parse_arguments
 from .core import VersionFinder, GitError, GitCommandError
+from .__common__ import parse_arguments
+import os
+import argparse
+from PIL import Image, ImageTk
+import customtkinter as ctk
+
+
+def check_tkinter():
+    try:
+        import tkinter
+        return True
+    except ImportError:
+        return False
+
+
+def install_tkinter():
+    import platform
+    system = platform.system().lower()
+
+    if system == "linux":
+        os.system("sudo apt-get install python3-tk")
+    elif system == "darwin":  # MacOS
+        os.system("brew install python-tk")
+    elif system == "windows":
+        os.system("pip install tk")
+
+
+def launch_gui():
+    if not check_tkinter():
+        install_tkinter()
+
+
+launch_gui()
+
 
 os.environ['TK_SILENCE_DEPRECATION'] = '1'
 

@@ -181,11 +181,11 @@ class TestVersionFinder:
         # Add commits with different versions
         os.chdir(test_repo)
         os.system("git checkout main")
-        os.system("git commit -m 'VERSION: 1_0_0' --allow-empty")
+        os.system("git commit -m 'Version: 1_0_0' --allow-empty")
         os.system("touch file2")
         os.system("git add file2")
         os.system("git commit -m 'add file2")
-        os.system("git commit -m 'VERSION: 1_1_0' --allow-empty")
+        os.system("git commit -m 'Version: 1_1_0' --allow-empty")
 
         yield test_repo
 

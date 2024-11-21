@@ -34,16 +34,18 @@ setup(
     version=get_version(),
     package_dir={"": "src"},
     packages=find_packages(where="src"),
-    install_requires=[
-        "prompt_toolkit>=3.0.0",
-    ],
     extras_require={
         "dev": ["pytest", "pytest-cov", "flake8", "autopep8"],  # Development tools
-        "docs": ["sphinx", "sphinx_rtd_theme"],  # Documentation tools
+        "gui": ["customtkinter"],
+        "cli": ["prompt_toolkit>=3.0.0"],
+        "cli+gui": ["customtkinter", "prompt_toolkit>=3.0.0"],
+        "all": ["pytest", "pytest-cov", "flake8", "autopep8", "sphinx", "sphinx_rtd_theme", "customtkinter"],
     },
     entry_points={
         "console_scripts": [
             "version-finder=version_finder.__main__:main",
+            "version-finder-cli=version-finder.__cli__:main",
+            "version-finder-gui=version-finder.__gui__:main",
         ],
     },
     author="Matan Levy",

@@ -11,7 +11,7 @@ def run_command(command, cwd=None):
 
 def generate_random_version():
     """Generate a random version number in format XX_XX_XXXX"""
-    return f"{random.randint(1,99):02d}_{random.randint(1,99):02d}_{random.randint(1,9999):04d}"
+    return f"{random.randint(1, 99):02d}_{random.randint(1, 99):02d}_{random.randint(1, 9999):04d}"
 
 
 def create_commits_in_branch(repo_path, branch_name, num_commits=1000):

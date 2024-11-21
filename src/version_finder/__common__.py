@@ -1,6 +1,5 @@
 import argparse
 import shutil
-from ._version import __version__
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -44,8 +43,7 @@ Examples:
                         help="Number of retries for git operations (default: 0)")
 
     parser.add_argument('--version',
-                        action='version',
-                        version=f'%(prog)s {__version__}',
+                        action='store_true',
                         help="Show program's version number and exit")
 
     args = parser.parse_args()

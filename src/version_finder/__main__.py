@@ -15,7 +15,7 @@ def main():
     else:
         if args.path and args.branch and args.commit:
             vf = VersionFinder(path=args.path)
-            version = vf.get_version_of_commit(args.branch, args.commit, args.submodule)
+            version = vf.find_first_version_containing_commit(args.branch, args.commit, args.submodule)
             if version:
                 print(f"The first version which includes commit {args.commit} is {version}")
             else:

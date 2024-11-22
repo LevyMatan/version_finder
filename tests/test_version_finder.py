@@ -71,17 +71,17 @@ class TestVersionFinder:
             with pytest.raises(InvalidGitRepository):
                 VersionFinder(path=temp_dir)
 
-    def test_get_branches(self, test_repo):
+    def test_list_branches(self, test_repo):
         finder = VersionFinder(path=test_repo, logger=logger)
-        branches = finder.get_branches()
+        branches = finder.list_branches()
         assert 'main' in branches or 'master' in branches
         assert 'dev' in branches
         assert 'feature' in branches
 
-    def test_is_valid_branch(self, test_repo):
+    def test_has_branch(self, test_repo):
         finder = VersionFinder(path=test_repo, logger=logger)
-        assert finder.is_valid_branch('dev')
-        assert not finder.is_valid_branch('nonexistent-branch')
+        assert finder.has_branch('dev')
+        assert not finder.has_branch('nonexistent-branch')
 
     def test_update_repository_valid_branch(self, test_repo):
         finder = VersionFinder(path=test_repo, logger=logger)
@@ -94,6 +94,26 @@ class TestVersionFinder:
         finder = VersionFinder(path=test_repo, logger=logger)
         with pytest.raises(GitCommandError):
             finder.update_repository('nonexistent-branch')
+
+    def test_extract_version_from_message(self, test_repo):
+        finder = VersionFinder(path=test_repo, logger=logger)
+
+        # Test various version formats
+        test_cases = [
+            ("Version: 2024_01", "2024_01"),
+            ("Version: XX_2024_01_15", "2024_01_15"),
+            ("Random text Version: 2024-01-15 more text", "2024-01-15"),
+            ("2024_01_15_23", "2024_01_15_23"),
+            ("Version: XX_2024_01", "2024_01"),
+            ("No version here", None),
+            ("2023-text", None),
+            ("Version: XX_2024_01_15_RC1", "2024_01_15"),
+            ("Version: 2024_01-15", "2024_01-15"),
+        ]
+
+        for message, expected in test_cases:
+            result = finder._VersionFinder__extract_version_from_message(message)
+            assert result == expected, f"Failed for message: {message}"
 
     def test_repository_not_clean(self, test_repo):
         # Create uncommitted changes
@@ -145,37 +165,37 @@ class TestVersionFinder:
         # Verify that the first commit is correct
         assert first_commit == os.popen('git rev-parse HEAD').read().strip()
 
-    def test_get_submodules(self, repo_with_submodule):
+    def test_list_submodules(self, repo_with_submodule):
         # This test verifies that the VersionFinder can correctly identify Git submodules
         # It uses the repo_with_submodule fixture which creates a test repo containing a submodule named 'sub1'
         finder = VersionFinder(path=repo_with_submodule)
-        # Call get_submodules() to retrieve list of submodules in the repository
-        submodules = finder.get_submodules()
+        # Call list_submodules() to retrieve list of submodules in the repository
+        submodules = finder.list_submodules()
         # Verify that the 'sub1' submodule is found in the list of submodules
         assert 'sub_repo' in submodules
 
-    def test_get_submodules_empty(self, test_repo):
+    def test_list_submodules_empty(self, test_repo):
         # This test verifies that the VersionFinder can correctly handle the case where there are no submodules
         # It uses the test_repo fixture which creates a test repo without any submodules
         finder = VersionFinder(path=test_repo, logger=logger)
-        # Call get_submodules() to retrieve list of submodules in the repository
-        submodules = finder.get_submodules()
+        # Call list_submodules() to retrieve list of submodules in the repository
+        submodules = finder.list_submodules()
         # Verify that the list of submodules is empty
         assert len(submodules) == 0
 
-    def test_get_submodules_invalid_repo(self, test_repo):
+    def test_list_submodules_invalid_repo(self, test_repo):
         # This test verifies that the VersionFinder can correctly handle the case where the repository is invalid
         # It uses the test_repo fixture which creates a test repo without any submodules
         finder = VersionFinder(path=test_repo, logger=logger)
-        # Call get_submodules() to retrieve list of submodules in the repository
-        submodules = finder.get_submodules()
+        # Call list_submodules() to retrieve list of submodules in the repository
+        submodules = finder.list_submodules()
         # Verify that the list of submodules is empty
         assert len(submodules) == 0
 
-    def test_get_submodule_ptr_from_commit(self, repo_with_submodule):
+    def test_get_submodule_commit_hash(self, repo_with_submodule):
         finder = VersionFinder(path=repo_with_submodule)
-        # Call get_submodule_ptr_from_commit() to retrieve the submodule pointer from a specific commit
-        submodule_ptr = finder.get_submodule_ptr_from_commit('main', 'sub_repo')
+        # Call get_submodule_commit_hash() to retrieve the submodule pointer from a specific commit
+        submodule_ptr = finder.get_submodule_commit_hash('main', 'HEAD', 'sub_repo')
         # Verify that the submodule pointer is correct
 
         # change dir to submodule
@@ -198,12 +218,12 @@ class TestVersionFinder:
 
         yield test_repo
 
-    def test_find_version_commit(self, repo_with_versions):
+    def test_find_commit_by_version(self, repo_with_versions):
         finder = VersionFinder(path=repo_with_versions)
-        commits = finder.find_version_commit('main', '1_0_0')
+        commits = finder.find_commit_by_version('main', '1_0_0')
         assert len(commits) == 1
         assert commits[0] == os.popen('git rev-parse HEAD~1').read().strip()
 
-        commits = finder.find_version_commit('main', '1_1_0')
+        commits = finder.find_commit_by_version('main', '1_1_0')
         assert len(commits) == 1
         assert commits[0] == os.popen('git rev-parse HEAD').read().strip()

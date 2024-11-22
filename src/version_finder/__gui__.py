@@ -1,5 +1,5 @@
-from .core import VersionFinder, GitError, GitCommandError
-from .__common__ import parse_arguments
+from version_finder.core import VersionFinder, GitError, GitCommandError
+from version_finder.__common__ import parse_arguments
 import os
 import argparse
 from PIL import Image, ImageTk
@@ -326,10 +326,13 @@ class VersionFinderGUI(ctk.CTk):
             self.output_text.insert("end", f"Branch: {branch}\n")
             self.output_text.insert("end", f"Submodule: {submodule}\n")
             self.output_text.insert("end", f"Commit: {commit}\n")
+            self.output_text.insert(
+                "end", f"Commit: {self.version_finder.get_commit_sha_from_relative_string(branch, commit)}\n")
 
             # Perform the search with error handling
             try:
-                result = self.version_finder.find_first_version_containing_commit(branch, commit, submodule)
+                result = self.version_finder.find_first_version_containing_commit(
+                    branch, self.version_finder.get_commit_sha_from_relative_string(branch, commit), submodule)
                 self.output_text.insert("end", f"✅ Search completed successfully: The version is {result}\n")
             except GitCommandError as e:
                 self.output_text.insert("end", f"❌ Git Error: {str(e)}\n")

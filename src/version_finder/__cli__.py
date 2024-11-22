@@ -105,8 +105,8 @@ def process_commit_search(finder: VersionFinder, branch: str, logger: LoggerProt
 
                 versions = finder.get_commit_surrounding_versions(selected_commit)
                 logger.info("\nSurrounding versions:")
-                logger.info("  Previous version: %s", finder.get_commit_version(versions[0]) or "None")
-                logger.info("  Next version: %s", finder.get_commit_version(versions[1]) or "None")
+                logger.info("  Previous version: %s", finder.get_version_from_commit(versions[0]) or "None")
+                logger.info("  Next version: %s", finder.get_version_from_commit(versions[1]) or "None")
                 logger.info("  Previous version: %s", versions[0] or "None")
                 logger.info("  Next version: %s", versions[1] or "None")
 
@@ -156,7 +156,7 @@ def cli_main(args: argparse.Namespace) -> int:
 
         # Get available branches
         logger.debug("Fetching available branches")
-        branches = finder.get_branches()
+        branches = finder.list_branches()
         if not branches:
             logger.error("No branches found in repository")
             return 1

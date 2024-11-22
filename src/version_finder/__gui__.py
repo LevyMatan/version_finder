@@ -284,10 +284,10 @@ class VersionFinderGUI(ctk.CTk):
             self.dir_entry.insert(0, directory)
             self.initialize_version_finder()
 
-            self.branch_entry.suggestions = self.version_finder.get_branches()
+            self.branch_entry.suggestions = self.version_finder.list_branches()
             self.branch_entry.configure(state="normal")
 
-            self.submodule_entry.suggestions = self.version_finder.get_submodules()
+            self.submodule_entry.suggestions = self.version_finder.list_submodules()
             self.submodule_entry.configure(state="normal")
 
     def validate_entries(self):
@@ -329,7 +329,7 @@ class VersionFinderGUI(ctk.CTk):
 
             # Perform the search with error handling
             try:
-                result = self.version_finder.get_version_of_commit(branch, commit, submodule)
+                result = self.version_finder.find_first_version_containing_commit(branch, commit, submodule)
                 self.output_text.insert("end", f"✅ Search completed successfully: The version is {result}\n")
             except GitCommandError as e:
                 self.output_text.insert("end", f"❌ Git Error: {str(e)}\n")

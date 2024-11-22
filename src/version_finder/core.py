@@ -194,7 +194,7 @@ class VersionFinder:
             self.logger.error(f"Failed to load branches: {e}")
             self.branches = []
 
-    def extract_version(self, commit_message: str) -> Optional[str]:
+    def __extract_version_from_message(self, commit_message: str) -> Optional[str]:
         """
         Extract version from commit message using various patterns.
 
@@ -225,15 +225,15 @@ class VersionFinder:
         except GitCommandError:
             return False
 
-    def get_submodules(self) -> List[str]:
+    def list_submodules(self) -> List[str]:
         """Get list of submodules."""
         return self.submodules
 
-    def get_branches(self) -> List[str]:
+    def list_branches(self) -> List[str]:
         """Get list of branches."""
         return self.branches
 
-    def is_valid_branch(self, branch: str) -> bool:
+    def has_branch(self, branch: str) -> bool:
         """Check if a branch exists."""
         return branch in self.branches
 
@@ -247,20 +247,20 @@ class VersionFinder:
         Raises:
             GitCommandError: If update operations fail.
         """
-        if not self.is_valid_branch(branch):
+        if not self.has_branch(branch):
             raise GitCommandError(f"Invalid branch: {branch}")
 
         try:
             self.__execute_git_command(["checkout", branch])
             if self._has_remote:
                 self.__execute_git_command(["pull", "origin", branch])
-            self.__update_submodules()
+            self.update_all_submodules()
 
         except GitCommandError as e:
             self.logger.error(f"Failed to update repository: {e}")
             raise
 
-    def __update_submodules(self) -> None:
+    def update_all_submodules(self) -> None:
         """Update submodules recursively."""
         try:
             self.__execute_git_command(["submodule", "update", "--init", "--recursive"])
@@ -326,7 +326,7 @@ class VersionFinder:
             List containing the previous and next version commit SHAs. Elements can be None.
         """
         try:
-            if not self.commit_exists(commit_sha):
+            if not self.has_commit(commit_sha):
                 raise GitCommandError(f"Commit {commit_sha} does not exist")
 
             # Find nearest version commits using grep
@@ -350,7 +350,7 @@ class VersionFinder:
         except GitCommandError as e:
             raise GitCommandError(f"Failed to get version commits: {e}") from e
 
-    def get_commit_version(self, commit_sha: str) -> str:
+    def get_version_from_commit(self, commit_sha: str) -> str:
         """
         Get the version from the commit message.
 
@@ -374,7 +374,7 @@ class VersionFinder:
             message = output.decode("utf-8").strip()
 
             # Extract version from message (assuming format "Version: X.Y.Z")
-            version_string = self.extract_version(message)
+            version_string = self.__extract_version_from_message(message)
             if version_string:
                 return version_string
             raise GitCommandError(f"Commit {commit_sha} does not contain version information")
@@ -382,7 +382,7 @@ class VersionFinder:
         except GitCommandError as e:
             raise GitCommandError(f"Failed to get version for commit {commit_sha}: {e}") from e
 
-    def commit_exists(self, commit_sha: str) -> bool:
+    def has_commit(self, commit_sha: str) -> bool:
         """
         Check if a commit exists in the repository.
 
@@ -443,7 +443,7 @@ class VersionFinder:
         else:
             return commits[left - 1]
 
-    def find_version_commit(self, branch: str, version: str) -> Optional[List[str]]:
+    def find_commit_by_version(self, branch: str, version: str) -> Optional[List[str]]:
         """
         Find the commit that indicates the specified version.
         """
@@ -457,15 +457,16 @@ class VersionFinder:
             return f"Version {version} not found"
         return commits
 
-    def get_submodule_ptr_from_commit(self, commit: str, submodule: str, branch=None) -> Optional[str]:
+    def get_submodule_commit_hash(self, branch: str, commit: str, submodule: str) -> Optional[str]:
         """
         Get the submodule pointer from a commit.
+        That is, get the hash of the submodule at the time of the commit.
         """
         # Update the repository to the latest commit
         if branch:
             self.update_repository(branch)
 
-        if not self.commit_exists(commit):
+        if not self.has_commit(commit):
             self.logger.error(f"Commit {commit} does not exist")
             raise GitCommandError(f"Commit {commit} does not exist")
 
@@ -477,33 +478,32 @@ class VersionFinder:
         return submodule_ptr[0].split()[2]
 
     def get_commits_between_versions(self, branch: str, start_version: str,
-                                     end_version: str, submodule=None) -> List[str]:
+                                     end_version: str, submodule: Optional[str] = None) -> List[str]:
         """
         Get the list of commits between two versions.
         """
         # Update the repository to the latest commit
         self.update_repository(branch)
 
-        start_commit = self.find_version_commit(branch, start_version)
-        end_commit = self.find_version_commit(branch, end_version)
+        start_commit = self.find_commit_by_version(branch, start_version)
+        end_commit = self.find_commit_by_version(branch, end_version)
 
         if submodule:
-            first_submodule_pointer = self.get_submodule_ptr_from_commit(start_commit, submodule, branch=branch)
-            last_submodule_pointer = self.get_submodule_ptr_from_commit(end_commit, submodule, branch=branch)
+            first_submodule_pointer = self.get_submodule_commit_hash(start_commit, submodule, branch=branch)
+            last_submodule_pointer = self.get_submodule_commit_hash(end_commit, submodule, branch=branch)
             if not first_submodule_pointer or not last_submodule_pointer:
                 return []
             commits = self.__execute_git_command(
                 ["log", "--format=%H", f"{first_submodule_pointer}..{last_submodule_pointer}"]).decode("utf-8").strip().split("\n")
         if not start_commit or not end_commit:
             return []
-        # raise ValueError("Invalid version(s)")
 
         # Get the list of commits between the two versions
         commits = self.__execute_git_command(
             ["log", "--format=%H", f"{start_commit}..{end_commit}"]).decode("utf-8").strip().split("\n")
         return commits
 
-    def get_version_of_commit(self, branch: str, commit_sha: str, submodule=None) -> Optional[str]:
+    def find_first_version_containing_commit(self, branch: str, commit_sha: str, submodule=None) -> Optional[str]:
         """
         Get the first version which includes the given commit.
         If submodule is provided, get the first version which includes the given commit in the submodule.
@@ -513,7 +513,7 @@ class VersionFinder:
         # Update the repository to the latest commit
         self.update_repository(branch)
 
-        if not self.commit_exists(commit_sha):
+        if not self.has_commit(commit_sha):
             self.logger.error(f"Commit {commit_sha} does not exist")
             raise GitCommandError(f"Commit {commit_sha} does not exist")
 
@@ -527,4 +527,4 @@ class VersionFinder:
         if versions_commits is None or versions_commits[1] is None:
             return None
 
-        return self.get_commit_version(versions_commits[1])
+        return self.get_version_from_commit(versions_commits[1])

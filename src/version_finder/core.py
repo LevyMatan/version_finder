@@ -65,6 +65,14 @@ class VersionFinder:
     branches: List[str]
     _has_remote: bool
 
+    # Pattern matches:
+    # - Optional "Version: XX_" prefix
+    # - Year (2014)
+    # - Underscore or hyphen
+    # - Numbers
+    # - Optional "-" or "_" followed by additional numbers
+    version_pattern = r'(Version:\s*(?:XX_)?)?(\d+(?:[_-]\d+)+(?:[_-]\d+)?)'
+
     def __init__(self,
                  path: Optional[str] = None,
                  config: Optional[GitConfig] = None,
@@ -204,17 +212,10 @@ class VersionFinder:
         Returns:
             Optional[str]: Extracted version or None if no version found
         """
-        # Pattern matches:
-        # - Optional "Version: XX_" prefix
-        # - Year (2014)
-        # - Underscore or hyphen
-        # - Numbers
-        # - Optional "-" or "_" followed by additional numbers
-        version_pattern = r'(?:Version:\s*(?:XX_)?)?(\d{4}(?:[_-]\d+)+(?:[_-]\d+)?)'
 
-        match = re.search(version_pattern, commit_message)
+        match = re.search(self.version_pattern, commit_message)
         if match:
-            return match.group(1)
+            return match.group(2)
         return None
 
     def __is_clean_git_repo(self) -> bool:
@@ -332,7 +333,8 @@ class VersionFinder:
             # Find nearest version commits using grep
             prev_version = self.__execute_git_command([
                 "log",
-                "--grep=Version:",
+                "-i",
+                "--grep=version:",
                 "--format=%H",
                 "-n", "1",
                 f"{commit_sha}~1"
@@ -340,7 +342,8 @@ class VersionFinder:
 
             next_version = self.__execute_git_command([
                 "log",
-                "--grep=Version:",
+                "-i",
+                "--grep=version:",
                 "--format=%H",
                 "-n", "1",
                 f"{commit_sha}^1..HEAD"
@@ -528,3 +531,17 @@ class VersionFinder:
             return None
 
         return self.get_version_from_commit(versions_commits[1])
+
+    def get_commit_sha_from_relative_string(self, branch: str, relative_string: str) -> Optional[str]:
+        """
+        Get the commit SHA from a relative string.
+        """
+        # Update the repository to the latest commit
+        self.update_repository(branch)
+
+        # Get the commit SHA from the relative string
+        commit_sha = self.__execute_git_command(
+            ["rev-parse", relative_string]).decode("utf-8").strip()
+        if not commit_sha:
+            return None
+        return commit_sha

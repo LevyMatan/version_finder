@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+
       {
         "name": "Debug Electron Main Process",
         "type": "node",
@@ -22,6 +23,19 @@
         "module": "pytest",
         "args": [
           "-v"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": false
+      },
+      {
+        "name": "Python: Debug CLI",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/version_finder/__cli__.py",
+        "args": [
+          "-v",
+          "-p${workspaceFolder}/test_version_repo",
+          "-bhotfix/branch_12",
         ],
         "console": "integratedTerminal",
         "justMyCode": false

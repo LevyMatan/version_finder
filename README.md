@@ -3,6 +3,12 @@
 
 Version Finder is a command-line utility for finding and comparing versions in Git repositories. It provides an easy way to manage and analyze version information across multiple branches and submodules.
 
+## Features
+
+- Find versions across different branches and submodules in a Git repository
+- Handle Git submodules
+- Retrieve detailed commit information
+
 ## Installation
 
 To install Version Finder, follow these steps:
@@ -11,21 +17,31 @@ To install Version Finder, follow these steps:
 2. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/version_finder.git
+   git clone https://github.com/LevyMatan/version_finder.git
    cd version_finder
    ```
 
 3. Install the package using pip:
 
    ```bash
-   pip install .
+   make install
    ```
+
+   You will be prompted to use what will be installed, the option are:
+   - Core Library only
+   - Core Library and CLI
+   - Core Library and GUI
+   - All
+
+   Please note that this installation does not inlude the requierments for development.
 
 ## Usage
 
 After installation, you can use the `version_finder` command-line tool. Here are some example commands:
 
 ```bash
+version_finder --gui                            # Run the GUI
+version-finder --cli                            # Run the CLI
 version_finder -p /path/to/repo                 # Find versions in specified repository
 version_finder -v                               # Run with verbose output
 version_finder --timeout 60                     # Set git operation timeout to 60 seconds
@@ -37,31 +53,57 @@ For a full list of options, run:
 version_finder --help
 ```
 
-## Features
+### Direct Interaction
 
-- Find and compare versions across different branches in a Git repository
-- Handle Git submodules
-- Verify commit signatures
-- Retrieve detailed commit information
+You can envoke a simplpe version finder with:
+
+```bash
+version_finder -p /path/to/repo -b target_branch -c target_commit [-s submodule_path]
+```
+
+This will find the first version containing the target commit within the target branch.
+
+### CLI
+
+The CLI will enable user to interact with the library in a more interactive way.
+The first step will be to select the repository to work on.
+After that, the user will be asked to select the branch to work on.
+
+Now the user will given the option to choose a TASK to perform.
+Based on the task chosen, user will have to enter additional information.
+Tasks include:
+
+- Find the first version containing a specific commit
+- Find the first version containing a specific commit in a specific submodule
+- Show all commits between two versions
+- Show all commits between two versions in a specific submodule
+
+### GUI
+
+Reveales the same functionality as the CLI, but with a GUI interface.
+It also provides instant feedback for parameter correctness and hints in the form of autocomplete.
 
 ## Code Structure
 
 The Version Finder utility is structured as follows:
 
-- `version_finder/__main__.py`: Contains the main CLI logic and argument parsing
-- `version_finder/core.py`: Implements the `VersionFinder` class, which handles Git operations
+- `version_finder/__main__.py`: Contains the a gateway to the library and will preform a simple task or open CLI or GUI.
+- `version_finder/core.py`: Implements the `VersionFinder` class, which handles Git operations, branch handling, and version extraction.
 - `version_finder/logger.py`: Sets up logging for the application
 - `version_finder/protocols.py`: Defines protocol classes for type hinting
+- `version_finder/__cli__.py`: Defines the CLI interface for the application
+- `version_finder/__gui__.py`: Defines the GUI interface for the application
+- `version_finder/__common__.py`: Defines common utility functions for both CLI and GUI
 
 ### Core Components
 
 1. `VersionFinder` class:
    - Manages Git repository operations
    - Handles submodules and branches
-   - Performs version comparisons and retrieves commit information
+   - Performs version extraction and retrieves commit information
 
 2. CLI Interface:
-   - Parses command-line arguments
+   - Provides a command-line interface for interacting with the application
    - Provides an interactive interface for selecting branches
    - Executes version finding operations based on user input
 

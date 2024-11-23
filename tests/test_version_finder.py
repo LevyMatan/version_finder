@@ -95,6 +95,30 @@ class TestVersionFinder:
         with pytest.raises(GitCommandError):
             finder.update_repository('nonexistent-branch')
 
+    def test_get_current_branch(self, test_repo):
+        finder = VersionFinder(path=test_repo, logger=logger)
+
+        # Test getting current branch on main
+        current_branch = finder.get_current_branch()
+        assert current_branch in ['main']
+
+        # Test getting current branch after switching to dev
+        finder.update_repository('dev')
+        current_branch = finder.get_current_branch()
+        assert current_branch == 'dev'
+
+        # Test getting current branch after switching to feature
+        finder.update_repository('feature')
+        current_branch = finder.get_current_branch()
+        assert current_branch == 'feature'
+
+        # Get current commit hash
+        commit_hash = os.popen('git rev-parse HEAD').read().strip()
+        # Checkout specific commit to enter detached HEAD state
+        os.system(f"git checkout {commit_hash}")
+        current_branch = finder.get_current_branch()
+        assert current_branch is None
+
     def test_extract_version_from_message(self, test_repo):
         finder = VersionFinder(path=test_repo, logger=logger)
 

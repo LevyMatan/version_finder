@@ -13,7 +13,7 @@ import os
 import re
 import subprocess
 import time
-from typing import List, Optional
+from typing import List, Optional, Dict, Callable
 from version_finder.protocols import LoggerProtocol, NullLogger
 
 
@@ -56,6 +56,84 @@ class Commit:
     author: str
     timestamp: int
     version: Optional[str] = None
+
+
+@dataclass
+class VersionFinderTask:
+    """A class to represent a VersionFinder task."""
+    index: int
+    name: str
+    description: str
+    args: Optional[Dict] = None
+    run: Callable = None
+
+
+class VersionFinderTaskRegistry:
+    def __init__(self):
+        self._tasks_by_name: Dict[str, VersionFinderTask] = {}
+        self._tasks_by_index: Dict[int, VersionFinderTask] = {}
+        self._initialize_tasks()
+
+    def _initialize_tasks(self):
+        tasks = [
+            VersionFinderTask(
+                name="Find first version containing commit",
+                index=0,
+                description="TODO",
+            ),
+            VersionFinderTask(
+                name="Find all commits between two versions",
+                index=1,
+                description="TODO",
+            ),
+            VersionFinderTask(
+                name="Find commit by text",
+                index=2,
+                description="TODO",
+            )
+        ]
+
+        for task in tasks:
+            self._tasks_by_name[task.name] = task
+            self._tasks_by_index[task.index] = task
+
+    def get_by_name(self, name: str) -> Optional[VersionFinderTask]:
+        return self._tasks_by_name.get(name)
+
+    def get_by_index(self, index: int) -> Optional[VersionFinderTask]:
+        return self._tasks_by_index.get(index)
+
+    def get_tasks_by_index(self) -> list[VersionFinderTask]:
+        """Returns tasks sorted by index"""
+        return [self._tasks_by_index[i] for i in sorted(self._tasks_by_index.keys())]
+
+    def has_index(self, index: int) -> bool:
+        return index in self._tasks_by_index
+
+    def has_name(self, name: str) -> bool:
+        return name in self._tasks_by_name
+
+    def _set_task_action(self, index: int, action: Callable):
+        task = self.get_by_index(index)
+        if task:
+            task.run = action
+        else:
+            raise ValueError(f"Task with index {index} not found")
+
+    def _set_task_action_params(self, index: int, params: Dict):
+        task = self.get_by_index(index)
+        if task:
+            task.args = params
+        else:
+            raise ValueError(f"Task with index {index} not found")
+
+    def initialize_actions_and_args(self, actions: Dict[int, Callable], params: Dict[int, List[str]]):
+        """
+
+        """
+        for index, action in actions.items():
+            self._set_task_action(index, action)
+            self._set_task_action_params(index, params[index])
 
 
 class VersionFinder:
@@ -234,6 +312,19 @@ class VersionFinder:
         """Get list of branches."""
         return self.branches
 
+    def get_current_branch(self) -> str:
+        """Get current branch."""
+        current_branch = None
+        try:
+            output = self.__execute_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
+            output = output.decode("utf-8").strip()
+            self.logger.debug(f"Current branch output: {output}")
+            if output not in ["HEAD"]:
+                current_branch = output
+        except GitCommandError as e:
+            self.logger.error(f"Failed to get current branch: {e}")
+        return current_branch
+
     def has_branch(self, branch: str) -> bool:
         """Check if a branch exists."""
         return branch in self.branches
@@ -345,9 +436,8 @@ class VersionFinder:
                 "-i",
                 "--grep=version:",
                 "--format=%H",
-                "-n", "1",
-                f"{commit_sha}^1..HEAD"
-            ]).decode("utf-8").strip() or None
+                f"{commit_sha}..HEAD"
+            ]).decode("utf-8").strip().split()[-1] or None
 
             return [prev_version, next_version]
         except GitCommandError as e:
@@ -545,3 +635,23 @@ class VersionFinder:
         if not commit_sha:
             return None
         return commit_sha
+
+    def get_task_api_functions(self) -> Dict[int, Callable]:
+        """
+        Get the list of API functions.
+        """
+        return {
+            0: self.find_commits_by_text,
+            1: self.find_first_version_containing_commit,
+            2: self.get_commits_between_versions,
+        }
+
+    def get_task_api_functions_params(self) -> Dict[int, List[str]]:
+        """
+        Get the list of API functions parameters.
+        """
+        return {
+            0: ["text"],
+            1: ["commit_sha"],
+            2: ["start_version", "end_version"],
+        }

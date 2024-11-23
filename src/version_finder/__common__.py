@@ -16,15 +16,21 @@ Examples:
 """)
 
     parser.add_argument("-p", "--path",
+                        default=None,
                         help="Repository path (defaults to current directory)")
 
     parser.add_argument("-c", "--commit",
+                        default=None,
                         help="The commit hash to find the first that includes it")
     parser.add_argument("-b", "--branch",
+                        default=None,
                         help="The branch to find the first that includes it")
     parser.add_argument("-s", "--submodule",
                         help="The submodule to find the first that includes it")
 
+    parser.add_argument("-t", "--task",
+                        default=None,
+                        help="The task to perform (find_commit, find_version, compare_versions, list_submodules, get_submodule_commit_hash)")
     parser.add_argument("--cli", action="store_true", help="Run the CLI version")
     parser.add_argument("--gui", action="store_true", help="Run the GUI version")
 

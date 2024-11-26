@@ -184,8 +184,13 @@ class TestVersionFinder:
         # This test verifies that the VersionFinder can correctly identify the first commit
         # that includes changes in the submodule
         finder = VersionFinder(path=repo_with_submodule)
+
+        # Choose a branch to update the repository to
+        update_repository_branch = 'main'
+        finder.update_repository(update_repository_branch)
+
         # Call get_first_commit_including_submodule_changes() to retrieve the first commit
-        first_commit = finder.get_first_commit_including_submodule_changes('main', 'sub_repo', 'HEAD')
+        first_commit = finder.get_first_commit_including_submodule_changes('sub_repo', 'HEAD')
         # Verify that the first commit is correct
         assert first_commit == os.popen('git rev-parse HEAD').read().strip()
 
@@ -218,8 +223,10 @@ class TestVersionFinder:
 
     def test_get_submodule_commit_hash(self, repo_with_submodule):
         finder = VersionFinder(path=repo_with_submodule)
+
+        finder.update_repository('main')
         # Call get_submodule_commit_hash() to retrieve the submodule pointer from a specific commit
-        submodule_ptr = finder.get_submodule_commit_hash('main', 'HEAD', 'sub_repo')
+        submodule_ptr = finder.get_submodule_commit_hash('HEAD', 'sub_repo')
         # Verify that the submodule pointer is correct
 
         # change dir to submodule
@@ -244,10 +251,11 @@ class TestVersionFinder:
 
     def test_find_commit_by_version(self, repo_with_versions):
         finder = VersionFinder(path=repo_with_versions)
-        commits = finder.find_commit_by_version('main', '1_0_0')
+        finder.update_repository('main')
+        commits = finder.find_commit_by_version('1_0_0')
         assert len(commits) == 1
         assert commits[0] == os.popen('git rev-parse HEAD~1').read().strip()
 
-        commits = finder.find_commit_by_version('main', '1_1_0')
+        commits = finder.find_commit_by_version('1_1_0')
         assert len(commits) == 1
         assert commits[0] == os.popen('git rev-parse HEAD').read().strip()

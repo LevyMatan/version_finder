@@ -49,6 +49,7 @@ class GitRepositoryNotClean(GitError):
     """Raised when the repository has uncommitted changes"""
 
 
+@dataclass
 class Commit:
     """A class to represent a git commit."""
     sha: str
@@ -165,6 +166,7 @@ class VersionFinder:
         """
         self.config = config or GitConfig()
         self.repository_path = Path(path or os.getcwd()).resolve()
+        self.is_task_ready = False
         self.submodules: List[str] = []
         self.branches: List[str] = []
         self.logger = logger or NullLogger()  # Use NullLogger if no logger provided
@@ -201,8 +203,8 @@ class VersionFinder:
         if self._has_remote:
             self.logger.info(f"Fetching latest changes from remote repository: {self.repository_path}")
             self.__fetch_repository()
-        self.__load_submodules()
         self.__load_branches()
+        self.__load_submodules()
 
     def __execute_git_command(self, command: List[str], retries: int = 0, check: bool = True) -> bytes:
         """
@@ -329,7 +331,7 @@ class VersionFinder:
         """Check if a branch exists."""
         return branch in self.branches
 
-    def update_repository(self, branch: str) -> None:
+    def update_repository(self, branch: str = None) -> None:
         """
         Update the repository and its submodules to the specified branch.
 
@@ -339,6 +341,10 @@ class VersionFinder:
         Raises:
             GitCommandError: If update operations fail.
         """
+        if branch is None:
+            self.logger.info("No branch specified, using current branch")
+            branch = self.get_current_branch()
+
         if not self.has_branch(branch):
             raise GitCommandError(f"Invalid branch: {branch}")
 
@@ -346,13 +352,15 @@ class VersionFinder:
             self.__execute_git_command(["checkout", branch])
             if self._has_remote:
                 self.__execute_git_command(["pull", "origin", branch])
-            self.update_all_submodules()
+            self.__load_submodules()
+            self.__update_all_submodules()
+            self.is_task_ready = True
 
         except GitCommandError as e:
             self.logger.error(f"Failed to update repository: {e}")
             raise
 
-    def update_all_submodules(self) -> None:
+    def __update_all_submodules(self) -> None:
         """Update submodules recursively."""
         try:
             self.__execute_git_command(["submodule", "update", "--init", "--recursive"])
@@ -492,39 +500,72 @@ class VersionFinder:
         except GitCommandError:
             return False
 
+    def submodule_has_commit(self, submodule_path: str, commit_sha: str) -> bool:
+        """
+        Check if a commit exists in a submodule.
+
+        Args:
+            submodule_path: The path to the submodule.
+            commit_sha: The commit SHA to check.
+
+        Returns:
+            bool: True if the commit exists in the submodule, False otherwise.
+        """
+        try:
+            # Check if the commit exists in the submodule
+            self.__execute_git_command(["-C", submodule_path, "cat-file", "-e", commit_sha])
+            return True
+        except GitCommandError:
+            self.logger.error(f"Commit {commit_sha} does not exist in submodule {submodule_path}")
+            return False
+
     def get_first_commit_including_submodule_changes(
-            self, branch: str, submodule_path: str, submodule_target_commit: str) -> str:
+            self, submodule_path: str, submodule_target_commit: str) -> str:
         """
         Get the first commit that includes changes in the specified submodule.
         """
-        # Update the repository to the specified branch
-        self.update_repository(branch)
+        if not self.is_task_ready:
+            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
 
         # Verify submodule path exists
         if submodule_path not in self.submodules:
             raise GitCommandError(f"Invalid submodule path: {submodule_path}")
 
-        # Get list of commits that touched submodule
-        commits = self.__execute_git_command(
-            ["log", "--format=%H", "--", submodule_path]).decode("utf-8").strip().split("\n")
+        # Verify commit exists in submodule
+        if not self.submodule_has_commit(submodule_path, submodule_target_commit):
+            raise GitCommandError(f"Commit {submodule_target_commit} does not exist in submodule {submodule_path}")
 
-        submodule_pointers = self.__execute_git_command([
-            "ls-tree",
-            "-r",
-            "--full-tree",
-            *commits,  # list of commit hashes
-            submodule_path
-        ]).decode("utf-8").strip().split("\n")
+        def parse_git_log_output(git_log_output):
+            repo_commit_sha = None
+            tuples = []
+            for line in git_log_output.splitlines():
+                # Detect commit lines
+                if line.startswith("Commit: "):
+                    repo_commit_sha = line.split()[1]
+                # Detect submodule commit change lines
+                match = re.match(r"^\+Subproject commit (\w+)", line)
+                if match and repo_commit_sha:
+                    submodule_commit_sha = match.group(1)
+                    tuples.append((repo_commit_sha, submodule_commit_sha))
+                    repo_commit_sha = None  # Reset to avoid duplication
+            return tuples
 
-        # Each line will contain: "<mode> commit <submodule_hash> <submodule_path>"
-        # Parse to get just the submodule hashes
-        pointers = [line.split()[2] for line in submodule_pointers]
+        git_log_output = self.__get_commits_changing_submodule_pointers_and_the_new_pointer(submodule_path, 1500)
+        if not git_log_output:
+                raise GitCommandError(f"No commits found that change submodule {submodule_path} or its ancestors")
+        repo_commot_submodule_ptr_tuples = parse_git_log_output(git_log_output)
+        self.logger.debug(f"Found {len(repo_commot_submodule_ptr_tuples)} commits that change submodule {submodule_path}")
+        self.logger.debug(f"First commit: {repo_commot_submodule_ptr_tuples[0][0]}")
+        self.logger.debug(f"Last commit: {repo_commot_submodule_ptr_tuples[-1][0]}")
+
+        # Parse the git log output
+
 
         # Apply binary search to find the first commit that points to an ancestor of the target commit
-        left, right = 0, len(commits) - 1
+        left, right = 0, len(repo_commot_submodule_ptr_tuples) - 1
         while left <= right:
             mid = (left + right) // 2
-            submodule_ptr = pointers[mid]
+            submodule_ptr = repo_commot_submodule_ptr_tuples[mid][1]
             if self.__execute_git_command(
                     ["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr], check=False).returncode == 0:
                 right = mid - 1
@@ -532,16 +573,25 @@ class VersionFinder:
                 left = mid + 1
         # If left is 0, it means the target commit is the first commit that includes changes in the submodule
         if left == 0:
-            return commits[0]
+            return repo_commot_submodule_ptr_tuples[0][0]
         else:
-            return commits[left - 1]
+            return repo_commot_submodule_ptr_tuples[left - 1][0]
 
-    def find_commit_by_version(self, branch: str, version: str) -> Optional[List[str]]:
+    def __get_commits_changing_submodule_pointers_and_the_new_pointer(self, submodule_path, commit_num_limit):
+        git_log_command = [
+            "log", "--format=Commit: %H", "-p", "--", submodule_path,
+        ]
+        if commit_num_limit:
+            git_log_command.insert(2, f"-n {commit_num_limit}")
+        git_log_output = self.__execute_git_command(git_log_command).decode("utf-8").strip()
+        return git_log_output
+
+    def find_commit_by_version(self, version: str) -> Optional[List[str]]:
         """
         Find the commit that indicates the specified version.
         """
-        # Update the repository to the latest commit
-        self.update_repository(branch)
+        if not self.is_task_ready:
+            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
 
         # Find the commit that indicates the specified version
         commits = self.__execute_git_command(
@@ -550,14 +600,13 @@ class VersionFinder:
             return f"Version {version} not found"
         return commits
 
-    def get_submodule_commit_hash(self, branch: str, commit: str, submodule: str) -> Optional[str]:
+    def get_submodule_commit_hash(self, commit: str, submodule: str) -> Optional[str]:
         """
         Get the submodule pointer from a commit.
         That is, get the hash of the submodule at the time of the commit.
         """
-        # Update the repository to the latest commit
-        if branch:
-            self.update_repository(branch)
+        if not self.is_task_ready:
+            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
 
         if not self.has_commit(commit):
             self.logger.error(f"Commit {commit} does not exist")
@@ -570,20 +619,20 @@ class VersionFinder:
             return None
         return submodule_ptr[0].split()[2]
 
-    def get_commits_between_versions(self, branch: str, start_version: str,
+    def get_commits_between_versions(self, start_version: str,
                                      end_version: str, submodule: Optional[str] = None) -> List[str]:
         """
         Get the list of commits between two versions.
         """
-        # Update the repository to the latest commit
-        self.update_repository(branch)
+        if not self.is_task_ready:
+            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
 
-        start_commit = self.find_commit_by_version(branch, start_version)
-        end_commit = self.find_commit_by_version(branch, end_version)
+        start_commit = self.find_commit_by_version(start_version)
+        end_commit = self.find_commit_by_version(end_version)
 
         if submodule:
-            first_submodule_pointer = self.get_submodule_commit_hash(start_commit, submodule, branch=branch)
-            last_submodule_pointer = self.get_submodule_commit_hash(end_commit, submodule, branch=branch)
+            first_submodule_pointer = self.get_submodule_commit_hash(start_commit, submodule)
+            last_submodule_pointer = self.get_submodule_commit_hash(end_commit, submodule)
             if not first_submodule_pointer or not last_submodule_pointer:
                 return []
             commits = self.__execute_git_command(
@@ -596,38 +645,37 @@ class VersionFinder:
             ["log", "--format=%H", f"{start_commit}..{end_commit}"]).decode("utf-8").strip().split("\n")
         return commits
 
-    def find_first_version_containing_commit(self, branch: str, commit_sha: str, submodule=None) -> Optional[str]:
+    def find_first_version_containing_commit(self, commit_sha: str, submodule=None) -> Optional[str]:
         """
         Get the first version which includes the given commit.
         If submodule is provided, get the first version which includes the given commit in the submodule.
         If no version is found, return None.
         """
 
-        # Update the repository to the latest commit
-        self.update_repository(branch)
+        if not self.is_task_ready:
+            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+
+        if submodule:
+            # Get the first commit that includes changes in the submodule
+            commit_sha = self.get_first_commit_including_submodule_changes(submodule, commit_sha)
 
         if not self.has_commit(commit_sha):
             self.logger.error(f"Commit {commit_sha} does not exist")
             raise GitCommandError(f"Commit {commit_sha} does not exist")
 
-        target_commit = commit_sha
-
-        if submodule:
-            # Get the first commit that includes changes in the submodule
-            target_commit = self.get_first_commit_including_submodule_changes(branch, submodule, target_commit)
-
-        versions_commits = self.get_commit_surrounding_versions(target_commit)
+        versions_commits = self.get_commit_surrounding_versions(commit_sha)
         if versions_commits is None or versions_commits[1] is None:
             return None
 
         return self.get_version_from_commit(versions_commits[1])
 
-    def get_commit_sha_from_relative_string(self, branch: str, relative_string: str) -> Optional[str]:
+    def get_commit_sha_from_relative_string(self, relative_string: str) -> Optional[str]:
         """
         Get the commit SHA from a relative string.
+        For example, "HEAD~1" will return the SHA of the commit that is one commit before HEAD.
         """
-        # Update the repository to the latest commit
-        self.update_repository(branch)
+        if not self.is_task_ready:
+            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
 
         # Get the commit SHA from the relative string
         commit_sha = self.__execute_git_command(

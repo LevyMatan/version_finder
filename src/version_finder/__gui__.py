@@ -1,9 +1,11 @@
 from version_finder.core import VersionFinder, GitError, GitCommandError
 from version_finder.__common__ import parse_arguments
+from version_finder import __version__
 import os
 import argparse
 from PIL import Image, ImageTk
 import customtkinter as ctk
+
 
 
 def check_tkinter():
@@ -351,7 +353,8 @@ class VersionFinderGUI(ctk.CTk):
 
 def gui_main(args: argparse.Namespace) -> int:
     if args.version:
-        print(f"Version: {__gui_version__}")
+        print(f"version-finder-core: {__version__}")
+        print(f"version-finder-cli: {__gui_version__}")
         return 0
 
     app = VersionFinderGUI(args.path)

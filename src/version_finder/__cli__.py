@@ -10,6 +10,7 @@ from version_finder.core import VersionFinder, GitError, VersionFinderTask, Vers
 from version_finder.logger.logger import setup_logger
 from version_finder.protocols import LoggerProtocol
 from version_finder.__common__ import parse_arguments
+from version_finder import __version__
 
 __cli_version__ = "1.0.0"
 
@@ -353,7 +354,11 @@ class VersionFinderCLI:
 
 def cli_main(args: argparse.Namespace) -> int:
     """Main entry point for the version finder CLI."""
-    # Parse arguments
+
+    if args.version:
+        print(f"version-finder-core: {__version__}")
+        print(f"version-finder-cli: {__cli_version__}")
+        return 0
 
     # Setup logging
     log_level = logging.DEBUG if args.verbose else logging.INFO

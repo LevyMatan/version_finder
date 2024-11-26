@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v3.3.3 (2024-11-26)
+
+### Bug Fixes
+
+* fix(gui): improve autocomplete ([`34d753a`](https://github.com/LevyMatan/version_finder/commit/34d753a65985b959bc8684a5e4d66161c67b4537))
+
+
 ## v3.3.2 (2024-11-26)
 
 ### Bug Fixes

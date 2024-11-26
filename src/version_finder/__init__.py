@@ -7,7 +7,7 @@ from typing import List
 # version_finder/__init__.py
 from .core import VersionFinder, GitConfig, GitError
 from .logger.logger import setup_logger
-__version__ = "3.3.2"
+__version__ = "3.3.3"
 
 __all__: List[str] = [
     'VersionFinder',

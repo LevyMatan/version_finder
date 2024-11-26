@@ -1,6 +1,16 @@
 # CHANGELOG
 
 
+## v3.4.0 (2024-11-26)
+
+### Features
+
+* feat(branch): dont update repo to branch on each api
+
+BREAKING CHANGE Now the user is required to call updated_repository
+with a branch as an input in-order to call task APIs ([`b4bf5a9`](https://github.com/LevyMatan/version_finder/commit/b4bf5a9a036840aebc91c9ce389a9ff1ef293a1b))
+
+
 ## v3.3.3 (2024-11-26)
 
 ### Bug Fixes

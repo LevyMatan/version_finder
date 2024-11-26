@@ -46,4 +46,4 @@ class TestCLI:
         sys.argv = ['version_finder', '--path', str(test_repo), '--verbose']
         main()
         captured = capsys.readouterr()
-        assert "debug" in captured.err.lower() or "info" in captured.err.lower()
+        assert "debug" in captured.out.lower() or "info" in captured.out.lower()

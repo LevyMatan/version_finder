@@ -221,6 +221,7 @@ class VersionFinder:
             GitCommandError: If the command fails after all retries.
         """
         try:
+            self.logger.debug(f"Executing git command: {' '.join(command)}")
             output = subprocess.check_output(
                 ["git"] + command,
                 cwd=self.repository_path,
@@ -439,13 +440,22 @@ class VersionFinder:
                 f"{commit_sha}~1"
             ]).decode("utf-8").strip() or None
 
-            next_version = self.__execute_git_command([
+            # Add validation for empty output
+            if not prev_version:
+                self.logger.debug("No previous version found")
+
+            next_version_output = self.__execute_git_command([
                 "log",
                 "-i",
                 "--grep=version:",
                 "--format=%H",
                 f"{commit_sha}..HEAD"
-            ]).decode("utf-8").strip().split()[-1] or None
+            ]).decode("utf-8").strip()
+
+            # Add validation for empty output
+            next_version = next_version_output.split()[-1] if next_version_output else None
+            if not next_version:
+                self.logger.debug("No next version found")
 
             return [prev_version, next_version]
         except GitCommandError as e:

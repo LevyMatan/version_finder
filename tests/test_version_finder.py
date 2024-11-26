@@ -12,7 +12,7 @@ from src.version_finder.core import (
 )
 from src.version_finder.logger.logger import setup_logger
 
-logger = setup_logger(__name__, level=logging.DEBUG)
+debug_logger = setup_logger(__name__, level=logging.DEBUG)
 
 
 class TestGitConfig:
@@ -62,7 +62,7 @@ class TestVersionFinder:
         os.system(f"rm -rf {temp_dir}")
 
     def test_init_valid_repository(self, test_repo):
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
         assert finder.repository_path == Path(test_repo).resolve()
         assert isinstance(finder.config, GitConfig)
 
@@ -72,31 +72,31 @@ class TestVersionFinder:
                 VersionFinder(path=temp_dir)
 
     def test_list_branches(self, test_repo):
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
         branches = finder.list_branches()
         assert 'main' in branches or 'master' in branches
         assert 'dev' in branches
         assert 'feature' in branches
 
     def test_has_branch(self, test_repo):
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
         assert finder.has_branch('dev')
         assert not finder.has_branch('nonexistent-branch')
 
     def test_update_repository_valid_branch(self, test_repo):
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
         finder.update_repository('dev')
         # Verify we're on dev branch
         result = os.popen('git branch --show-current').read().strip()
         assert result == 'dev'
 
     def test_update_repository_invalid_branch(self, test_repo):
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
         with pytest.raises(GitCommandError):
             finder.update_repository('nonexistent-branch')
 
     def test_get_current_branch(self, test_repo):
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
 
         # Test getting current branch on main
         current_branch = finder.get_current_branch()
@@ -120,7 +120,7 @@ class TestVersionFinder:
         assert current_branch is None
 
     def test_extract_version_from_message(self, test_repo):
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
 
         # Test various version formats
         test_cases = [
@@ -139,13 +139,88 @@ class TestVersionFinder:
             result = finder._VersionFinder__extract_version_from_message(message)
             assert result == expected, f"Failed for message: {message}"
 
+    def test_find_first_version_containing_commit_basic(self, test_repo):
+        # Setup test repository with version commits
+        os.chdir(test_repo)
+        os.system("git checkout main")
+        os.system("git commit -m 'Initial commit' --allow-empty")
+        commit_to_find = os.popen('git rev-parse HEAD').read().strip()
+        os.system("git commit -m 'Version: 2024_01' --allow-empty")
+
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        version = finder.find_first_version_containing_commit(commit_to_find)
+        assert version == '2024_01'
+
+    def test_find_first_version_containing_commit_multiple_versions(self, test_repo):
+        os.chdir(test_repo)
+        os.system("git checkout main")
+        os.system("git commit -m 'Version: 2024_01' --allow-empty")
+        os.system("git commit -m 'Some commit' --allow-empty")
+        commit_to_find = os.popen('git rev-parse HEAD').read().strip()
+        os.system("git commit -m 'Version: 2024_02' --allow-empty")
+        os.system("git commit -m 'Version: 2024_03' --allow-empty")
+
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        version = finder.find_first_version_containing_commit(commit_to_find)
+        assert version == '2024_02'
+
+    def test_find_first_version_containing_commit_with_submodule(self, repo_with_submodule):
+        # Setup submodule with specific commit
+        os.chdir(os.path.join(repo_with_submodule, 'sub_repo'))
+        os.system("git commit -m 'Submodule commit' --allow-empty")
+        submodule_commit = os.popen('git rev-parse HEAD').read().strip()
+
+        # Update main repo with version
+        os.chdir(repo_with_submodule)
+        os.system("git add sub_repo")
+        os.system("git commit -m 'Version: 2024_01' --allow-empty")
+
+        finder = VersionFinder(path=repo_with_submodule)
+        finder.update_repository('main')
+        version = finder.find_first_version_containing_commit(submodule_commit, submodule='sub_repo')
+        assert version == '2024_01'
+
+    def test_find_first_version_containing_commit_nonexistent_commit(self, test_repo):
+        finder = VersionFinder(path=test_repo)
+        with pytest.raises(GitCommandError):
+            finder.update_repository('main')
+            finder.find_first_version_containing_commit('nonexistent-commit')
+
+    def test_find_first_version_containing_commit_no_version_after(self, test_repo):
+        os.chdir(test_repo)
+        os.system("git checkout main")
+        os.system("git commit -m 'Version: 2024_01' --allow-empty")
+        os.system("git commit -m 'Latest commit' --allow-empty")
+        commit_to_find = os.popen('git rev-parse HEAD').read().strip()
+
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        version = finder.find_first_version_containing_commit(commit_to_find)
+        assert version is None
+
+    def test_get_commit_surrounding_versions(self, test_repo):
+        os.chdir(test_repo)
+        os.system("git checkout main")
+        os.system("git commit -m 'Version: 2024_01' --allow-empty")
+        os.system("git commit -m 'Middle commit' --allow-empty")
+        middle_commit = os.popen('git rev-parse HEAD').read().strip()
+        os.system("git commit -m 'Version: 2024_02' --allow-empty")
+
+        finder = VersionFinder(path=test_repo)
+        prev_version, next_version = finder.get_commit_surrounding_versions(middle_commit)
+
+        assert finder.get_version_from_commit(prev_version) == '2024_01'
+        assert finder.get_version_from_commit(next_version) == '2024_02'
+
     def test_repository_not_clean(self, test_repo):
         # Create uncommitted changes
         with open(f"{test_repo}/file1", "w") as f:
             f.write("modified content")
 
         with pytest.raises(GitRepositoryNotClean):
-            VersionFinder(path=test_repo, logger=logger)
+            VersionFinder(path=test_repo, logger=debug_logger)
 
     def test_custom_config(self, test_repo):
         config = GitConfig(
@@ -206,7 +281,7 @@ class TestVersionFinder:
     def test_list_submodules_empty(self, test_repo):
         # This test verifies that the VersionFinder can correctly handle the case where there are no submodules
         # It uses the test_repo fixture which creates a test repo without any submodules
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
         # Call list_submodules() to retrieve list of submodules in the repository
         submodules = finder.list_submodules()
         # Verify that the list of submodules is empty
@@ -215,7 +290,7 @@ class TestVersionFinder:
     def test_list_submodules_invalid_repo(self, test_repo):
         # This test verifies that the VersionFinder can correctly handle the case where the repository is invalid
         # It uses the test_repo fixture which creates a test repo without any submodules
-        finder = VersionFinder(path=test_repo, logger=logger)
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
         # Call list_submodules() to retrieve list of submodules in the repository
         submodules = finder.list_submodules()
         # Verify that the list of submodules is empty

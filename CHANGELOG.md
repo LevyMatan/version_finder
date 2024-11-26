@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.4.1 (2024-11-26)
+
+### Bug Fixes
+
+* fix(core): fix getting the next version ([`3be55e9`](https://github.com/LevyMatan/version_finder/commit/3be55e998c2b40c7a32402f1c626d226d8c30036))
+
+### Chores
+
+* chore(debug): remove unused configuration ([`c1186a9`](https://github.com/LevyMatan/version_finder/commit/c1186a942651b6d48486d48b945d23a4619a5ae5))
+
+
 ## v3.4.0 (2024-11-26)
 
 ### Features

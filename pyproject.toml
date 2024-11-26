@@ -1,7 +1,5 @@
 [tool.semantic_release]
-version_variable = [
+version_variables = [
     "src/version_finder/__init__.py:__version__",
-    "setup.py:version",
 ]
 version_toml = ["pyproject.toml:tool.poetry.version"]
-version = "3.3.0"

@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.3.1 (2024-11-26)
+
+### Bug Fixes
+
+- **versioning**: Fix the version reported
+  ([`d318534`](https://github.com/LevyMatan/version_finder/commit/d318534ff056fb75f75475ae048f6b957e86024c))
+
+- sync the way version is fetched - allow semantic versioning action to update the files to update
+  automatically
+
+
 ## v3.3.0 (2024-11-26)
 
 ### Bug Fixes

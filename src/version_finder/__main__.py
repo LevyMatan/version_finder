@@ -8,6 +8,11 @@ def main():
     """Main entry point for the application."""
     args = parse_arguments()
 
+    if args.version:
+        from version_finder import __version__
+        print(f"version_finder v{__version__}")
+        return 0
+
     if args.cli:
         cli_main(args)
     elif args.gui:

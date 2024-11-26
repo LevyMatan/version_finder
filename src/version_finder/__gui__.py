@@ -59,7 +59,11 @@ class AutocompleteEntry(ctk.CTkEntry):
             return
 
         text = self.get().lower()
-        suggestions = [s for s in self.suggestions if text in s.lower()]
+        # First show exact prefix matches, then contains matches
+        exact_matches = [s for s in self.suggestions if s.lower().startswith(text)]
+        contains_matches = [s for s in self.suggestions if text in s.lower() and not s.lower().startswith(text)]
+
+        suggestions = sorted(exact_matches) + sorted(contains_matches)
 
         if suggestions:
             x = self.winfo_rootx()
@@ -80,9 +84,8 @@ class AutocompleteEntry(ctk.CTkEntry):
                 )
                 suggestion_button.pack(fill="x", padx=2, pady=1)
 
-            self.suggestion_window.geometry(f"{self.winfo_width()}x150+{x}+{y}")
+            self.suggestion_window.geometry(f"{self.winfo_width()}x300+{x}+{y}")
             self.suggestion_window.deiconify()  # Show window
-
     def _select_suggestion(self, suggestion):
         self.delete(0, "end")
         self.insert(0, suggestion)

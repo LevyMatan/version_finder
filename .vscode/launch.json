@@ -24,6 +24,18 @@
         ],
         "console": "integratedTerminal",
         "justMyCode": false
+      },
+      {
+        "name": "Python: Debug GUI",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/version_finder/__gui__.py",
+        "args": [
+          "-v",
+          "-p${workspaceFolder}/test_version_repo",
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": false
       }
 
     ]

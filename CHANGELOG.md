@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v4.0.0 (2024-11-27)
+
+### Breaking
+
+* fix(version): trigger a major bump
+
+BREAKING CHANGE: last PR had an error in the commit message which caused the major version not to increament. ([`ca69f3b`](https://github.com/LevyMatan/version_finder/commit/ca69f3b487f94b365a9d29d41c5f9a2edbf86921))
+
+
 ## v3.5.0 (2024-11-27)
 
 ### Bug Fixes

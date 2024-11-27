@@ -2,6 +2,7 @@
 # Version Finder
 
 [![Coverage Report](https://img.shields.io/badge/Coverage-Report-blue)](https://LevyMatan.github.io/version_finder/)
+[![Latest Release](https://img.shields.io/github/v/release/LevyMatan/version_finder)](https://github.com/LevyMatan/version_finder/releases/latest)
 
 Version Finder is a command-line utility for finding and comparing versions in Git repositories. It provides an easy way to manage and analyze version information across multiple branches and submodules.
 
@@ -13,7 +14,17 @@ Version Finder is a command-line utility for finding and comparing versions in G
 
 ## Installation
 
-To install Version Finder, follow these steps:
+You can install Version Finder in two ways:
+
+### From GitHub Release
+
+Download the latest wheel file from the [releases page](https://github.com/LevyMatan/version_finder/releases/latest) and install with:
+
+```bash
+pip install version_finder-*.whl
+```
+
+### From Source
 
 1. Ensure you have Python 3.6 or higher installed on your system.
 2. Clone the repository:
@@ -57,7 +68,7 @@ version_finder --help
 
 ### Direct Interaction
 
-You can envoke a simplpe version finder with:
+You can invoke a simple version finder with:
 
 ```bash
 version_finder -p /path/to/repo -b target_branch -c target_commit [-s submodule_path]

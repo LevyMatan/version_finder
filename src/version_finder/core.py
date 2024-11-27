@@ -562,14 +562,12 @@ class VersionFinder:
 
         git_log_output = self.__get_commits_changing_submodule_pointers_and_the_new_pointer(submodule_path, 1500)
         if not git_log_output:
-                raise GitCommandError(f"No commits found that change submodule {submodule_path} or its ancestors")
+            raise GitCommandError(f"No commits found that change submodule {submodule_path} or its ancestors")
+        # Parse the git log output
         repo_commot_submodule_ptr_tuples = parse_git_log_output(git_log_output)
         self.logger.debug(f"Found {len(repo_commot_submodule_ptr_tuples)} commits that change submodule {submodule_path}")
         self.logger.debug(f"First commit: {repo_commot_submodule_ptr_tuples[0][0]}")
         self.logger.debug(f"Last commit: {repo_commot_submodule_ptr_tuples[-1][0]}")
-
-        # Parse the git log output
-
 
         # Apply binary search to find the first commit that points to an ancestor of the target commit
         left, right = 0, len(repo_commot_submodule_ptr_tuples) - 1

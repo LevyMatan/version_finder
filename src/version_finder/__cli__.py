@@ -131,6 +131,21 @@ class VersionFinderCLI:
 
         return branch_name
 
+    def handle_submodule_input(self, submodule_name: str = None) -> str:
+        """
+        Handle branch input from user.
+        """
+        if submodule_name is None:
+            submodule_list = self.finder.list_submodules()
+            submodule_completer = WordCompleter(submodule_list, ignore_case=True, match_middle=True)
+            # Take input from user
+            submodule_name = prompt(
+                "\nEnter submodule name (Tab for completion) or [ENTER] to continue without a submodule:",
+                completer=submodule_completer,
+                complete_while_typing=True
+            ).strip()
+        return submodule_name
+
     def handle_path_input(path: str) -> str:
         """
         Handle path input from user.
@@ -165,7 +180,7 @@ class VersionFinderCLI:
             Selected branch name
         """
         branches = self.finder.list_branches()
-        branch_completer = WordCompleter(branches, ignore_case=True)
+        branch_completer = WordCompleter(branches, ignore_case=True, match_middle=True)
 
         while True:
             try:
@@ -218,15 +233,17 @@ class VersionFinderCLI:
             int: 0 on success, 1 on error
         """
         try:
-            self.logger.info("Enter text to search for in commits (Ctrl+C to cancel):")
-            text = input().strip()
+            text = prompt("Enter search text: ").strip()
+
 
             if not text:
                 self.logger.warning("Search text cannot be empty")
                 return 1
 
+            submodule_name = self.handle_submodule_input()
+
             self.logger.info("Searching for commits containing: %s", text)
-            commits = self.finder.find_commits_by_text(self.branch, text)
+            commits = self.finder.find_commits_by_text(text, submodule_name)
 
             if not commits:
                 self.logger.info("No commits found containing: %s", text)
@@ -243,38 +260,6 @@ class VersionFinderCLI:
             self.logger.info("\nFound %d commits:", len(commits))
             for i, commit in enumerate(commits, 1):
                 self.logger.info("  %d. %s", i, commit)
-
-        #     self.logger.info("\nSelect commit to view surrounding versions (Ctrl+C to cancel):")
-        #     while True:
-        #         try:
-        #             selection = input("Enter commit number: ").strip()
-        #             if not selection.isdigit():
-        #                 self.logger.error("Invalid input. Please enter a number.")
-        #                 continue
-
-        #             index = int(selection) - 1
-        #             if index < 0 or index >= len(commits):
-        #                 self.logger.error("Invalid commit number selected")
-        #                 continue
-
-        #             selected_commit = commits[index]
-        #             self.logger.info("Selected commit: %s", selected_commit)
-
-        #             versions = self.finder.get_commit_surrounding_versions(selected_commit)
-        #             self.logger.info("\nSurrounding versions:")
-        #             self.logger.info("  Previous version: %s", self.finder.get_version_from_commit(versions[0]) or "None")
-        #             self.logger.info("  Next version: %s", self.finder.get_version_from_commit(versions[1]) or "None")
-        #             self.logger.info("  Previous version: %s", versions[0] or "None")
-        #             self.logger.info("  Next version: %s", versions[1] or "None")
-
-        #             break  # Exit loop if valid selection is made
-
-        #         except KeyboardInterrupt:
-        #             self.logger.info("\nOperation cancelled by user")
-        #             return 0
-        #         except Exception as e:
-        #             self.logger.error("Error during version search: %s", str(e))
-        #     return 0
 
         except KeyboardInterrupt:
             self.logger.info("\nSearch cancelled by user")

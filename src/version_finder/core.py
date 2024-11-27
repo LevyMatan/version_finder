@@ -665,15 +665,44 @@ class VersionFinder:
             return []
 
         if submodule:
-            first_submodule_pointer = self.get_submodule_commit_hash(start_commit, submodule)
-            last_submodule_pointer = self.get_submodule_commit_hash(end_commit, submodule)
-            if not first_submodule_pointer or not last_submodule_pointer:
+            start_commit = self.get_submodule_commit_hash(start_commit, submodule)
+            end_commit = self.get_submodule_commit_hash(end_commit, submodule)
+            if not start_commit or not end_commit:
                 return []
-            return self.__execute_git_command(
-                ["log", "--format=%H", f"{first_submodule_pointer}..{last_submodule_pointer}"]).decode("utf-8").strip().split("\n")
 
+
+        lower_bound_commit = self.get_parent_commit(start_commit, submodule)
+        git_command = ["log", "--format=%H", f"{lower_bound_commit}..{end_commit}"]
+        if submodule:
+            git_command.insert(0, "-C")
+            git_command.insert(1, f"{submodule}")
         return self.__execute_git_command(
-            ["log", "--format=%H", f"{start_commit}..{end_commit}"]).decode("utf-8").strip().split("\n")
+            git_command).decode("utf-8").strip().split("\n")
+
+
+    def get_parent_commit(self, commit: str, submodule=None) -> str:
+        """
+        Get the parent commit of a given commit hash.
+
+        Args:
+            commit: The commit hash to find the parent for
+            submodule: Optional submodule path to look in
+
+        Returns:
+            str: Parent commit hash, or original commit if no parent exists
+
+        Raises:
+            GitCommandError: If repository is not ready
+        """
+        if not self.is_task_ready:
+            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+        if submodule:
+            if self.submodule_has_commit(submodule, f"{commit}^"):
+                return f"{commit}^"
+            return commit
+        if self.has_commit(f"{commit}^"):
+            return f"{commit}^"
+        return commit
 
 
     def find_first_version_containing_commit(self, commit_sha: str, submodule=None) -> Optional[str]:
@@ -700,7 +729,7 @@ class VersionFinder:
 
         return self.get_version_from_commit(versions_commits[1])
 
-    def get_commit_sha_from_relative_string(self, relative_string: str) -> Optional[str]:
+    def get_commit_sha_from_relative_string(self, relative_string: str, submodule: str = None) -> Optional[str]:
         """
         Get the commit SHA from a relative string.
         For example, "HEAD~1" will return the SHA of the commit that is one commit before HEAD.

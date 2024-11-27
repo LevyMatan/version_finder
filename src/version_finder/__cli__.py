@@ -390,9 +390,10 @@ class VersionFinderCLI:
             second_version = prompt("Enter second version (Ctrl+C to cancel): ").strip()
             self.logger.info("Second version: %s", second_version)
 
+            submodule_name = self.handle_submodule_input()
             self.logger.info("Searching for commits between versions: %s and %s", first_version, second_version)
-            commits = self.finder.find_commits_between_versions(first_version, second_version)
-            if not commits:
+            commits = self.finder.get_commits_between_versions(first_version, second_version, submodule_name)
+            if not commits[0]:
                 self.logger.info("No commits found between versions: %s and %s", first_version, second_version)
                 return 0
             self.logger.info("\nFound %d commits:", len(commits))

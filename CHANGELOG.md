@@ -1,6 +1,48 @@
 # CHANGELOG
 
 
+## v3.5.0 (2024-11-27)
+
+### Bug Fixes
+
+* fix(core): fix binary search over the submodule pointers
+
+- Add debug for the search
+- Correct the logic, adjust the is_ancestor criteria ([`d59ef68`](https://github.com/LevyMatan/version_finder/commit/d59ef6854513c887b659b4cae856aee9513ce53f))
+
+* fix(get_commit_surrounding_versions): find the version even if the commit is the version
+
+When searching for the next version commit, make sure to include the current commit in the search ([`83c9b0b`](https://github.com/LevyMatan/version_finder/commit/83c9b0b6e8b13608ca462aa5880a860dbdbaf86d))
+
+* fix(gui): remove call to branch in find version API ([`708d386`](https://github.com/LevyMatan/version_finder/commit/708d3868e7aed43c824f3fcdd67110f1af63aa5e))
+
+### Code Style
+
+* style(core): remove extra ident ([`ba81951`](https://github.com/LevyMatan/version_finder/commit/ba81951fd64384d052016d6eac98f7e1002f57f1))
+
+### Features
+
+* feat(gui): file dialog box deafult is current dir ([`65b46c0`](https://github.com/LevyMatan/version_finder/commit/65b46c0b2626aae6132368688a21da04221e823a))
+
+* feat(gui): Update repo on branch selection
+
+BREAKING CHANGE This change solve the misalignment with the core change which require the version finder instance to update the repo before sending tasks ([`b60ff56`](https://github.com/LevyMatan/version_finder/commit/b60ff561a7bb2b2143e9312a40b77ca5b20bbff1))
+
+* feat(gui): Add logger to the gui ([`324f505`](https://github.com/LevyMatan/version_finder/commit/324f50526237bf57d149532dd5e475303ea96e0c))
+
+### Refactoring
+
+* refactor(cli): remove unused import ([`d35b987`](https://github.com/LevyMatan/version_finder/commit/d35b98763421832cf2ce821e95c8e6a509ee81b7))
+
+### Unknown
+
+* Merge pull request #53 from LevyMatan/gui-fixes
+
+Gui fixes ([`819ea4a`](https://github.com/LevyMatan/version_finder/commit/819ea4aaa4b930faebd20a38cc63559f2a346548))
+
+* misc(debug): Add GUI debug configuration ([`a33c7b6`](https://github.com/LevyMatan/version_finder/commit/a33c7b67a3186c7125789e73f75409c6b96be3bd))
+
+
 ## v3.4.1 (2024-11-26)
 
 ### Bug Fixes

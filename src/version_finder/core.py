@@ -373,13 +373,13 @@ class VersionFinder:
             self.logger.error(f"Failed to update submodules: {e}")
             raise
 
-    def find_commits_by_text(self, branch: str, text: str) -> List[str]:
+    def find_commits_by_text(self, text: str, submodule: str = None) -> List[str]:
         """
         Find commits in the specified branch that contain the given text in either title or description.
 
         Args:
-            branch: Branch name to search.
             text: Text to search for in commit messages (title and description).
+            submodule: Optional submodule path to search in.
 
         Returns:
             List of commit hashes.
@@ -387,19 +387,24 @@ class VersionFinder:
         Raises:
             GitCommandError: If the git command fails.
         """
-        try:
-            self.logger.debug(f"Finding commits by text: {text} in branch: {branch}")
-            # Use --format to get hash, subject and body in one command
-            # %H: commit hash
-            # %s: subject (title)
-            # %b: body (description)
-            # Using ASCII delimiter (0x1F) to separate fields
-            output = self.__execute_git_command([
-                "log",
-                "--format=%H%x1F%s%x1F%b",
-                branch
-            ])
+        if not self.is_task_ready:
+            raise ValueError("Repository is not ready to perform tasks.")
 
+        try:
+            command = [
+                "log",
+                "--format=%H%x1F%s%x1F%b"
+            ]
+
+            if submodule:
+                # Verify submodule exists
+                if submodule not in self.submodules:
+                    raise GitCommandError(f"Invalid submodule path: {submodule}")
+                # Execute command in submodule directory
+                command.insert(0, "-C")
+                command.insert(1, submodule)
+
+            output = self.__execute_git_command(command)
             commits = output.decode("utf-8").strip().split("\n")
             matching_commits = []
 
@@ -419,6 +424,7 @@ class VersionFinder:
         except GitCommandError as e:
             self.logger.error(f"Failed to find commits by text: {e}")
             raise
+
 
     def get_commit_surrounding_versions(self, commit_sha: str) -> List[Optional[str]]:
         """

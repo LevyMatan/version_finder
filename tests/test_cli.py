@@ -1,11 +1,11 @@
 import pytest
 import sys
-from pathlib import Path
 import logging
 from src.version_finder.__cli__ import main
 from src.version_finder.logger.logger import setup_logger
 
 logger = setup_logger(__name__, level=logging.DEBUG)
+
 
 class TestCLI:
     @pytest.fixture

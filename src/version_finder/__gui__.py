@@ -1,5 +1,8 @@
 from version_finder.core import VersionFinder, GitError, GitCommandError
 from version_finder.__common__ import parse_arguments
+from version_finder.logger.logger import setup_logger
+from version_finder.protocols import LoggerProtocol
+import logging
 import os
 import argparse
 from PIL import Image, ImageTk
@@ -36,7 +39,7 @@ launch_gui()
 
 os.environ['TK_SILENCE_DEPRECATION'] = '1'
 
-__gui_version__ = '1.0.0'
+__gui_version__ = '2.0.0'
 
 
 class AutocompleteEntry(ctk.CTkEntry):
@@ -86,12 +89,16 @@ class AutocompleteEntry(ctk.CTkEntry):
 
             self.suggestion_window.geometry(f"{self.winfo_width()}x300+{x}+{y}")
             self.suggestion_window.deiconify()  # Show window
+
     def _select_suggestion(self, suggestion):
         self.delete(0, "end")
         self.insert(0, suggestion)
         if self.suggestion_window:
             self.suggestion_window.destroy()
             self.suggestion_window = None
+        # Trigger the callback if it exists
+        if hasattr(self, 'callback') and self.callback:
+            self.callback(suggestion)
 
     def _on_focus_out(self, event):
         # Add a small delay before destroying the window
@@ -105,10 +112,11 @@ class AutocompleteEntry(ctk.CTkEntry):
 
 
 class VersionFinderGUI(ctk.CTk):
-    def __init__(self, path: str = None):
+    def __init__(self, path: str = None, logger: LoggerProtocol = None):
         super().__init__()
         self.repo_path = path
         self.version_finder = None
+        self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("green")
@@ -191,6 +199,15 @@ class VersionFinderGUI(ctk.CTk):
         )
         browse_btn.pack(side="right", padx=5)
 
+    def _on_branch_select(self, branch):
+        try:
+            self.version_finder.update_repository(branch)
+            self.output_text.insert("end", f"✅ Repository updated to branch: {branch}\n")
+            self.output_text.see("end")
+        except Exception as e:
+            self.output_text.insert("end", f"❌ Error updating repository: {str(e)}\n")
+            self.output_text.see("end")
+
     def create_branch_selection(self):
         branch_frame = ctk.CTkFrame(self.main_frame)
         branch_frame.pack(fill="x", padx=10, pady=10)
@@ -202,6 +219,7 @@ class VersionFinderGUI(ctk.CTk):
             branch_frame,
             width=240,
         )
+        self.branch_entry.callback = self._on_branch_select  # Add callback
         self.branch_entry.pack(fill="x", padx=10, pady=10, expand=True)
         self.branch_entry.configure(state="disabled")
 
@@ -268,7 +286,7 @@ class VersionFinderGUI(ctk.CTk):
 
     def initialize_version_finder(self):
         try:
-            self.version_finder = VersionFinder(self.dir_entry.get())
+            self.version_finder = VersionFinder(self.dir_entry.get(), logger=self.logger)
             self.output_text.insert("end", "✅ Repository loaded successfully\n")
         except GitError as e:
             self.output_text.insert("end", f"❌ Error: {str(e)}\n")
@@ -281,7 +299,7 @@ class VersionFinderGUI(ctk.CTk):
         if self.repo_path:
             directory = self.repo_path
         else:
-            directory = ctk.filedialog.askdirectory()
+            directory = ctk.filedialog.askdirectory(initialdir=os.getcwd())
         if directory:
             self.dir_entry.delete(0, "end")
             self.dir_entry.insert(0, directory)
@@ -330,12 +348,12 @@ class VersionFinderGUI(ctk.CTk):
             self.output_text.insert("end", f"Submodule: {submodule}\n")
             self.output_text.insert("end", f"Commit: {commit}\n")
             self.output_text.insert(
-                "end", f"Commit: {self.version_finder.get_commit_sha_from_relative_string(branch, commit)}\n")
+                "end", f"Commit: {self.version_finder.get_commit_sha_from_relative_string(commit)}\n")
 
             # Perform the search with error handling
             try:
                 result = self.version_finder.find_first_version_containing_commit(
-                    branch, self.version_finder.get_commit_sha_from_relative_string(branch, commit), submodule)
+                    self.version_finder.get_commit_sha_from_relative_string(commit), submodule)
                 self.output_text.insert("end", f"✅ Search completed successfully: The version is {result}\n")
             except GitCommandError as e:
                 self.output_text.insert("end", f"❌ Git Error: {str(e)}\n")
@@ -357,7 +375,9 @@ def gui_main(args: argparse.Namespace) -> int:
         print(f"Version: {__gui_version__}")
         return 0
 
-    app = VersionFinderGUI(args.path)
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logger = setup_logger(name=__name__, level=log_level)
+    app = VersionFinderGUI(args.path, logger=logger)
     app.mainloop()
 
 

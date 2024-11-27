@@ -2,17 +2,45 @@
 import logging
 import sys
 import os
+import re
 from typing import List, Any
 from prompt_toolkit import prompt
-from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.styles import Style
+from prompt_toolkit.completion import WordCompleter, PathCompleter
 import argparse
 from version_finder.core import VersionFinder, GitError, VersionFinderTask, VersionFinderTaskRegistry
 from version_finder.logger.logger import setup_logger
 from version_finder.protocols import LoggerProtocol
 from version_finder.__common__ import parse_arguments
+from prompt_toolkit.validation import Validator, ValidationError
+
 
 __cli_version__ = "1.0.0"
 
+class TaskNumberValidator(Validator):
+    def __init__(self, min_index: int, max_index: int):
+        self.min_index = min_index
+        self.max_index = max_index
+
+    def validate(self, document):
+        text = document.text.strip()
+        if not text:
+            raise ValidationError(message="Task number cannot be empty")
+        try:
+            task_idx = int(text)
+            if not (self.min_index <= task_idx <= self.max_index):
+                raise ValidationError(message=f"Please select a task number between {self.min_index} and {self.max_index}")
+        except ValueError:
+            raise ValidationError(message="Please enter a valid number")
+
+class CommitSHAValidator(Validator):
+    def validate(self, document):
+        text = document.text.strip()
+        if not text:
+            raise ValidationError(message="Commit SHA cannot be empty")
+        # Allow full SHA (40 chars), short SHA (min 7 chars), or HEAD~n format
+        if not (len(text) >= 7 and len(text) <= 40) and not text.startswith("HEAD~"):
+            raise ValidationError(message="Invalid commit SHA format. Use 7-40 hex chars or HEAD~n format")
 
 class VersionFinderCLI:
     """
@@ -29,6 +57,13 @@ class VersionFinderCLI:
         self.registry = VersionFinderTaskRegistry()
         self.logger = logger
         self.logger.info("Version Finder CLI v%s", __cli_version__)
+        self.prompt_style = Style.from_dict({
+            # User input (default text).
+            # '':          '#ff0066',
+
+            # Prompt.
+            'current_status':       '#00aa00',
+        })
 
     def get_task_functions(self) -> List[VersionFinderTask]:
         """
@@ -61,7 +96,7 @@ class VersionFinderCLI:
             int: 0 on success, 1 on error
         """
         try:
-            self.path = VersionFinderCLI.handle_path_input(args.path)
+            self.path = self.handle_path_input(args.path)
             self.finder = VersionFinder(path=self.path, logger=self.logger)
 
             actions = self.get_task_functions()
@@ -95,59 +130,107 @@ class VersionFinderCLI:
                 print(f"{task.index}: {task.name}")
             min_index = self.registry.get_tasks_by_index()[0].index
             max_index = self.registry.get_tasks_by_index()[-1].index
-            print(f"Choose from tasks {min_index} to {max_index}")
-            # Clean the input more thoroughly
-            try:
-                # Use raw_input if available (Python 2) or input (Python 3)
-                user_input = input().replace('\r', '').replace('\n', '').strip()
-                task_idx = int(user_input)
-            except ValueError:
-                self.logger.error("Invalid input: please enter a number")
+
+            task_validator = TaskNumberValidator(min_index, max_index)
+            task_idx = int(prompt(
+                "Enter task number: ",
+                validator=task_validator,
+                validate_while_typing=True
+            ).strip())
+
+            self.logger.debug("Selected task: %d", task_idx)
+            if not self.registry.has_index(task_idx):
+                self.logger.error("Invalid task selected")
                 sys.exit(1)
 
-        self.logger.debug("Selected task: %d", task_idx)
-        if not self.registry.has_index(task_idx):
-            self.logger.error("Invalid task selected")
-            sys.exit(1)
+            task_struct = self.registry.get_by_index(task_idx)
+            return task_struct.name
 
-        task_struct = self.registry.get_by_index(task_idx)
-        return task_struct.name
 
     def handle_branch_input(self, branch_name: str) -> str:
         """
-        Handle branch input from user.
-        """
-        if branch_name is None:
-            print("You have not selected a branch.")
-            current_branch = self.finder.get_current_branch()
-            self.logger.info("Current branch: %s", current_branch)
-            if current_branch:
-                print(f"Would you like to use the current checked-out branch: {current_branch} (y/n)")
-                use_current = input().strip().lower()
-                if use_current == "y":
-                    return current_branch
-
-            branch_name = self.get_branch_selection()
-
-        return branch_name
-
-    def handle_path_input(path: str) -> str:
-        """
-        Handle path input from user.
+        Handle branch input from user with auto-completion.
 
         Args:
-            logger: Logger instance
+            branch_name: Optional branch name from command line
+
+        Returns:
+            str: Selected branch name
+        """
+        if branch_name is not None:
+            return branch_name
+
+        branches = self.finder.list_branches()
+        # When creating the branch_completer, modify it to:
+        branch_completer = WordCompleter(
+            branches,
+            ignore_case=True,
+            match_middle=True,
+            pattern=re.compile(r'\S+')  # Matches non-whitespace characters
+        )
+
+        current_branch = self.finder.get_current_branch()
+        self.logger.info("Current branch: %s", current_branch)
+
+        if current_branch:
+            prompt_message = [
+                ('', 'Current branch: '),
+                ('class:current_status', f'{current_branch}'),
+                ('', '\nPress [ENTER] to use the current branch or type to select a different branch: '),
+            ]
+            branch_name = prompt(
+                prompt_message,
+                completer=branch_completer,
+                complete_while_typing=True,
+                style=self.prompt_style
+            ).strip()
+            if branch_name == "":
+                return current_branch
+            return branch_name
+
+    def handle_submodule_input(self, submodule_name: str = None) -> str:
+        """
+        Handle branch input from user.
+        """
+        if submodule_name is None:
+            submodule_list = self.finder.list_submodules()
+            submodule_completer = WordCompleter(submodule_list, ignore_case=True, match_middle=True)
+            # Take input from user
+            submodule_name = prompt(
+                "\nEnter submodule name (Tab for completion) or [ENTER] to continue without a submodule:",
+                completer=submodule_completer,
+                complete_while_typing=True
+            ).strip()
+        return submodule_name
+
+    def handle_path_input(self, path: str = None) -> str:
+        """
+        Handle path input from user using prompt_toolkit.
+
+        Args:
+            path: Optional path from command line
 
         Returns:
             str: Path entered by user
         """
         if path is None:
-            print("Repository path was not provided.")
-            print(f"Press [ENTER] to use the current directory: {os.getcwd()}")
-            print("Or enter a repository path:")
+            prompt_msg = [
+                ('', 'Current directory: '),
+                ('class:current_status', f'{os.getcwd()}'),
+                ('', ':\nPress [ENTER] to use the current directory or type to select a different directory: '),
+            ]
 
-            # Take input from user
-            path = input().strip()
+            path_completer = PathCompleter(
+                only_directories=True,
+                expanduser=True
+            )
+            path = prompt(
+                prompt_msg,
+                completer=path_completer,
+                complete_while_typing=True,
+                style=self.prompt_style
+            ).strip()
+
             if not path:
                 path = os.getcwd()
 
@@ -165,7 +248,7 @@ class VersionFinderCLI:
             Selected branch name
         """
         branches = self.finder.list_branches()
-        branch_completer = WordCompleter(branches, ignore_case=True)
+        branch_completer = WordCompleter(branches, ignore_case=True, match_middle=True)
 
         while True:
             try:
@@ -218,15 +301,17 @@ class VersionFinderCLI:
             int: 0 on success, 1 on error
         """
         try:
-            self.logger.info("Enter text to search for in commits (Ctrl+C to cancel):")
-            text = input().strip()
+            text = prompt("Enter search text: ").strip()
+
 
             if not text:
                 self.logger.warning("Search text cannot be empty")
                 return 1
 
+            submodule_name = self.handle_submodule_input()
+
             self.logger.info("Searching for commits containing: %s", text)
-            commits = self.finder.find_commits_by_text(self.branch, text)
+            commits = self.finder.find_commits_by_text(text, submodule_name)
 
             if not commits:
                 self.logger.info("No commits found containing: %s", text)
@@ -243,38 +328,6 @@ class VersionFinderCLI:
             self.logger.info("\nFound %d commits:", len(commits))
             for i, commit in enumerate(commits, 1):
                 self.logger.info("  %d. %s", i, commit)
-
-        #     self.logger.info("\nSelect commit to view surrounding versions (Ctrl+C to cancel):")
-        #     while True:
-        #         try:
-        #             selection = input("Enter commit number: ").strip()
-        #             if not selection.isdigit():
-        #                 self.logger.error("Invalid input. Please enter a number.")
-        #                 continue
-
-        #             index = int(selection) - 1
-        #             if index < 0 or index >= len(commits):
-        #                 self.logger.error("Invalid commit number selected")
-        #                 continue
-
-        #             selected_commit = commits[index]
-        #             self.logger.info("Selected commit: %s", selected_commit)
-
-        #             versions = self.finder.get_commit_surrounding_versions(selected_commit)
-        #             self.logger.info("\nSurrounding versions:")
-        #             self.logger.info("  Previous version: %s", self.finder.get_version_from_commit(versions[0]) or "None")
-        #             self.logger.info("  Next version: %s", self.finder.get_version_from_commit(versions[1]) or "None")
-        #             self.logger.info("  Previous version: %s", versions[0] or "None")
-        #             self.logger.info("  Next version: %s", versions[1] or "None")
-
-        #             break  # Exit loop if valid selection is made
-
-        #         except KeyboardInterrupt:
-        #             self.logger.info("\nOperation cancelled by user")
-        #             return 0
-        #         except Exception as e:
-        #             self.logger.error("Error during version search: %s", str(e))
-        #     return 0
 
         except KeyboardInterrupt:
             self.logger.info("\nSearch cancelled by user")
@@ -296,15 +349,17 @@ class VersionFinderCLI:
             int: 0 on success, 1 on error
         """
         try:
-            self.logger.info("Enter commit SHA to search from (Ctrl+C to cancel):")
-            commit_sha = input().strip()
+            # Replace the existing input code with:
+            commit_sha = prompt(
+                "Enter commit SHA to search from (Ctrl+C to cancel): ",
+                validator=CommitSHAValidator(),
+                validate_while_typing=True
+            ).strip()
 
-            if not commit_sha:
-                self.logger.warning("Commit SHA cannot be empty")
-                return 1
+            submodule_name = self.handle_submodule_input()
 
             self.logger.info("Searching for first version containing commit: %s", commit_sha)
-            version = self.finder.find_first_version_containing_commit(self.branch, commit_sha)
+            version = self.finder.find_first_version_containing_commit(commit_sha, submodule_name)
 
             if not version:
                 self.logger.info("No version found containing commit: %s", commit_sha)
@@ -330,10 +385,11 @@ class VersionFinderCLI:
             int: 0 on success, 1 on error
         """
         try:
-            self.logger.info("Enter first version (Ctrl+C to cancel):")
-            first_version = input().strip()
-            self.logger.info("Enter second version (Ctrl+C to cancel):")
-            second_version = input().strip()
+            first_version = prompt("Enter first version (Ctrl+C to cancel): ").strip()
+            self.logger.info("First version: %s", first_version)
+            second_version = prompt("Enter second version (Ctrl+C to cancel): ").strip()
+            self.logger.info("Second version: %s", second_version)
+
             self.logger.info("Searching for commits between versions: %s and %s", first_version, second_version)
             commits = self.finder.find_commits_between_versions(first_version, second_version)
             if not commits:

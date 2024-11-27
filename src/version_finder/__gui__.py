@@ -152,7 +152,7 @@ class VersionFinderGUI(ctk.CTk):
         header = ctk.CTkLabel(
             self.main_frame,
             text="Version Finder",
-            font=ctk.CTkFont(size=24, weight="bold")
+            font=ctk.CTkFont(size=34, weight="bold")
         )
         header.pack(pady=20)
 
@@ -175,7 +175,7 @@ class VersionFinderGUI(ctk.CTk):
         commit_frame = ctk.CTkFrame(self.main_frame)
         commit_frame.pack(fill="x", padx=10, pady=10)
 
-        commit_label = ctk.CTkLabel(commit_frame, text="Commit:")
+        commit_label = ctk.CTkLabel(commit_frame, text="Commit:", width=100, font=ctk.CTkFont(size=16, weight="bold"))
         commit_label.pack(side="left", padx=5)
 
         self.commit_entry = ctk.CTkEntry(commit_frame, width=300)
@@ -185,7 +185,7 @@ class VersionFinderGUI(ctk.CTk):
         dir_frame = ctk.CTkFrame(self.main_frame)
         dir_frame.pack(fill="x", padx=10, pady=10)
 
-        dir_label = ctk.CTkLabel(dir_frame, text="Select Directory:")
+        dir_label = ctk.CTkLabel(dir_frame, text="Select Directory:", width=100, font=ctk.CTkFont(size=16, weight="bold"))
         dir_label.pack(side="left", padx=5)
 
         self.dir_entry = ctk.CTkEntry(dir_frame, width=300)
@@ -212,7 +212,7 @@ class VersionFinderGUI(ctk.CTk):
         branch_frame = ctk.CTkFrame(self.main_frame)
         branch_frame.pack(fill="x", padx=10, pady=10)
 
-        branch_label = ctk.CTkLabel(branch_frame, text="Branch:")
+        branch_label = ctk.CTkLabel(branch_frame, text="Branch:", width=100, font=ctk.CTkFont(size=16, weight="bold"))
         branch_label.pack(side="left", padx=5)
 
         self.branch_entry = AutocompleteEntry(
@@ -227,7 +227,7 @@ class VersionFinderGUI(ctk.CTk):
         submodule_frame = ctk.CTkFrame(self.main_frame)
         submodule_frame.pack(fill="x", padx=10, pady=10)
 
-        submodule_label = ctk.CTkLabel(submodule_frame, text="Submodule:")
+        submodule_label = ctk.CTkLabel(submodule_frame, text="Submodule:", width=100, font=ctk.CTkFont(size=16, weight="bold"))
         submodule_label.pack(side="left", padx=5)
 
         self.submodule_entry = AutocompleteEntry(

@@ -80,17 +80,21 @@ class VersionFinderTaskRegistry:
             VersionFinderTask(
                 name="Find first version containing commit",
                 index=0,
-                description="TODO",
+                description="""The most common task is to find the first version that includes a change (=commit).
+                             Given a commit SHA identifier in a repository, it can be done easily using: `git log --grep=version: <commit_ha>^1..<HEAD>` you now what to scroll down all the way to find the first commit.
+                             But, when the change is part of a submodule, things can can a little more tricky. Given a submodule with the reposity and the commit SHA identifier, Version Finder
+                             will iterate over all the commits that change the submodule pointer. It will than apply binary search to find the first ancestor of the change.""",
             ),
             VersionFinderTask(
                 name="Find all commits between two versions",
                 index=1,
-                description="TODO",
+                description="""Trying to identify a commit that may cause an issue, a user would like to seek all the changes between two versions.
+                Once again an easy solution is `git log <old_version_tag>..<new_version_tag>`. If a submodule is given than Version Finder will get the submodule pointers at each commit, and log all the commits between them.""",
             ),
             VersionFinderTask(
                 name="Find commit by text",
                 index=2,
-                description="TODO",
+                description="An helper task in-order to identify the correct commit SHA identifier for later",
             )
         ]
 

@@ -1,5 +1,8 @@
 from version_finder.core import VersionFinder, GitError, GitCommandError
 from version_finder.__common__ import parse_arguments
+from version_finder.logger.logger import setup_logger
+from version_finder.protocols import LoggerProtocol
+import logging
 import os
 import argparse
 from PIL import Image, ImageTk
@@ -105,10 +108,11 @@ class AutocompleteEntry(ctk.CTkEntry):
 
 
 class VersionFinderGUI(ctk.CTk):
-    def __init__(self, path: str = None):
+    def __init__(self, path: str = None, logger: LoggerProtocol = None):
         super().__init__()
         self.repo_path = path
         self.version_finder = None
+        self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("green")
@@ -268,7 +272,7 @@ class VersionFinderGUI(ctk.CTk):
 
     def initialize_version_finder(self):
         try:
-            self.version_finder = VersionFinder(self.dir_entry.get())
+            self.version_finder = VersionFinder(self.dir_entry.get(), logger=self.logger)
             self.output_text.insert("end", "✅ Repository loaded successfully\n")
         except GitError as e:
             self.output_text.insert("end", f"❌ Error: {str(e)}\n")
@@ -357,7 +361,9 @@ def gui_main(args: argparse.Namespace) -> int:
         print(f"Version: {__gui_version__}")
         return 0
 
-    app = VersionFinderGUI(args.path)
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logger = setup_logger(name=__name__, level=log_level)
+    app = VersionFinderGUI(args.path, logger=logger)
     app.mainloop()
 
 

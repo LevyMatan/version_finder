@@ -449,7 +449,7 @@ class VersionFinder:
                 "-i",
                 "--grep=version:",
                 "--format=%H",
-                f"{commit_sha}..HEAD"
+                f"{commit_sha}^1..HEAD"
             ]).decode("utf-8").strip()
 
             # Add validation for empty output

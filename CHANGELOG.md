@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v5.2.0 (2024-11-27)
+
+### Bug Fixes
+
+* fix(gui): adjust font size and entry width ([`e54ae90`](https://github.com/LevyMatan/version_finder/commit/e54ae906b755f44edd7a7212b4d157c0bdc90246))
+
+* fix(find_first_version_containing_commit): remove branch input ([`7d7b135`](https://github.com/LevyMatan/version_finder/commit/7d7b135866d3ef0820a8799ac7eda2f7b309ed90))
+
+### Documentation
+
+* docs(readme): Add latestest release link and installation instruction ([`78a6cf7`](https://github.com/LevyMatan/version_finder/commit/78a6cf70ee796ea8e1afb432233446c0d52a4e03))
+
+### Features
+
+* feat(cli): improve command line interface
+
+Add colors to prompts, to attract user for current selection
+More elegant and easy to choose
+Better completion to enter repository path ([`e394b2f`](https://github.com/LevyMatan/version_finder/commit/e394b2fb2a7e0485a7e8e870f01aa8159395bb8f))
+
+* feat(cli): when searching for text, ask for optional submodule
+
+Also make the autocompleter match from middle ([`087b1e7`](https://github.com/LevyMatan/version_finder/commit/087b1e723933c9adfe415d83a719ec33f667136e))
+
+### Unknown
+
+* Merge pull request #59 from LevyMatan/cli_gui_support
+
+Cli gui support ([`f37ecb5`](https://github.com/LevyMatan/version_finder/commit/f37ecb54b6c1f25b4ff3a45ee7c77791c615ca78))
+
+
 ## v5.1.0 (2024-11-27)
 
 ### Features

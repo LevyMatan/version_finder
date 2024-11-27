@@ -39,7 +39,7 @@ launch_gui()
 
 os.environ['TK_SILENCE_DEPRECATION'] = '1'
 
-__gui_version__ = '1.0.0'
+__gui_version__ = '2.0.0'
 
 
 class AutocompleteEntry(ctk.CTkEntry):
@@ -89,12 +89,16 @@ class AutocompleteEntry(ctk.CTkEntry):
 
             self.suggestion_window.geometry(f"{self.winfo_width()}x300+{x}+{y}")
             self.suggestion_window.deiconify()  # Show window
+
     def _select_suggestion(self, suggestion):
         self.delete(0, "end")
         self.insert(0, suggestion)
         if self.suggestion_window:
             self.suggestion_window.destroy()
             self.suggestion_window = None
+        # Trigger the callback if it exists
+        if hasattr(self, 'callback') and self.callback:
+            self.callback(suggestion)
 
     def _on_focus_out(self, event):
         # Add a small delay before destroying the window
@@ -195,6 +199,15 @@ class VersionFinderGUI(ctk.CTk):
         )
         browse_btn.pack(side="right", padx=5)
 
+    def _on_branch_select(self, branch):
+        try:
+            self.version_finder.update_repository(branch)
+            self.output_text.insert("end", f"✅ Repository updated to branch: {branch}\n")
+            self.output_text.see("end")
+        except Exception as e:
+            self.output_text.insert("end", f"❌ Error updating repository: {str(e)}\n")
+            self.output_text.see("end")
+
     def create_branch_selection(self):
         branch_frame = ctk.CTkFrame(self.main_frame)
         branch_frame.pack(fill="x", padx=10, pady=10)
@@ -206,6 +219,7 @@ class VersionFinderGUI(ctk.CTk):
             branch_frame,
             width=240,
         )
+        self.branch_entry.callback = self._on_branch_select  # Add callback
         self.branch_entry.pack(fill="x", padx=10, pady=10, expand=True)
         self.branch_entry.configure(state="disabled")
 

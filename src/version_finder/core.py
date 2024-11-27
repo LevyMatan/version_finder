@@ -80,17 +80,21 @@ class VersionFinderTaskRegistry:
             VersionFinderTask(
                 name="Find first version containing commit",
                 index=0,
-                description="TODO",
+                description="""The most common task is to find the first version that includes a change (=commit).
+                             Given a commit SHA identifier in a repository, it can be done easily using: `git log --grep=version: <commit_ha>^1..<HEAD>` you now what to scroll down all the way to find the first commit.
+                             But, when the change is part of a submodule, things can can a little more tricky. Given a submodule with the reposity and the commit SHA identifier, Version Finder
+                             will iterate over all the commits that change the submodule pointer. It will than apply binary search to find the first ancestor of the change.""",
             ),
             VersionFinderTask(
                 name="Find all commits between two versions",
                 index=1,
-                description="TODO",
+                description="""Trying to identify a commit that may cause an issue, a user would like to seek all the changes between two versions.
+                Once again an easy solution is `git log <old_version_tag>..<new_version_tag>`. If a submodule is given than Version Finder will get the submodule pointers at each commit, and log all the commits between them.""",
             ),
             VersionFinderTask(
                 name="Find commit by text",
                 index=2,
-                description="TODO",
+                description="An helper task in-order to identify the correct commit SHA identifier for later",
             )
         ]
 
@@ -369,13 +373,13 @@ class VersionFinder:
             self.logger.error(f"Failed to update submodules: {e}")
             raise
 
-    def find_commits_by_text(self, branch: str, text: str) -> List[str]:
+    def find_commits_by_text(self, text: str, submodule: str = None) -> List[str]:
         """
         Find commits in the specified branch that contain the given text in either title or description.
 
         Args:
-            branch: Branch name to search.
             text: Text to search for in commit messages (title and description).
+            submodule: Optional submodule path to search in.
 
         Returns:
             List of commit hashes.
@@ -383,19 +387,24 @@ class VersionFinder:
         Raises:
             GitCommandError: If the git command fails.
         """
-        try:
-            self.logger.debug(f"Finding commits by text: {text} in branch: {branch}")
-            # Use --format to get hash, subject and body in one command
-            # %H: commit hash
-            # %s: subject (title)
-            # %b: body (description)
-            # Using ASCII delimiter (0x1F) to separate fields
-            output = self.__execute_git_command([
-                "log",
-                "--format=%H%x1F%s%x1F%b",
-                branch
-            ])
+        if not self.is_task_ready:
+            raise ValueError("Repository is not ready to perform tasks.")
 
+        try:
+            command = [
+                "log",
+                "--format=%H%x1F%s%x1F%b"
+            ]
+
+            if submodule:
+                # Verify submodule exists
+                if submodule not in self.submodules:
+                    raise GitCommandError(f"Invalid submodule path: {submodule}")
+                # Execute command in submodule directory
+                command.insert(0, "-C")
+                command.insert(1, submodule)
+
+            output = self.__execute_git_command(command)
             commits = output.decode("utf-8").strip().split("\n")
             matching_commits = []
 
@@ -415,6 +424,7 @@ class VersionFinder:
         except GitCommandError as e:
             self.logger.error(f"Failed to find commits by text: {e}")
             raise
+
 
     def get_commit_surrounding_versions(self, commit_sha: str) -> List[Optional[str]]:
         """

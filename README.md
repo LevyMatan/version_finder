@@ -1,6 +1,8 @@
 
 # Version Finder
 
+[![Coverage Report](https://img.shields.io/badge/Coverage-Report-blue)](https://LevyMatan.github.io/version_finder/)
+
 Version Finder is a command-line utility for finding and comparing versions in Git repositories. It provides an easy way to manage and analyze version information across multiple branches and submodules.
 
 ## Features

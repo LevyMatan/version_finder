@@ -10,9 +10,19 @@ from version_finder.core import VersionFinder, GitError, VersionFinderTask, Vers
 from version_finder.logger.logger import setup_logger
 from version_finder.protocols import LoggerProtocol
 from version_finder.__common__ import parse_arguments
+from prompt_toolkit.validation import Validator, ValidationError
+
 
 __cli_version__ = "1.0.0"
 
+class CommitSHAValidator(Validator):
+    def validate(self, document):
+        text = document.text.strip()
+        if not text:
+            raise ValidationError(message="Commit SHA cannot be empty")
+        # Allow full SHA (40 chars), short SHA (min 7 chars), or HEAD~n format
+        if not (len(text) >= 7 and len(text) <= 40) and not text.startswith("HEAD~"):
+            raise ValidationError(message="Invalid commit SHA format. Use 7-40 hex chars or HEAD~n format")
 
 class VersionFinderCLI:
     """
@@ -281,15 +291,17 @@ class VersionFinderCLI:
             int: 0 on success, 1 on error
         """
         try:
-            self.logger.info("Enter commit SHA to search from (Ctrl+C to cancel):")
-            commit_sha = input().strip()
+            # Replace the existing input code with:
+            commit_sha = prompt(
+                "Enter commit SHA to search from (Ctrl+C to cancel): ",
+                validator=CommitSHAValidator(),
+                validate_while_typing=True
+            ).strip()
 
-            if not commit_sha:
-                self.logger.warning("Commit SHA cannot be empty")
-                return 1
+            submodule_name = self.handle_submodule_input()
 
             self.logger.info("Searching for first version containing commit: %s", commit_sha)
-            version = self.finder.find_first_version_containing_commit(self.branch, commit_sha)
+            version = self.finder.find_first_version_containing_commit(commit_sha, submodule_name)
 
             if not version:
                 self.logger.info("No version found containing commit: %s", commit_sha)

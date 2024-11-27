@@ -398,3 +398,66 @@ class TestVersionFinder:
 
         with pytest.raises(ValueError, match="Repository is not ready to perform tasks."):
             finder.find_commits_by_text("test")
+
+    def test_get_commits_between_versions(self, test_repo):
+        # Setup test repository with version commits
+        os.chdir(test_repo)
+        os.system("git checkout main")
+        os.system("git commit -m 'Version: 2024_01' --allow-empty")
+        os.system("git commit -m 'Intermediate commit 1' --allow-empty")
+        os.system("git commit -m 'Intermediate commit 2' --allow-empty")
+        os.system("git commit -m 'Version: 2024_02' --allow-empty")
+
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        commits = finder.get_commits_between_versions('2024_01', '2024_02')
+
+        # Verify we got the intermediate commits
+        assert len(commits) == 4
+
+        # Verify commit messages
+        for commit in commits:
+            message = os.popen(f'git log -1 --format=%s {commit}').read().strip()
+            assert message in ['Version: 2024_01', 'Intermediate commit 1', 'Intermediate commit 2', 'Version: 2024_02']
+
+    def test_get_commits_between_versions_with_submodule(self, repo_with_submodule):
+        # Setup submodule with initial commit
+        os.chdir(os.path.join(repo_with_submodule, 'sub_repo'))
+        os.system("git commit -m 'Sub commit 1' --allow-empty")
+        sub_commit1 = os.popen('git rev-parse HEAD').read().strip()
+
+        # Update main repo with first version pointing to first submodule commit
+        os.chdir(repo_with_submodule)
+        os.system("git add sub_repo")
+        os.system("git commit -m 'Version: 2024_01'")
+
+        # Create second commit in submodule
+        os.chdir(os.path.join(repo_with_submodule, 'sub_repo'))
+        os.system("git commit -m 'Sub commit 2' --allow-empty")
+        sub_commit2 = os.popen('git rev-parse HEAD').read().strip()
+
+        # Update main repo to point to new submodule commit
+        os.chdir(repo_with_submodule)
+        os.system("git add sub_repo")
+        os.system("git commit -m 'Version: 2024_02'")
+
+        finder = VersionFinder(path=repo_with_submodule)
+        finder.update_repository('main')
+        commits = finder.get_commits_between_versions('2024_01', '2024_02', submodule='sub_repo')
+
+        # Verify we got the submodule commit
+        assert len(commits) == 2
+        assert sub_commit1 in commits
+        assert sub_commit2 in commits
+
+    def test_get_commits_between_versions_invalid_version(self, test_repo):
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        commits = finder.get_commits_between_versions('nonexistent_version1', 'nonexistent_version2')
+        assert commits == []
+
+    def test_get_commits_between_versions_not_ready(self, test_repo):
+        finder = VersionFinder(path=test_repo)
+        # Don't call update_repository to test not ready state
+        with pytest.raises(GitCommandError, match="Repository is not ready"):
+            finder.get_commits_between_versions('2024_01', '2024_02')

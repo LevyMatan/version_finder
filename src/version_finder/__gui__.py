@@ -299,7 +299,7 @@ class VersionFinderGUI(ctk.CTk):
         if self.repo_path:
             directory = self.repo_path
         else:
-            directory = ctk.filedialog.askdirectory()
+            directory = ctk.filedialog.askdirectory(initialdir=os.getcwd())
         if directory:
             self.dir_entry.delete(0, "end")
             self.dir_entry.insert(0, directory)

@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v5.0.0 (2024-11-27)
+
+### Breaking
+
+* feat(search by text): Add search within a submodule
+
+BREAKING CHANGE: change the task paramter interface, removed the branch param ([`bed7c24`](https://github.com/LevyMatan/version_finder/commit/bed7c243899614abbc7d24d0c58c14c70e0a86c2))
+
+### Documentation
+
+* docs(API): Update description of tasks ([`cf100b4`](https://github.com/LevyMatan/version_finder/commit/cf100b429445f2f62e6f2e32f1d7ec97e8c81ba9))
+
+### Features
+
+* feat(cov): Upload coverage report ([`cdbd6f6`](https://github.com/LevyMatan/version_finder/commit/cdbd6f68a14b45100373838c5cbccef1c3327081))
+
+### Unknown
+
+* Merge pull request #58 from LevyMatan/core-impro
+
+Core improvements ([`3c35e59`](https://github.com/LevyMatan/version_finder/commit/3c35e59fd393b37de90faabd91c1b8898da3136f))
+
+* tests(uint): find_commits_by_text ([`6365eba`](https://github.com/LevyMatan/version_finder/commit/6365eba175fb7accf62b9ddf291e8c272109b477))
+
+
 ## v4.0.0 (2024-11-27)
 
 ### Breaking

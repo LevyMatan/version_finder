@@ -334,3 +334,67 @@ class TestVersionFinder:
         commits = finder.find_commit_by_version('1_1_0')
         assert len(commits) == 1
         assert commits[0] == os.popen('git rev-parse HEAD').read().strip()
+
+    def test_find_commits_by_text_basic(self, test_repo):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder.update_repository('main')
+
+        # Create test commits with specific text
+        os.chdir(test_repo)
+        os.system("git commit -m 'Test message one' --allow-empty")
+        first_commit = os.popen('git rev-parse HEAD').read().strip()
+        os.system("git commit -m 'Different message' --allow-empty")
+        os.system("git commit -m 'Test message two' --allow-empty")
+        second_commit = os.popen('git rev-parse HEAD').read().strip()
+
+        # Test finding commits with text
+        commits = finder.find_commits_by_text("Test message")
+        assert len(commits) == 2
+        assert first_commit in commits
+        assert second_commit in commits
+
+    def test_find_commits_by_text_case_insensitive(self, test_repo):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder.update_repository('main')
+
+        os.chdir(test_repo)
+        os.system("git commit -m 'UPPER CASE MESSAGE' --allow-empty")
+        commit_hash = os.popen('git rev-parse HEAD').read().strip()
+
+        commits = finder.find_commits_by_text("upper case")
+        assert len(commits) == 1
+        assert commit_hash in commits
+
+    def test_find_commits_by_text_in_submodule(self, repo_with_submodule):
+        finder = VersionFinder(path=repo_with_submodule, logger=debug_logger)
+        finder.update_repository('main')
+
+        # Add commit in submodule
+        os.chdir(os.path.join(repo_with_submodule, 'sub_repo'))
+        os.system("git commit -m 'Submodule specific text' --allow-empty")
+        submodule_commit = os.popen('git rev-parse HEAD').read().strip()
+
+        commits = finder.find_commits_by_text("Submodule specific", submodule='sub_repo')
+        assert len(commits) == 1
+        assert submodule_commit in commits
+
+    def test_find_commits_by_text_no_matches(self, test_repo):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder.update_repository('main')
+
+        commits = finder.find_commits_by_text("NonexistentText")
+        assert len(commits) == 0
+
+    def test_find_commits_by_text_invalid_submodule(self, test_repo):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder.update_repository('main')
+
+        with pytest.raises(GitCommandError):
+            finder.find_commits_by_text("test", submodule="nonexistent-submodule")
+
+    def test_find_commits_by_text_repository_not_ready(self, test_repo):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        # Don't call update_repository to test not ready state
+
+        with pytest.raises(ValueError, match="Repository is not ready to perform tasks."):
+            finder.find_commits_by_text("test")

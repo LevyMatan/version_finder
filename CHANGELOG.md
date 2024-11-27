@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v5.1.0 (2024-11-27)
+
+### Features
+
+* feat(package): build a package in CI for each release ([`77cde95`](https://github.com/LevyMatan/version_finder/commit/77cde9557f1861a82e5b328cea51d36be8cb814f))
+
+
 ## v5.0.0 (2024-11-27)
 
 ### Breaking

@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v5.2.1 (2024-11-27)
+
+### Bug Fixes
+
+* fix(core): :bug: get commit between version with submodule
+
+Correct the git command sent once there is submodule involved ([`8530821`](https://github.com/LevyMatan/version_finder/commit/853082141ca5383c954dc986c48da300e1f2fba8))
+
+* fix(core): :ambulance: boolean opeartion on a list even if with empty string return True.
+
+Fixed the logic of handling an empty list when searching for commits ([`24eb707`](https://github.com/LevyMatan/version_finder/commit/24eb7078f9b2b1d7e0c8e4bbf558e03813c8f1be))
+
+### Testing
+
+* test(core): :white_check_mark: add test to commit between versions method ([`d6f794d`](https://github.com/LevyMatan/version_finder/commit/d6f794dd72bda82134099d275cf7d904b3ec545a))
+
+### Unknown
+
+* Merge pull request #60 from LevyMatan/cli_gui_support
+
+Cli gui support ([`4fd1c05`](https://github.com/LevyMatan/version_finder/commit/4fd1c054c129be0a7f96ba57ca81d9cc9157a893))
+
+
 ## v5.2.0 (2024-11-27)
 
 ### Bug Fixes

@@ -576,16 +576,30 @@ class VersionFinder:
         while left <= right:
             mid = (left + right) // 2
             submodule_ptr = repo_commot_submodule_ptr_tuples[mid][1]
-            if self.__execute_git_command(
-                    ["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr], check=False).returncode == 0:
-                right = mid - 1
-            else:
+            self.logger.debug(f"Binary search - Left: {left}, Right: {right}, Mid: {mid}")
+            self.logger.debug(f"Checking if {submodule_target_commit} is ancestor of {submodule_ptr}")
+
+            is_ancestor_or_equal = (
+                submodule_target_commit == submodule_ptr or
+                self.__execute_git_command(
+                    ["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr],
+                    check=False).returncode == 0
+            )
+
+            self.logger.debug(f"Is ancestor or equal result: {is_ancestor_or_equal}")
+
+            if is_ancestor_or_equal:
+                self.logger.debug(f"Moving left pointer from {left} to {mid+1}")
                 left = mid + 1
-        # If left is 0, it means the target commit is the first commit that includes changes in the submodule
-        if left == 0:
-            return repo_commot_submodule_ptr_tuples[0][0]
-        else:
-            return repo_commot_submodule_ptr_tuples[left - 1][0]
+            else:
+                self.logger.debug(f"Moving right pointer from {right} to {mid-1}")
+                right = mid - 1
+
+        self.logger.debug(f"Binary search completed - Final left: {left}, Final right: {right}")
+
+        first_commit_to_include_submodule_change = repo_commot_submodule_ptr_tuples[right][0]
+        self.logger.debug(f"First commit that includes submodule change: {first_commit_to_include_submodule_change}")
+        return first_commit_to_include_submodule_change
 
     def __get_commits_changing_submodule_pointers_and_the_new_pointer(self, submodule_path, commit_num_limit):
         git_log_command = [

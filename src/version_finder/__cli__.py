@@ -66,7 +66,7 @@ class VersionFinderCLI:
             # '':          '#ff0066',
 
             # Prompt.
-            'current_status':       '#00aa00',
+            'current_status': '#00aa00',
         })
 
     def get_task_functions(self) -> List[VersionFinderTask]:

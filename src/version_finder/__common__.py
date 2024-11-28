@@ -28,9 +28,11 @@ Examples:
     parser.add_argument("-s", "--submodule",
                         help="The submodule to find the first that includes it")
 
-    parser.add_argument("-t", "--task",
-                        default=None,
-                        help="The task to perform (find_commit, find_version, compare_versions, list_submodules, get_submodule_commit_hash)")
+    parser.add_argument(
+        "-t",
+        "--task",
+        default=None,
+        help="The task to perform (find_commit, find_version, compare_versions, list_submodules, get_submodule_commit_hash)")
     parser.add_argument("--cli", action="store_true", help="Run the CLI version")
     parser.add_argument("--gui", action="store_true", help="Run the GUI version")
 

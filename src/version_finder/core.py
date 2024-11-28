@@ -31,6 +31,7 @@ class GitRepositoryNotClean(GitError):
 
 class GitNotInstalledError(GitError):
     """Raised when git is not installed"""
+
     def __init__(self, message: str):
         installation_guide = """
         To use version_finder, you need git installed on your system.
@@ -43,6 +44,7 @@ class GitNotInstalledError(GitError):
         After installation, ensure 'git' is available in your system PATH.
         """
         super().__init__(f"{message}\n{installation_guide}")
+
 
 @dataclass
 class Commit:
@@ -564,10 +566,10 @@ class VersionFinder:
             self.logger.debug(f"Is ancestor or equal result: {is_ancestor_or_equal}")
 
             if is_ancestor_or_equal:
-                self.logger.debug(f"Moving left pointer from {left} to {mid+1}")
+                self.logger.debug(f"Moving left pointer from {left} to {mid + 1}")
                 left = mid + 1
             else:
-                self.logger.debug(f"Moving right pointer from {right} to {mid-1}")
+                self.logger.debug(f"Moving right pointer from {right} to {mid - 1}")
                 right = mid - 1
 
         self.logger.debug(f"Binary search completed - Final left: {left}, Final right: {right}")

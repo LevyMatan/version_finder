@@ -17,6 +17,7 @@ from prompt_toolkit.validation import Validator, ValidationError
 
 __cli_version__ = "1.0.0"
 
+
 class TaskNumberValidator(Validator):
     def __init__(self, min_index: int, max_index: int):
         self.min_index = min_index
@@ -29,9 +30,11 @@ class TaskNumberValidator(Validator):
         try:
             task_idx = int(text)
             if not (self.min_index <= task_idx <= self.max_index):
-                raise ValidationError(message=f"Please select a task number between {self.min_index} and {self.max_index}")
+                raise ValidationError(
+                    message=f"Please select a task number between {self.min_index} and {self.max_index}")
         except ValueError:
             raise ValidationError(message="Please enter a valid number")
+
 
 class CommitSHAValidator(Validator):
     def validate(self, document):
@@ -41,6 +44,7 @@ class CommitSHAValidator(Validator):
         # Allow full SHA (40 chars), short SHA (min 7 chars), or HEAD~n format
         if not (len(text) >= 7 and len(text) <= 40) and not text.startswith("HEAD~"):
             raise ValidationError(message="Invalid commit SHA format. Use 7-40 hex chars or HEAD~n format")
+
 
 class VersionFinderCLI:
     """
@@ -145,7 +149,6 @@ class VersionFinderCLI:
 
             task_struct = self.registry.get_by_index(task_idx)
             return task_struct.name
-
 
     def handle_branch_input(self, branch_name: str) -> str:
         """
@@ -302,7 +305,6 @@ class VersionFinderCLI:
         """
         try:
             text = prompt("Enter search text: ").strip()
-
 
             if not text:
                 self.logger.warning("Search text cannot be empty")

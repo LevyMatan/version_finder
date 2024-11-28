@@ -3,3 +3,21 @@ version_variables = [
     "src/version_finder/__init__.py:__version__",
 ]
 version_toml = ["pyproject.toml:tool.poetry.version"]
+
+[tool.autopep8]
+max_line_length = 120
+aggressive = 2
+recursive = true
+in-place = true
+select = E, W, F
+exclude = [
+    "**/*.cfg",
+    ".venv",
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "**/*.md",
+    "version_finder_env",
+    "pytest"
+]

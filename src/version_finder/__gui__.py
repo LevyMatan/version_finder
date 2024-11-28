@@ -185,7 +185,8 @@ class VersionFinderGUI(ctk.CTk):
         dir_frame = ctk.CTkFrame(self.main_frame)
         dir_frame.pack(fill="x", padx=10, pady=10)
 
-        dir_label = ctk.CTkLabel(dir_frame, text="Select Directory:", width=100, font=ctk.CTkFont(size=16, weight="bold"))
+        dir_label = ctk.CTkLabel(dir_frame, text="Select Directory:", width=100,
+                                 font=ctk.CTkFont(size=16, weight="bold"))
         dir_label.pack(side="left", padx=5)
 
         self.dir_entry = ctk.CTkEntry(dir_frame, width=300)
@@ -227,7 +228,8 @@ class VersionFinderGUI(ctk.CTk):
         submodule_frame = ctk.CTkFrame(self.main_frame)
         submodule_frame.pack(fill="x", padx=10, pady=10)
 
-        submodule_label = ctk.CTkLabel(submodule_frame, text="Submodule:", width=100, font=ctk.CTkFont(size=16, weight="bold"))
+        submodule_label = ctk.CTkLabel(submodule_frame, text="Submodule:", width=100,
+                                       font=ctk.CTkFont(size=16, weight="bold"))
         submodule_label.pack(side="left", padx=5)
 
         self.submodule_entry = AutocompleteEntry(

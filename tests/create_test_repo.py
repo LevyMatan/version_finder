@@ -64,7 +64,7 @@ def create_test_repo():
 
     for i in range(20):
         branch_type = random.choice(branch_types)
-        branch_name = f"{branch_type}/branch_{i+1}"
+        branch_name = f"{branch_type}/branch_{i + 1}"
         print(f"\nCreating branch: {branch_name}")
 
         # Create new branch from master

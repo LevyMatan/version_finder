@@ -155,6 +155,8 @@ class VersionFinder:
     # - Numbers
     # - Optional "-" or "_" followed by additional numbers
     version_pattern = r'(Version:\s*(?:XX_)?)?(\d+(?:[_-]\d+)+(?:[_-]\d+)?)'
+    git_regex_pattern_for_version = "(Version|VERSION): (XX_)?[0-9]+_[0-9]+(-[0-9]+)?"
+
 
     def __init__(self,
                  path: Optional[str] = None,
@@ -439,12 +441,11 @@ class VersionFinder:
         try:
             if not self.has_commit(commit_sha):
                 raise GitCommandError(f"Commit {commit_sha} does not exist")
-
             # Find nearest version commits using grep
             prev_version = self.__execute_git_command([
                 "log",
-                "-i",
-                "--grep=version:",
+                f"--grep={self.git_regex_pattern_for_version}",
+                "--extended-regexp",
                 "--format=%H",
                 "-n", "1",
                 f"{commit_sha}~1"
@@ -456,8 +457,8 @@ class VersionFinder:
 
             next_version_output = self.__execute_git_command([
                 "log",
-                "-i",
-                "--grep=version:",
+                f"--grep={self.git_regex_pattern_for_version}",
+                "--extended-regexp",
                 "--format=%H",
                 f"{commit_sha}^1..HEAD"
             ]).decode("utf-8").strip()
@@ -627,7 +628,7 @@ class VersionFinder:
 
         # Find the commit that indicates the specified version
         commits = self.__execute_git_command(
-            ["log", "-i","--grep", f"Version: {version}", "--format=%H"]).decode("utf-8").strip().split("\n")
+            ["log", "-i","--grep", version, "--format=%H"]).decode("utf-8").strip().split("\n")
         self.logger.debug(f"Found {len(commits)} commits for version {version}")
         return commits
 

@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v5.2.2 (2024-11-28)
+
+### Bug Fixes
+
+* fix(core): :bug: more robust version pattern matching
+
+Use the --extended-regex option in git --grep to allow more accurate detection of versions ([`9dcaffa`](https://github.com/LevyMatan/version_finder/commit/9dcaffa4dff6a2ec3df142e029c275de9a870e4f))
+
+### Unknown
+
+* Merge pull request #61 from LevyMatan/cli_gui_support
+
+Cli gui support ([`d46bb5e`](https://github.com/LevyMatan/version_finder/commit/d46bb5e0deb85d6625882a2d9e4769dac026414d))
+
+
 ## v5.2.1 (2024-11-27)
 
 ### Bug Fixes

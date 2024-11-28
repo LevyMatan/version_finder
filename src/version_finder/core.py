@@ -11,26 +11,10 @@ from dataclasses import dataclass
 from pathlib import Path
 import os
 import re
-import subprocess
 import time
 from typing import List, Optional, Dict, Callable
 from version_finder.protocols import LoggerProtocol, NullLogger
-
-
-@dataclass
-class GitConfig:
-    """Configuration settings for git operations"""
-    timeout: int = 30
-    max_retries: int = 0
-    retry_delay: int = 1
-
-    def __post_init__(self):
-        if self.timeout <= 0:
-            raise ValueError("timeout must be positive")
-        if self.max_retries < 0:
-            raise ValueError("max_retries cannot be negative")
-        if self.retry_delay <= 0:
-            raise ValueError("retry_delay must be positive")
+from version_finder.git_executer import GitCommandExecutor, GitConfig, GitCommandError
 
 
 class GitError(Exception):
@@ -39,10 +23,6 @@ class GitError(Exception):
 
 class InvalidGitRepository(GitError):
     """Raised when the repository path is invalid"""
-
-
-class GitCommandError(GitError):
-    """Raised when a git command fails"""
 
 
 class GitRepositoryNotClean(GitError):
@@ -157,7 +137,6 @@ class VersionFinder:
     version_pattern = r'(Version:\s*(?:XX_)?)?(\d+(?:[_-]\d+)+(?:[_-]\d+)?)'
     git_regex_pattern_for_version = "(Version|VERSION): (XX_)?[0-9]+_[0-9]+(-[0-9]+)?"
 
-
     def __init__(self,
                  path: Optional[str] = None,
                  config: Optional[GitConfig] = None,
@@ -172,10 +151,12 @@ class VersionFinder:
         """
         self.config = config or GitConfig()
         self.repository_path = Path(path or os.getcwd()).resolve()
+        self.logger = logger or NullLogger()  # Use NullLogger if no logger provided
+        self._git = GitCommandExecutor(self.repository_path, self.config, self.logger)
+
         self.is_task_ready = False
         self.submodules: List[str] = []
         self.branches: List[str] = []
-        self.logger = logger or NullLogger()  # Use NullLogger if no logger provided
 
         self.__validate_repository()
         self.__load_repository_info()
@@ -183,7 +164,7 @@ class VersionFinder:
     def __has_remote(self) -> bool:
         """Check if the repository has any remotes configured."""
         try:
-            output = self.__execute_git_command(["remote"])
+            output = self._git.execute(["remote"])
             return bool(output.strip())
         except GitCommandError:
             return False
@@ -192,7 +173,7 @@ class VersionFinder:
         """Validate the git repository and its state."""
         try:
             # Check if directory is a git repository by running git status
-            self.__execute_git_command(["status"])
+            self._git.execute(["status"])
         except GitCommandError as e:
             # Convert GitCommandError to InvalidGitRepository
             raise InvalidGitRepository(f"Path {self.repository_path} is not a valid git repository: {str(e)}") from e
@@ -212,44 +193,10 @@ class VersionFinder:
         self.__load_branches()
         self.__load_submodules()
 
-    def __execute_git_command(self, command: List[str], retries: int = 0, check: bool = True) -> bytes:
-        """
-        Execute a git command with retry logic and timeout.
-
-        Args:
-            command: Git command and arguments as list.
-            retries: Number of retries attempted so far.
-
-        Returns:
-            Command output as bytes.
-
-        Raises:
-            GitCommandError: If the command fails after all retries.
-        """
-        try:
-            self.logger.debug(f"Executing git command: {' '.join(command)}")
-            output = subprocess.check_output(
-                ["git"] + command,
-                cwd=self.repository_path,
-                stderr=subprocess.PIPE,
-                timeout=self.config.timeout
-            )
-            return output
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-            if not check:
-                # create a struct with returncode and set it to 1
-                e.returncode = 1
-                return e
-            if retries < self.config.max_retries:
-                self.logger.warning(f"Git command failed, retrying in {self.config.retry_delay}s: {e}")
-                time.sleep(self.config.retry_delay)
-                return self.__execute_git_command(command, retries + 1)
-            raise GitCommandError(f"Git command failed: {e}") from e
-
     def __load_submodules(self) -> None:
         """Load git submodules information."""
         try:
-            output = self.__execute_git_command(["submodule", "status"])
+            output = self._git.execute(["submodule", "status"])
             self.submodules = [line.split()[1] for line in output.decode("utf-8").splitlines()]
             self.logger.debug(f"Loaded submodules: {self.submodules}")
         except GitCommandError as e:
@@ -259,7 +206,7 @@ class VersionFinder:
     def __fetch_repository(self) -> None:
         """Fetch latest changes from remote repository."""
         try:
-            output = self.__execute_git_command(["fetch", "--all"])
+            output = self._git.execute(["fetch", "--all"])
             self.logger.debug(f"Fetch output: {output}")
         except GitCommandError as e:
             self.logger.error(f"Failed to fetch repository: {e}")
@@ -267,7 +214,7 @@ class VersionFinder:
     def __load_branches(self) -> None:
         """Load git branches information."""
         try:
-            output = self.__execute_git_command(["branch", "-a"])
+            output = self._git.execute(["branch", "-a"])
             self.logger.debug(f"Loaded branches output: {output}")
 
             start_time = time.time()
@@ -308,7 +255,7 @@ class VersionFinder:
     def __is_clean_git_repo(self) -> bool:
         """Check if the git repository is clean."""
         try:
-            self.__execute_git_command(["diff", "--quiet", "HEAD"])
+            self._git.execute(["diff", "--quiet", "HEAD"])
             return True
         except GitCommandError:
             return False
@@ -325,7 +272,7 @@ class VersionFinder:
         """Get current branch."""
         current_branch = None
         try:
-            output = self.__execute_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
+            output = self._git.execute(["rev-parse", "--abbrev-ref", "HEAD"])
             output = output.decode("utf-8").strip()
             self.logger.debug(f"Current branch output: {output}")
             if output not in ["HEAD"]:
@@ -356,9 +303,9 @@ class VersionFinder:
             raise GitCommandError(f"Invalid branch: {branch}")
 
         try:
-            self.__execute_git_command(["checkout", branch])
+            self._git.execute(["checkout", branch])
             if self._has_remote:
-                self.__execute_git_command(["pull", "origin", branch])
+                self._git.execute(["pull", "origin", branch])
             self.__load_submodules()
             self.__update_all_submodules()
             self.is_task_ready = True
@@ -370,7 +317,7 @@ class VersionFinder:
     def __update_all_submodules(self) -> None:
         """Update submodules recursively."""
         try:
-            self.__execute_git_command(["submodule", "update", "--init", "--recursive"])
+            self._git.execute(["submodule", "update", "--init", "--recursive"])
         except GitCommandError as e:
             self.logger.error(f"Failed to update submodules: {e}")
             raise
@@ -406,7 +353,7 @@ class VersionFinder:
                 command.insert(0, "-C")
                 command.insert(1, submodule)
 
-            output = self.__execute_git_command(command)
+            output = self._git.execute(command)
             commits = output.decode("utf-8").strip().split("\n")
             matching_commits = []
 
@@ -427,7 +374,6 @@ class VersionFinder:
             self.logger.error(f"Failed to find commits by text: {e}")
             raise
 
-
     def get_commit_surrounding_versions(self, commit_sha: str) -> List[Optional[str]]:
         """
         Find the nearest version commits before and after the given commit.
@@ -442,7 +388,7 @@ class VersionFinder:
             if not self.has_commit(commit_sha):
                 raise GitCommandError(f"Commit {commit_sha} does not exist")
             # Find nearest version commits using grep
-            prev_version = self.__execute_git_command([
+            prev_version = self._git.execute([
                 "log",
                 f"--grep={self.git_regex_pattern_for_version}",
                 "--extended-regexp",
@@ -455,7 +401,7 @@ class VersionFinder:
             if not prev_version:
                 self.logger.debug("No previous version found")
 
-            next_version_output = self.__execute_git_command([
+            next_version_output = self._git.execute([
                 "log",
                 f"--grep={self.git_regex_pattern_for_version}",
                 "--extended-regexp",
@@ -487,7 +433,7 @@ class VersionFinder:
         """
         try:
             # Get the commit message using the pretty format
-            output = self.__execute_git_command([
+            output = self._git.execute([
                 "show",
                 "-s",  # suppress diff output
                 "--format=%s",  # get subject/title only
@@ -516,7 +462,7 @@ class VersionFinder:
         """
         try:
             # -e flag just checks for existence, -t type check is also good
-            self.__execute_git_command(["cat-file", "-e", commit_sha])
+            self._git.execute(["cat-file", "-e", commit_sha])
             return True
         except GitCommandError:
             return False
@@ -534,7 +480,7 @@ class VersionFinder:
         """
         try:
             # Check if the commit exists in the submodule
-            self.__execute_git_command(["-C", submodule_path, "cat-file", "-e", commit_sha])
+            self._git.execute(["-C", submodule_path, "cat-file", "-e", commit_sha])
             return True
         except GitCommandError:
             self.logger.error(f"Commit {commit_sha} does not exist in submodule {submodule_path}")
@@ -576,7 +522,8 @@ class VersionFinder:
             raise GitCommandError(f"No commits found that change submodule {submodule_path} or its ancestors")
         # Parse the git log output
         repo_commot_submodule_ptr_tuples = parse_git_log_output(git_log_output)
-        self.logger.debug(f"Found {len(repo_commot_submodule_ptr_tuples)} commits that change submodule {submodule_path}")
+        self.logger.debug(
+            f"Found {len(repo_commot_submodule_ptr_tuples)} commits that change submodule {submodule_path}")
         self.logger.debug(f"First commit: {repo_commot_submodule_ptr_tuples[0][0]}")
         self.logger.debug(f"Last commit: {repo_commot_submodule_ptr_tuples[-1][0]}")
 
@@ -590,7 +537,7 @@ class VersionFinder:
 
             is_ancestor_or_equal = (
                 submodule_target_commit == submodule_ptr or
-                self.__execute_git_command(
+                self._git.execute(
                     [f"-C {submodule_path}", "merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr],
                     check=False).returncode == 0
             )
@@ -616,7 +563,7 @@ class VersionFinder:
         ]
         if commit_num_limit:
             git_log_command.insert(2, f"-n {commit_num_limit}")
-        git_log_output = self.__execute_git_command(git_log_command).decode("utf-8").strip()
+        git_log_output = self._git.execute(git_log_command).decode("utf-8").strip()
         return git_log_output
 
     def find_commit_by_version(self, version: str) -> List[str]:
@@ -627,8 +574,8 @@ class VersionFinder:
             raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
 
         # Find the commit that indicates the specified version
-        commits = self.__execute_git_command(
-            ["log", "-i","--grep", version, "--format=%H"]).decode("utf-8").strip().split("\n")
+        commits = self._git.execute(
+            ["log", "-i", "--grep", version, "--format=%H"]).decode("utf-8").strip().split("\n")
         self.logger.debug(f"Found {len(commits)} commits for version {version}")
         return commits
 
@@ -645,14 +592,14 @@ class VersionFinder:
             raise GitCommandError(f"Commit {commit} does not exist")
 
         # Get the submodule pointer from the commit
-        submodule_ptr = self.__execute_git_command(
+        submodule_ptr = self._git.execute(
             ["ls-tree", "-r", "--full-tree", commit, submodule]).decode("utf-8").strip().split("\n")
         if not submodule_ptr:
             return None
         return submodule_ptr[0].split()[2]
 
     def get_commits_between_versions(self, start_version: str,
-                                    end_version: str, submodule: Optional[str] = None) -> List[str]:
+                                     end_version: str, submodule: Optional[str] = None) -> List[str]:
         """
         Get the list of commits between two versions.
         """
@@ -671,15 +618,13 @@ class VersionFinder:
             if not start_commit or not end_commit:
                 return []
 
-
         lower_bound_commit = self.get_parent_commit(start_commit, submodule)
         git_command = ["log", "--format=%H", f"{lower_bound_commit}..{end_commit}"]
         if submodule:
             git_command.insert(0, "-C")
             git_command.insert(1, f"{submodule}")
-        return self.__execute_git_command(
+        return self._git.execute(
             git_command).decode("utf-8").strip().split("\n")
-
 
     def get_parent_commit(self, commit: str, submodule=None) -> str:
         """
@@ -704,7 +649,6 @@ class VersionFinder:
         if self.has_commit(f"{commit}^"):
             return f"{commit}^"
         return commit
-
 
     def find_first_version_containing_commit(self, commit_sha: str, submodule=None) -> Optional[str]:
         """
@@ -739,7 +683,7 @@ class VersionFinder:
             raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
 
         # Get the commit SHA from the relative string
-        commit_sha = self.__execute_git_command(
+        commit_sha = self._git.execute(
             ["rev-parse", relative_string]).decode("utf-8").strip()
         if not commit_sha:
             return None

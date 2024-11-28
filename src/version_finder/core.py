@@ -591,7 +591,7 @@ class VersionFinder:
             is_ancestor_or_equal = (
                 submodule_target_commit == submodule_ptr or
                 self.__execute_git_command(
-                    ["merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr],
+                    [f"-C {submodule_path}", "merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr],
                     check=False).returncode == 0
             )
 

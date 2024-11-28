@@ -29,6 +29,21 @@ class GitRepositoryNotClean(GitError):
     """Raised when the repository has uncommitted changes"""
 
 
+class GitNotInstalledError(GitError):
+    """Raised when git is not installed"""
+    def __init__(self, message: str):
+        installation_guide = """
+        To use version_finder, you need git installed on your system.
+
+        Installation instructions:
+        - macOS: Install via Xcode Command Line Tools with 'xcode-select --install'
+        - Linux: Use your package manager e.g. 'apt install git' or 'yum install git'
+        - Windows: Download from https://git-scm.com/download/win
+
+        After installation, ensure 'git' is available in your system PATH.
+        """
+        super().__init__(f"{message}\n{installation_guide}")
+
 @dataclass
 class Commit:
     """A class to represent a git commit."""
@@ -152,7 +167,11 @@ class VersionFinder:
         self.config = config or GitConfig()
         self.repository_path = Path(path or os.getcwd()).resolve()
         self.logger = logger or NullLogger()  # Use NullLogger if no logger provided
-        self._git = GitCommandExecutor(self.repository_path, self.config, self.logger)
+        try:
+            self._git = GitCommandExecutor(self.repository_path, self.config, self.logger)
+        except GitCommandError as e:
+            self.logger.error(f"Error: {e}")
+            raise GitNotInstalledError(e)
 
         self.is_task_ready = False
         self.submodules: List[str] = []

@@ -40,6 +40,12 @@ class GitCommandExecutor:
         self.config = config or GitConfig()
         self.logger = logger or NullLogger()
 
+        # Check Git is installed
+        try:
+            subprocess.check_output(["git", "--version"])
+        except FileNotFoundError:
+            raise GitCommandError("Git is not installed")
+
     def execute(self, command: list[str], retries: int = 0, check: bool = True) -> bytes:
         """
         Execute a git command with retry logic and timeout.

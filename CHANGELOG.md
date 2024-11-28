@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v5.2.3 (2024-11-28)
+
+### Bug Fixes
+
+* fix(core): :ambulance: change --is-ancestor to tun in submodule context
+
+During the binary search to find the first commit in main repository to include a submodule commit, the comparison criteria which is --is-ancestor didn't run in the correct contect ([`b833423`](https://github.com/LevyMatan/version_finder/commit/b8334237c2e4ef584bcfbf6ecc365e62b18bd430))
+
+
 ## v5.2.2 (2024-11-28)
 
 ### Bug Fixes

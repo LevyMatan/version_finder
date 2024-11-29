@@ -29,6 +29,18 @@ class GitRepositoryNotClean(GitError):
     """Raised when the repository has uncommitted changes"""
 
 
+class InvalidCommitError(GitError):
+    """Raised when the commit is invalid"""
+
+
+class InvalidSubmoduleError(GitError):
+    """Raised when the submodule is invalid"""
+
+
+class InvalidBranchError(GitError):
+    """Raised when the branch is invalid"""
+
+
 class GitNotInstalledError(GitError):
     """Raised when git is not installed"""
 
@@ -46,10 +58,18 @@ class GitNotInstalledError(GitError):
         super().__init__(f"{message}\n{installation_guide}")
 
 
+class RepositoryNotTaskReady(GitError):
+    """Raised when the repository is not ready for task"""
+
+    def __init__(self):
+        super().__init__("Please run update_repository(<selected_branch>) first.")
+
+
 @dataclass
 class Commit:
     """A class to represent a git commit."""
     sha: str
+    subject: str
     message: str
     author: str
     timestamp: int
@@ -289,6 +309,26 @@ class VersionFinder:
         """Get list of branches."""
         return self.branches
 
+    def get_commit_info(self, commit_sha: str) -> Commit:
+        """Get detailed commit information."""
+        output = self._git.execute([
+            "show", "-s",
+            "--format=%H%n%s%n%B%n%an%n%at",  # Added %B for full message
+            commit_sha
+        ]).decode("utf-8").strip()
+
+        sha, subject, message, author, timestamp = output.split("\n")
+        version = self.__extract_version_from_message(message)
+
+        return Commit(
+            sha=sha,
+            subject=subject,
+            message=message,
+            author=author,
+            timestamp=int(timestamp),
+            version=version
+        )
+
     def get_current_branch(self) -> str:
         """Get current branch."""
         current_branch = None
@@ -321,7 +361,7 @@ class VersionFinder:
             branch = self.get_current_branch()
 
         if not self.has_branch(branch):
-            raise GitCommandError(f"Invalid branch: {branch}")
+            raise InvalidBranchError(f"Invalid branch: {branch}")
 
         try:
             self._git.execute(["checkout", branch])
@@ -358,7 +398,7 @@ class VersionFinder:
             GitCommandError: If the git command fails.
         """
         if not self.is_task_ready:
-            raise ValueError("Repository is not ready to perform tasks.")
+            raise RepositoryNotTaskReady()
 
         try:
             command = [
@@ -369,7 +409,7 @@ class VersionFinder:
             if submodule:
                 # Verify submodule exists
                 if submodule not in self.submodules:
-                    raise GitCommandError(f"Invalid submodule path: {submodule}")
+                    raise InvalidSubmoduleError(f"Invalid submodule path: {submodule}")
                 # Execute command in submodule directory
                 command.insert(0, "-C")
                 command.insert(1, submodule)
@@ -513,7 +553,7 @@ class VersionFinder:
         Get the first commit that includes changes in the specified submodule.
         """
         if not self.is_task_ready:
-            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+            raise RepositoryNotTaskReady()
 
         # Verify submodule path exists
         if submodule_path not in self.submodules:
@@ -592,7 +632,7 @@ class VersionFinder:
         Find the commit that indicates the specified version.
         """
         if not self.is_task_ready:
-            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+            raise RepositoryNotTaskReady()
 
         # Find the commit that indicates the specified version
         commits = self._git.execute(
@@ -606,7 +646,7 @@ class VersionFinder:
         That is, get the hash of the submodule at the time of the commit.
         """
         if not self.is_task_ready:
-            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+            raise RepositoryNotTaskReady()
 
         if not self.has_commit(commit):
             self.logger.error(f"Commit {commit} does not exist")
@@ -625,7 +665,7 @@ class VersionFinder:
         Get the list of commits between two versions.
         """
         if not self.is_task_ready:
-            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+            raise RepositoryNotTaskReady()
 
         start_commit = self.find_commit_by_version(start_version)[0]
         end_commit = self.find_commit_by_version(end_version)[0]
@@ -659,10 +699,10 @@ class VersionFinder:
             str: Parent commit hash, or original commit if no parent exists
 
         Raises:
-            GitCommandError: If repository is not ready
+            RepositoryNotTaskReady: If repository is not ready
         """
         if not self.is_task_ready:
-            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+            raise RepositoryNotTaskReady()
         if submodule:
             if self.submodule_has_commit(submodule, f"{commit}^"):
                 return f"{commit}^"
@@ -679,7 +719,7 @@ class VersionFinder:
         """
 
         if not self.is_task_ready:
-            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+            raise RepositoryNotTaskReady()
 
         if submodule:
             # Get the first commit that includes changes in the submodule
@@ -687,7 +727,7 @@ class VersionFinder:
 
         if not self.has_commit(commit_sha):
             self.logger.error(f"Commit {commit_sha} does not exist")
-            raise GitCommandError(f"Commit {commit_sha} does not exist")
+            raise InvalidCommitError(f"Commit {commit_sha} does not exist in the repository: {self.repository_path}")
 
         versions_commits = self.get_commit_surrounding_versions(commit_sha)
         if versions_commits is None or versions_commits[1] is None:
@@ -701,7 +741,7 @@ class VersionFinder:
         For example, "HEAD~1" will return the SHA of the commit that is one commit before HEAD.
         """
         if not self.is_task_ready:
-            raise GitCommandError("Repository is not ready. Please update the repository with a selected branch first.")
+            raise RepositoryNotTaskReady()
 
         # Get the commit SHA from the relative string
         commit_sha = self._git.execute(

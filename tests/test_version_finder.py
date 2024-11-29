@@ -3,14 +3,18 @@ import os
 import tempfile
 from pathlib import Path
 import logging
-from src.version_finder.core import (
+from typing import Any
+from version_finder import (
     VersionFinder,
-    GitConfig,
     InvalidGitRepository,
     GitRepositoryNotClean,
-    GitCommandError
+    RepositoryNotTaskReady,
+    InvalidCommitError,
+    InvalidSubmoduleError,
+    InvalidBranchError,
+    setup_logger,
+    GitConfig
 )
-from src.version_finder.logger.logger import setup_logger
 
 debug_logger = setup_logger(__name__, level=logging.DEBUG)
 
@@ -61,8 +65,11 @@ class TestVersionFinder:
         # Cleanup
         os.system(f"rm -rf {temp_dir}")
 
-    def test_init_valid_repository(self, test_repo):
+    def test_init_valid_repository(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
+        print(f"Type of finder.config: {type(finder.config)}")
+        print(f"Type of GitConfig: {type(GitConfig)}")
+        print(f"GitConfig MRO: {GitConfig.__mro__}")
         assert finder.repository_path == Path(test_repo).resolve()
         assert isinstance(finder.config, GitConfig)
 
@@ -71,31 +78,31 @@ class TestVersionFinder:
             with pytest.raises(InvalidGitRepository):
                 VersionFinder(path=temp_dir)
 
-    def test_list_branches(self, test_repo):
+    def test_list_branches(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
         branches = finder.list_branches()
         assert 'main' in branches or 'master' in branches
         assert 'dev' in branches
         assert 'feature' in branches
 
-    def test_has_branch(self, test_repo):
+    def test_has_branch(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
         assert finder.has_branch('dev')
         assert not finder.has_branch('nonexistent-branch')
 
-    def test_update_repository_valid_branch(self, test_repo):
+    def test_update_repository_valid_branch(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
         finder.update_repository('dev')
         # Verify we're on dev branch
         result = os.popen('git branch --show-current').read().strip()
         assert result == 'dev'
 
-    def test_update_repository_invalid_branch(self, test_repo):
+    def test_update_repository_invalid_branch(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
-        with pytest.raises(GitCommandError):
+        with pytest.raises(InvalidBranchError):
             finder.update_repository('nonexistent-branch')
 
-    def test_get_current_branch(self, test_repo):
+    def test_get_current_branch(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
 
         # Test getting current branch on main
@@ -119,7 +126,7 @@ class TestVersionFinder:
         current_branch = finder.get_current_branch()
         assert current_branch is None
 
-    def test_extract_version_from_message(self, test_repo):
+    def test_extract_version_from_message(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
 
         # Test various version formats
@@ -139,7 +146,7 @@ class TestVersionFinder:
             result = finder._VersionFinder__extract_version_from_message(message)
             assert result == expected, f"Failed for message: {message}"
 
-    def test_find_first_version_containing_commit_basic(self, test_repo):
+    def test_find_first_version_containing_commit_basic(self, test_repo: str):
         # Setup test repository with version commits
         os.chdir(test_repo)
         os.system("git checkout main")
@@ -152,7 +159,7 @@ class TestVersionFinder:
         version = finder.find_first_version_containing_commit(commit_to_find)
         assert version == '2024_01'
 
-    def test_find_first_version_containing_commit_multiple_versions(self, test_repo):
+    def test_find_first_version_containing_commit_multiple_versions(self, test_repo: str):
         os.chdir(test_repo)
         os.system("git checkout main")
         os.system("git commit -m 'Version: 2024_01' --allow-empty")
@@ -166,7 +173,7 @@ class TestVersionFinder:
         version = finder.find_first_version_containing_commit(commit_to_find)
         assert version == '2024_02'
 
-    def test_find_first_version_containing_commit_with_submodule(self, repo_with_submodule):
+    def test_find_first_version_containing_commit_with_submodule(self, repo_with_submodule: Any):
         # Setup submodule with specific commit
         os.chdir(os.path.join(repo_with_submodule, 'sub_repo'))
         os.system("git commit -m 'Submodule commit' --allow-empty")
@@ -182,13 +189,13 @@ class TestVersionFinder:
         version = finder.find_first_version_containing_commit(submodule_commit, submodule='sub_repo')
         assert version == '2024_01'
 
-    def test_find_first_version_containing_commit_nonexistent_commit(self, test_repo):
+    def test_find_first_version_containing_commit_nonexistent_commit(self, test_repo: str):
         finder = VersionFinder(path=test_repo)
-        with pytest.raises(GitCommandError):
+        with pytest.raises(InvalidCommitError, match="Commit nonexistent-commit does not exist"):
             finder.update_repository('main')
             finder.find_first_version_containing_commit('nonexistent-commit')
 
-    def test_find_first_version_containing_commit_no_version_after(self, test_repo):
+    def test_find_first_version_containing_commit_no_version_after(self, test_repo: str):
         os.chdir(test_repo)
         os.system("git checkout main")
         os.system("git commit -m 'Version: 2024_01' --allow-empty")
@@ -200,7 +207,7 @@ class TestVersionFinder:
         version = finder.find_first_version_containing_commit(commit_to_find)
         assert version is None
 
-    def test_get_commit_surrounding_versions(self, test_repo):
+    def test_get_commit_surrounding_versions(self, test_repo: str):
         os.chdir(test_repo)
         os.system("git checkout main")
         os.system("git commit -m 'Version: 2024_01' --allow-empty")
@@ -214,7 +221,7 @@ class TestVersionFinder:
         assert finder.get_version_from_commit(prev_version) == '2024_01'
         assert finder.get_version_from_commit(next_version) == '2024_02'
 
-    def test_repository_not_clean(self, test_repo):
+    def test_repository_not_clean(self, test_repo: str):
         # Create uncommitted changes
         with open(f"{test_repo}/file1", "w") as f:
             f.write("modified content")
@@ -222,7 +229,7 @@ class TestVersionFinder:
         with pytest.raises(GitRepositoryNotClean):
             VersionFinder(path=test_repo, logger=debug_logger)
 
-    def test_custom_config(self, test_repo):
+    def test_custom_config(self, test_repo: str):
         config = GitConfig(
             timeout=60,
             max_retries=3,
@@ -234,7 +241,7 @@ class TestVersionFinder:
         assert finder.config.retry_delay == 2
 
     @pytest.fixture
-    def repo_with_submodule(self, test_repo):
+    def repo_with_submodule(self, test_repo: str):
         # Create a separate repo to use as a submodule
         sub_dir = os.path.join(test_repo, "sub_repo")
         os.makedirs(sub_dir)
@@ -255,7 +262,7 @@ class TestVersionFinder:
 
         os.system(f"rm -rf {sub_dir}")
 
-    def test_get_first_commit_including_submodule_changes(self, repo_with_submodule):
+    def test_get_first_commit_including_submodule_changes(self, repo_with_submodule: Any):
         # This test verifies that the VersionFinder can correctly identify the first commit
         # that includes changes in the submodule
         finder = VersionFinder(path=repo_with_submodule)
@@ -269,7 +276,7 @@ class TestVersionFinder:
         # Verify that the first commit is correct
         assert first_commit == os.popen('git rev-parse HEAD').read().strip()
 
-    def test_list_submodules(self, repo_with_submodule):
+    def test_list_submodules(self, repo_with_submodule: Any):
         # This test verifies that the VersionFinder can correctly identify Git submodules
         # It uses the repo_with_submodule fixture which creates a test repo containing a submodule named 'sub1'
         finder = VersionFinder(path=repo_with_submodule)
@@ -278,7 +285,7 @@ class TestVersionFinder:
         # Verify that the 'sub1' submodule is found in the list of submodules
         assert 'sub_repo' in submodules
 
-    def test_list_submodules_empty(self, test_repo):
+    def test_list_submodules_empty(self, test_repo: str):
         # This test verifies that the VersionFinder can correctly handle the case where there are no submodules
         # It uses the test_repo fixture which creates a test repo without any submodules
         finder = VersionFinder(path=test_repo, logger=debug_logger)
@@ -287,7 +294,7 @@ class TestVersionFinder:
         # Verify that the list of submodules is empty
         assert len(submodules) == 0
 
-    def test_list_submodules_invalid_repo(self, test_repo):
+    def test_list_submodules_invalid_repo(self, test_repo: str):
         # This test verifies that the VersionFinder can correctly handle the case where the repository is invalid
         # It uses the test_repo fixture which creates a test repo without any submodules
         finder = VersionFinder(path=test_repo, logger=debug_logger)
@@ -296,7 +303,7 @@ class TestVersionFinder:
         # Verify that the list of submodules is empty
         assert len(submodules) == 0
 
-    def test_get_submodule_commit_hash(self, repo_with_submodule):
+    def test_get_submodule_commit_hash(self, repo_with_submodule: Any):
         finder = VersionFinder(path=repo_with_submodule)
 
         finder.update_repository('main')
@@ -312,7 +319,7 @@ class TestVersionFinder:
         assert submodule_ptr == head_commit
 
     @pytest.fixture
-    def repo_with_versions(self, test_repo):
+    def repo_with_versions(self, test_repo: str):
         # Add commits with different versions
         os.chdir(test_repo)
         os.system("git checkout main")
@@ -324,7 +331,7 @@ class TestVersionFinder:
 
         yield test_repo
 
-    def test_find_commit_by_version(self, repo_with_versions):
+    def test_find_commit_by_version(self, repo_with_versions: Any):
         finder = VersionFinder(path=repo_with_versions)
         finder.update_repository('main')
         commits = finder.find_commit_by_version('1_0_0')
@@ -335,7 +342,7 @@ class TestVersionFinder:
         assert len(commits) == 1
         assert commits[0] == os.popen('git rev-parse HEAD').read().strip()
 
-    def test_find_commits_by_text_basic(self, test_repo):
+    def test_find_commits_by_text_basic(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
         finder.update_repository('main')
 
@@ -353,7 +360,7 @@ class TestVersionFinder:
         assert first_commit in commits
         assert second_commit in commits
 
-    def test_find_commits_by_text_case_insensitive(self, test_repo):
+    def test_find_commits_by_text_case_insensitive(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
         finder.update_repository('main')
 
@@ -365,7 +372,7 @@ class TestVersionFinder:
         assert len(commits) == 1
         assert commit_hash in commits
 
-    def test_find_commits_by_text_in_submodule(self, repo_with_submodule):
+    def test_find_commits_by_text_in_submodule(self, repo_with_submodule: Any):
         finder = VersionFinder(path=repo_with_submodule, logger=debug_logger)
         finder.update_repository('main')
 
@@ -378,28 +385,28 @@ class TestVersionFinder:
         assert len(commits) == 1
         assert submodule_commit in commits
 
-    def test_find_commits_by_text_no_matches(self, test_repo):
+    def test_find_commits_by_text_no_matches(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
         finder.update_repository('main')
 
         commits = finder.find_commits_by_text("NonexistentText")
         assert len(commits) == 0
 
-    def test_find_commits_by_text_invalid_submodule(self, test_repo):
+    def test_find_commits_by_text_invalid_submodule(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
         finder.update_repository('main')
 
-        with pytest.raises(GitCommandError):
+        with pytest.raises(InvalidSubmoduleError):
             finder.find_commits_by_text("test", submodule="nonexistent-submodule")
 
-    def test_find_commits_by_text_repository_not_ready(self, test_repo):
+    def test_find_commits_by_text_repository_not_ready(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
         # Don't call update_repository to test not ready state
 
-        with pytest.raises(ValueError, match="Repository is not ready to perform tasks."):
+        with pytest.raises(RepositoryNotTaskReady):
             finder.find_commits_by_text("test")
 
-    def test_get_commits_between_versions(self, test_repo):
+    def test_get_commits_between_versions(self, test_repo: str):
         # Setup test repository with version commits
         os.chdir(test_repo)
         os.system("git checkout main")
@@ -420,7 +427,7 @@ class TestVersionFinder:
             message = os.popen(f'git log -1 --format=%s {commit}').read().strip()
             assert message in ['Version: 2024_01', 'Intermediate commit 1', 'Intermediate commit 2', 'Version: 2024_02']
 
-    def test_get_commits_between_versions_with_submodule(self, repo_with_submodule):
+    def test_get_commits_between_versions_with_submodule(self, repo_with_submodule: Any):
         # Setup submodule with initial commit
         os.chdir(os.path.join(repo_with_submodule, 'sub_repo'))
         os.system("git commit -m 'Sub commit 1' --allow-empty")
@@ -450,14 +457,14 @@ class TestVersionFinder:
         assert sub_commit1 in commits
         assert sub_commit2 in commits
 
-    def test_get_commits_between_versions_invalid_version(self, test_repo):
+    def test_get_commits_between_versions_invalid_version(self, test_repo: str):
         finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
         commits = finder.get_commits_between_versions('nonexistent_version1', 'nonexistent_version2')
         assert commits == []
 
-    def test_get_commits_between_versions_not_ready(self, test_repo):
+    def test_get_commits_between_versions_not_ready(self, test_repo: str):
         finder = VersionFinder(path=test_repo)
         # Don't call update_repository to test not ready state
-        with pytest.raises(GitCommandError, match="Repository is not ready"):
+        with pytest.raises(RepositoryNotTaskReady):
             finder.get_commits_between_versions('2024_01', '2024_02')

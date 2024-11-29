@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v5.3.0 (2024-11-29)
+
+### Chores
+
+* chore(Tests): Add type annotations to test ([`2803050`](https://github.com/LevyMatan/version_finder/commit/2803050189c88a20cc8cda562a15257eae292cd0))
+
+* chore(Infra): :bricks: fix the pyproject.toml configurations
+
+the exclude given a list instead of a comma separated string ([`d39e8e9`](https://github.com/LevyMatan/version_finder/commit/d39e8e945434e856e77e71dcd337c8c0aba3abbf))
+
+* chore(core): :recycle: Move git operation to a git executer class ([`c868f50`](https://github.com/LevyMatan/version_finder/commit/c868f50faeb4aeefc0d94d5ef953c0110087539a))
+
+### Code Style
+
+* style: :art: apply format ([`6893c37`](https://github.com/LevyMatan/version_finder/commit/6893c37d1317a34a7e65088ecc0ac769110884ab))
+
+* style: :art: apply autopep8 ([`532cb4f`](https://github.com/LevyMatan/version_finder/commit/532cb4ffd0cead93c221a5863be692f2d1090d29))
+
+### Features
+
+* feat(core): :goal_net: improve error handling in VersionFinder ([`2103188`](https://github.com/LevyMatan/version_finder/commit/2103188258cfee2e4e8ced72e71962cd9bfb34a7))
+
+* feat(ErrorHandling): :technologist: Git installation instruction when does not exist ([`2d29ad7`](https://github.com/LevyMatan/version_finder/commit/2d29ad7b3bf7ab63328a62f9f0e33f1a5715b832))
+
+* feat(GitExecuter): :sparkles: verify git installation ([`bd4f584`](https://github.com/LevyMatan/version_finder/commit/bd4f584a1d134d445c68d3adb26b9ef27e263f1d))
+
+
 ## v5.2.3 (2024-11-28)
 
 ### Bug Fixes

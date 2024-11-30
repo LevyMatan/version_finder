@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v5.4.0 (2024-11-30)
+
+### Bug Fixes
+
+* fix(GUI): :bug: Correctly collapse the sidebar ([`ba350e6`](https://github.com/LevyMatan/version_finder/commit/ba350e62f114c28c945c181a31ac0cfe5129932c))
+
+### Features
+
+* feat(GUI): :sparkles: Add sidebar with task change ability
+
+Still need to fix the collapse button ([`eba1065`](https://github.com/LevyMatan/version_finder/commit/eba1065c02d9821067e1173f6f8f85a6a233d613))
+
+* feat(GUI): :sparkles: Add place holder to entry fields ([`d21fdfa`](https://github.com/LevyMatan/version_finder/commit/d21fdfa60caee4231e11892a51e9caf053d33043))
+
+
 ## v5.3.1 (2024-11-30)
 
 ### Bug Fixes

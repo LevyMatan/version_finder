@@ -1,7 +1,7 @@
-from version_finder.core import VersionFinder, GitError, GitCommandError
+from version_finder import VersionFinder, GitError, GitCommandError, InvalidCommitError, InvalidSubmoduleError, InvalidBranchError, GitNotInstalledError
 from version_finder.__common__ import parse_arguments
-from version_finder.logger.logger import setup_logger
-from version_finder.protocols import LoggerProtocol
+from version_finder import setup_logger
+from version_finder import LoggerProtocol
 import logging
 import os
 import argparse
@@ -43,15 +43,54 @@ __gui_version__ = '2.0.0'
 
 
 class AutocompleteEntry(ctk.CTkEntry):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, placeholder_text=None, **kwargs):
         self.suggestions = kwargs.pop('suggestions', [])
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, placeholder_text=placeholder_text, **kwargs)
+
+        self._placeholder_text = placeholder_text
+        self._placeholder_shown = True
 
         self.suggestion_window = None
         self.suggestion_listbox = None
 
+        self.bind('<FocusIn>', self._on_focus_in)
         self.bind('<KeyRelease>', self._on_key_release)
         self.bind('<FocusOut>', self._on_focus_out)
+
+        # Initialize placeholder if provided
+        if self._placeholder_text:
+            self._show_placeholder()
+
+
+    def set_placeholder(self, text):
+        self._placeholder_text = text
+        if self._placeholder_shown:
+            self._show_placeholder()
+
+    def _on_focus_in(self, event):
+        if self._placeholder_shown:
+            self.delete(0, 'end')
+            self._placeholder_shown = False
+            self.configure(text_color=self._text_color)  # Reset to normal text color
+
+    def _show_placeholder(self):
+        self.delete(0, 'end')
+        self.insert(0, self._placeholder_text)
+        self.configure(text_color='gray')  # Make placeholder gray
+        self._placeholder_shown = True
+
+    def get(self):
+        # Don't return the placeholder text as the actual value
+        if self._placeholder_shown:
+            return ''
+        return super().get()
+
+    def insert(self, index, string):
+        if self._placeholder_shown:
+            self.delete(0, 'end')
+            self._placeholder_shown = False
+            self.configure(text_color=self._text_color)
+        super().insert(index, string)
 
     def _on_key_release(self, event):
         if self.suggestion_window:
@@ -118,23 +157,32 @@ class VersionFinderGUI(ctk.CTk):
         self.version_finder = None
         self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
 
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("green")
         self.setup_icon()
         self.setup_window()
         self.center_window()
+
+        # Create main_frame before creating widgets
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
         self.create_widgets()
         if self.repo_path:
             self.browse_directory()
 
     def setup_window(self):
         self.title("Version Finder")
-        self.window_height = 1000
-        self.window_width = 600
+        self.window_height = 800
+        self.window_width = 700
         self.geometry(f"{self.window_width}x{self.window_height}")
-        self.minsize(600, 400)
-        self.maxsize(1200, 800)
+        self.minsize(650, 400)
+        self.maxsize(1200, 900)
         self.focus_force()
+
+        self.configure(fg_color=("gray95", "gray10"))  # Adaptive background
+
+
 
     def center_window(self):
         screen_width = self.winfo_screenwidth()
@@ -144,17 +192,17 @@ class VersionFinderGUI(ctk.CTk):
         self.geometry(f"+{x}+{y}")
 
     def create_widgets(self):
-        # Main container
-        self.main_frame = ctk.CTkFrame(self)
-        self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        # Replace the existing header with this
+        header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        header_frame.pack(fill="x", padx=15, pady=(20, 10))
 
-        # Header
         header = ctk.CTkLabel(
-            self.main_frame,
+            header_frame,
             text="Version Finder",
-            font=ctk.CTkFont(size=34, weight="bold")
+            font=ctk.CTkFont(size=36, weight="bold"),
+            text_color=("green", "lightgreen")  # Adaptive color
         )
-        header.pack(pady=20)
+        header.pack(side="top")
 
         # Directory selection
         self.create_directory_section()
@@ -175,36 +223,54 @@ class VersionFinderGUI(ctk.CTk):
         commit_frame = ctk.CTkFrame(self.main_frame)
         commit_frame.pack(fill="x", padx=10, pady=10)
 
-        commit_label = ctk.CTkLabel(commit_frame, text="Commit:", width=100, font=ctk.CTkFont(size=16, weight="bold"))
-        commit_label.pack(side="left", padx=5)
+        commit_label = ctk.CTkLabel(commit_frame, text="Commit SHA", width=100, font=ctk.CTkFont(size=16, weight="bold"), anchor="w", justify="left")
+        commit_label.pack(side="left", padx=5, pady=10)
 
-        self.commit_entry = ctk.CTkEntry(commit_frame, width=300)
-        self.commit_entry.pack(side="left", padx=5, fill="x", expand=True)
+        self.commit_entry = ctk.CTkEntry(commit_frame, width=300, placeholder_text="Required")
+        self.commit_entry.pack(side="left", padx=5, pady=10, fill="x", expand=True)
 
     def create_directory_section(self):
         dir_frame = ctk.CTkFrame(self.main_frame)
         dir_frame.pack(fill="x", padx=10, pady=10)
 
-        dir_label = ctk.CTkLabel(dir_frame, text="Select Directory:", width=100,
-                                 font=ctk.CTkFont(size=16, weight="bold"))
+        dir_label = ctk.CTkLabel(
+            dir_frame,
+            text="Select Directory:",
+            width=100,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=("black", "white")  # Adaptive text color
+        )
         dir_label.pack(side="left", padx=5)
 
-        self.dir_entry = ctk.CTkEntry(dir_frame, width=300)
-        self.dir_entry.pack(side="left", padx=5, fill="x", expand=True)
+        self.dir_entry = ctk.CTkEntry(
+            dir_frame,
+            width=240,
+            border_width=1,
+            corner_radius=10
+        )
+        self.dir_entry.pack(side="left", padx=10, pady=10, fill="x", expand=True)
 
         browse_btn = ctk.CTkButton(
             dir_frame,
             text="Browse",
             command=self.browse_directory_btn,
-            width=100
+            width=100,
+            corner_radius=10,
+            hover_color=("green", "darkgreen")  # Adaptive hover color
         )
-        browse_btn.pack(side="right", padx=5)
+        browse_btn.pack(side="right", padx=10, pady=10)
 
     def _on_branch_select(self, branch):
         try:
             self.version_finder.update_repository(branch)
             self.output_text.insert("end", f"✅ Repository updated to branch: {branch}\n")
             self.output_text.see("end")
+            if self.version_finder.list_submodules():
+                self.output_text.insert("end", "✅ Submodules found.\n")
+                self.output_text.see("end")
+                self.submodule_entry.set_placeholder("Optional: Select a submodule")
+            else:
+                self.submodule_entry.set_placeholder("No submodules found")
         except Exception as e:
             self.output_text.insert("end", f"❌ Error updating repository: {str(e)}\n")
             self.output_text.see("end")
@@ -213,12 +279,13 @@ class VersionFinderGUI(ctk.CTk):
         branch_frame = ctk.CTkFrame(self.main_frame)
         branch_frame.pack(fill="x", padx=10, pady=10)
 
-        branch_label = ctk.CTkLabel(branch_frame, text="Branch:", width=100, font=ctk.CTkFont(size=16, weight="bold"))
+        branch_label = ctk.CTkLabel(branch_frame, text="Branch", width=100, font=ctk.CTkFont(size=16, weight="bold"), anchor="w", justify="left")
         branch_label.pack(side="left", padx=5)
 
         self.branch_entry = AutocompleteEntry(
             branch_frame,
             width=240,
+            placeholder_text="Enter branch name..."
         )
         self.branch_entry.callback = self._on_branch_select  # Add callback
         self.branch_entry.pack(fill="x", padx=10, pady=10, expand=True)
@@ -228,52 +295,68 @@ class VersionFinderGUI(ctk.CTk):
         submodule_frame = ctk.CTkFrame(self.main_frame)
         submodule_frame.pack(fill="x", padx=10, pady=10)
 
-        submodule_label = ctk.CTkLabel(submodule_frame, text="Submodule:", width=100,
+        submodule_label = ctk.CTkLabel(submodule_frame, text="Submodule", width=100,
                                        font=ctk.CTkFont(size=16, weight="bold"))
         submodule_label.pack(side="left", padx=5)
 
         self.submodule_entry = AutocompleteEntry(
             submodule_frame,
             width=300,
+            placeholder_text='Optional: Select a submodule'
         )
         self.submodule_entry.pack(fill="x", padx=10, pady=10, expand=True)
         self.submodule_entry.configure(state="disabled")
 
     def create_output_area(self):
-        output_frame = ctk.CTkFrame(self.main_frame)
-        output_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        output_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        output_frame.pack(fill="both", expand=True, padx=15, pady=10)
 
         self.output_text = ctk.CTkTextbox(
             output_frame,
             wrap="word",
-            font=("Helvetica", 11)
+            font=("Courier New", 11),  # Monospaced font for logs
+            border_width=1,
+            corner_radius=10,
+            fg_color=("white", "gray15"),  # Adaptive background
+            text_color=("black", "white"),  # Adaptive text color
+            scrollbar_button_color=("gray80", "gray30")
         )
-        self.output_text.pack(fill="both", expand=True, padx=5, pady=5)
+        self.output_text.pack(fill="both", expand=True)
 
     def create_buttons(self):
-        button_frame = ctk.CTkFrame(self.main_frame)
-        button_frame.pack(fill="x", padx=10, pady=10)
+        button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        button_frame.pack(fill="x", padx=15, pady=10)
 
+        # Create a gradient effect with multiple buttons
         search_btn = ctk.CTkButton(
             button_frame,
             text="Search",
-            command=self.search
+            command=self.search,
+            corner_radius=10,
+            fg_color=("green", "darkgreen"),
+            hover_color=("darkgreen", "forestgreen")
         )
-        search_btn.pack(side="left", padx=5)
+        search_btn.pack(side="left", padx=5, expand=True, fill="x")
 
         clear_btn = ctk.CTkButton(
             button_frame,
             text="Clear",
-            command=self.clear_output
+            command=self.clear_output,
+            corner_radius=10,
+            fg_color=("gray70", "gray30"),
+            hover_color=("gray60", "gray40")
         )
-        clear_btn.pack(side="left", padx=5)
+        clear_btn.pack(side="left", padx=5, expand=True, fill="x")
 
         exit_btn = ctk.CTkButton(
             button_frame,
             text="Exit",
-            command=self.quit
+            command=self.quit,
+            corner_radius=10,
+            fg_color=("red", "darkred"),
+            hover_color=("darkred", "firebrick")
         )
-        exit_btn.pack(side="right", padx=5)
+        exit_btn.pack(side="right", padx=5, expand=True, fill="x")
 
     def setup_icon(self):
         # Set the icon for the application
@@ -320,12 +403,16 @@ class VersionFinderGUI(ctk.CTk):
             "Commit": self.commit_entry.get().strip(),
         }
 
+        valid_input = True
         for field_name, value in required_fields.items():
             if not value:
                 self.output_text.insert("end", f"⚠️ {field_name} is required.\n")
-                return False
+                valid_input = False
+            else:
+                # Add logic to check if the value is a valid branch or commit
+                pass
 
-        return True
+        return valid_input
 
     def search(self):
         try:
@@ -349,14 +436,14 @@ class VersionFinderGUI(ctk.CTk):
             self.output_text.insert("end", f"Branch: {branch}\n")
             self.output_text.insert("end", f"Submodule: {submodule}\n")
             self.output_text.insert("end", f"Commit: {commit}\n")
-            self.output_text.insert(
-                "end", f"Commit: {self.version_finder.get_commit_sha_from_relative_string(commit)}\n")
 
             # Perform the search with error handling
             try:
                 result = self.version_finder.find_first_version_containing_commit(
                     self.version_finder.get_commit_sha_from_relative_string(commit), submodule)
                 self.output_text.insert("end", f"✅ Search completed successfully: The version is {result}\n")
+            except InvalidCommitError as e:
+                self.output_text.insert("end", f"❌ Error: {str(e)}\n")
             except GitCommandError as e:
                 self.output_text.insert("end", f"❌ Git Error: {str(e)}\n")
             except Exception as e:

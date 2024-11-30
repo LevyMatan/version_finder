@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v5.3.1 (2024-11-30)
+
+### Bug Fixes
+
+* fix(core): Error handling at: get_commit_sha_from_relative_string
+
+If the input commit sha is invalid, return a InvalidCommitError ([`196beb4`](https://github.com/LevyMatan/version_finder/commit/196beb4aa145e237c055c3af4379b19fe8b27791))
+
+
 ## v5.3.0 (2024-11-29)
 
 ### Chores

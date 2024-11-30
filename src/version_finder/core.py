@@ -744,10 +744,12 @@ class VersionFinder:
             raise RepositoryNotTaskReady()
 
         # Get the commit SHA from the relative string
-        commit_sha = self._git.execute(
-            ["rev-parse", relative_string]).decode("utf-8").strip()
-        if not commit_sha:
-            return None
+        try:
+            commit_sha = self._git.execute(
+                ["rev-parse", relative_string]).decode("utf-8").strip()
+        except GitCommandError as e:
+            self.logger.error(f"Error while getting commit SHA from relative string: {e}")
+            raise InvalidCommitError(f"Invalid commit SHA: {e}")
         return commit_sha
 
     def get_task_api_functions(self) -> Dict[int, Callable]:

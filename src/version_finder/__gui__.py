@@ -156,12 +156,17 @@ class VersionFinderGUI(ctk.CTk):
         self.version_finder = None
         self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
 
-        ctk.set_appearance_mode("System")
+        # Add a class constant for the NVIDIA green color
+        self.NVIDIA_GREEN = "#76B900"
+
+        ctk.set_appearance_mode("Dark")
         ctk.set_default_color_theme("green")
 
         self.setup_icon()
         self.setup_window()
+
         # Create main layout with sidebar
+        self.grid_columnconfigure(0, weight=0)  # Sidebar column - no weight
         self.grid_columnconfigure(1, weight=1)  # Make right column expandable
         self.grid_rowconfigure(0, weight=1)  # Add this to make rows expandable
 
@@ -175,17 +180,39 @@ class VersionFinderGUI(ctk.CTk):
 
     def create_sidebar(self):
         # Sidebar Frame
-        self.sidebar_frame = ctk.CTkFrame(self, width=200)
+        self.sidebar_frame = ctk.CTkFrame(self, width=350)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew", pady=5, padx=5)
         self.sidebar_frame.grid_rowconfigure(5, weight=1)  # Allow expansion
+        # Prevent the frame from resizing to fit its contents
+        # self.sidebar_frame.grid_propagate(False)
+        # Create a header frame in sidebar to match main frame's header
+        sidebar_header = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
+        sidebar_header.grid(row=0, column=0, sticky="new", padx=15, pady=(20, 10))
+
+        # Configure header grid
+        sidebar_header.grid_columnconfigure(1, weight=1)
+
+        # Collapse button in header frame (same position as expand button)
+        self.collapse_btn = ctk.CTkButton(
+            sidebar_header,
+            text="◀",
+            width=20,
+            height=20,
+            command=self.collapse_sidebar,
+            fg_color="transparent",
+            text_color=self.NVIDIA_GREEN,
+            hover_color=("#5a8c00", "#5a8c00")
+        )
+        self.collapse_btn.grid(row=0, column=0, sticky="w")
 
         # Sidebar Title
         sidebar_title = ctk.CTkLabel(
-            self.sidebar_frame,
-            text="Version Finder",
-            font=ctk.CTkFont(size=20, weight="bold")
+            sidebar_header,
+            text="Tasks",
+            font=ctk.CTkFont(size=24),
+            text_color=self.NVIDIA_GREEN
         )
-        sidebar_title.grid(row=0, column=0, padx=20, pady=(40, 10))
+        sidebar_title.grid(row=0, column=1, padx=20, pady=10)
 
         # Sidebar Tasks Buttons
         tasks = [
@@ -212,43 +239,13 @@ class VersionFinderGUI(ctk.CTk):
         )
         config_btn.grid(row=len(tasks) + 1, column=0, padx=20, pady=10, sticky="ew")
 
-        # Sidebar collapse/expand button
-        self.sidebar_toggle_btn = ctk.CTkButton(
-            self.sidebar_frame,
-            text="◀",
-            width=20,
-            command=self.toggle_sidebar
-        )
-        self.sidebar_toggle_btn.grid(row=0, column=0, sticky="nw", padx=5, pady=20)
+    def collapse_sidebar(self):
+        self.sidebar_frame.grid_remove()  # Hide sidebar
+        self.expand_btn.grid()  # Show expand button
 
-    def toggle_sidebar(self):
-        if self.sidebar_frame.winfo_viewable():
-            # Hide sidebar
-            self.sidebar_frame.grid_remove()
-            self.sidebar_toggle_btn.configure(text="▶")
-            # Create a new button in the main frame
-            self.sidebar_toggle_btn.grid_forget()  # Remove from current position
-            self.sidebar_toggle_btn = ctk.CTkButton(
-                self.main_frame,
-                text="▶",
-                command=self.toggle_sidebar,
-                width=30,  # Adjust width as needed
-                height=30  # Adjust height as needed
-            )
-            self.sidebar_toggle_btn.pack(side="right", anchor="nw", padx=5, pady=5)
-        else:
-            # Show sidebar
-            self.sidebar_frame.grid()
-            # Create a new button in the sidebar
-            self.sidebar_toggle_btn.destroy()  # Remove the old button
-            self.sidebar_toggle_btn = ctk.CTkButton(
-                self.sidebar_frame,
-                text="◀",
-                command=self.toggle_sidebar,
-                width=30,  # Adjust width as needed
-                height=30  # Adjust height as needed
-            )
-            self.sidebar_toggle_btn.grid(row=0, column=0, sticky="ne", padx=5, pady=5)
+    def expand_sidebar(self):
+        self.expand_btn.grid_remove()  # Hide expand button
+        self.sidebar_frame.grid()  # Show sidebar
 
     def show_version_search(self):
         # Clear existing main frame and recreate version search UI
@@ -323,35 +320,62 @@ class VersionFinderGUI(ctk.CTk):
         self.geometry(f"+{x}+{y}")
 
     def create_widgets(self):
-        # Replace the existing header with this
-        header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        header_frame.pack(fill="x", padx=15, pady=(20, 10))
+        # Configure grid for main frame
+        self.main_frame.grid_columnconfigure(0, weight=1)  # Make column expandable
+        self.main_frame.grid_rowconfigure(1, weight=1)  # Make content row expandable
 
+
+        # Create header frame
+        self.header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.header_frame.grid(row=0, column=0, sticky="new", padx=15, pady=(20, 10))
+
+        # Configure grid for header frame
+        self.header_frame.grid_columnconfigure(1, weight=1)  # Column 1 (after button) should expand
+
+        # Create expand button in header (initially hidden)
+        self.expand_btn = ctk.CTkButton(
+            self.header_frame,
+            text="▶",
+            width=20,
+            height=20,
+            command=self.expand_sidebar,
+            fg_color="transparent",
+            text_color=self.NVIDIA_GREEN,
+            hover_color=("#5a8c00", "#5a8c00")
+        )
+        self.expand_btn.grid(row=0, column=0, sticky="w")
+        self.expand_btn.grid_remove()  # Initially hidden if sidebar is visible
+
+        # Header title
         header = ctk.CTkLabel(
-            header_frame,
+            self.header_frame,
             text="Version Finder",
             font=ctk.CTkFont(size=36, weight="bold"),
-            text_color=("green", "lightgreen")  # Adaptive color
+            text_color="#76B900"
         )
-        header.pack(side="top")
+        header.grid(row=0, column=1, padx=20, pady=10)
+
+        # Content below header
+        content_frame = ctk.CTkFrame(self.main_frame)
+        content_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        content_frame.grid_rowconfigure(4, weight=1)     # Make output area row expandable
+
 
         # Directory selection
-        self.create_directory_section()
+        self.create_directory_section(content_frame)
         # Branch selection (initially disabled)
-        self.create_branch_selection()
+        self.create_branch_selection(content_frame)
         # Submodule selection (initially disabled)
-        self.create_submodule_selection()
+        self.create_submodule_selection(content_frame)
         # Commit section
-        self.create_commit_section()
-
+        self.create_commit_section(content_frame)
         # Output area
-        self.create_output_area()
-
+        self.create_output_area(content_frame)
         # Buttons
-        self.create_buttons()
+        self.create_buttons(content_frame)
 
-    def create_commit_section(self):
-        commit_frame = ctk.CTkFrame(self.main_frame)
+    def create_commit_section(self, parent_frame):
+        commit_frame = ctk.CTkFrame(parent_frame)
         commit_frame.pack(fill="x", padx=10, pady=10)
 
         commit_label = ctk.CTkLabel(
@@ -368,8 +392,8 @@ class VersionFinderGUI(ctk.CTk):
         self.commit_entry = ctk.CTkEntry(commit_frame, width=300, placeholder_text="Required")
         self.commit_entry.pack(side="left", padx=5, pady=10, fill="x", expand=True)
 
-    def create_directory_section(self):
-        dir_frame = ctk.CTkFrame(self.main_frame)
+    def create_directory_section(self, parent_frame):
+        dir_frame = ctk.CTkFrame(parent_frame)
         dir_frame.pack(fill="x", padx=10, pady=10)
 
         dir_label = ctk.CTkLabel(
@@ -414,8 +438,8 @@ class VersionFinderGUI(ctk.CTk):
             self.output_text.insert("end", f"❌ Error updating repository: {str(e)}\n")
             self.output_text.see("end")
 
-    def create_branch_selection(self):
-        branch_frame = ctk.CTkFrame(self.main_frame)
+    def create_branch_selection(self, parent_frame):
+        branch_frame = ctk.CTkFrame(parent_frame)
         branch_frame.pack(fill="x", padx=10, pady=10)
 
         branch_label = ctk.CTkLabel(
@@ -438,8 +462,8 @@ class VersionFinderGUI(ctk.CTk):
         self.branch_entry.pack(fill="x", padx=10, pady=10, expand=True)
         self.branch_entry.configure(state="disabled")
 
-    def create_submodule_selection(self):
-        submodule_frame = ctk.CTkFrame(self.main_frame)
+    def create_submodule_selection(self, parent_frame):
+        submodule_frame = ctk.CTkFrame(parent_frame)
         submodule_frame.pack(fill="x", padx=10, pady=10)
 
         submodule_label = ctk.CTkLabel(submodule_frame, text="Submodule", width=100,
@@ -454,8 +478,8 @@ class VersionFinderGUI(ctk.CTk):
         self.submodule_entry.pack(fill="x", padx=10, pady=10, expand=True)
         self.submodule_entry.configure(state="disabled")
 
-    def create_output_area(self):
-        output_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+    def create_output_area(self, parent_frame):
+        output_frame = ctk.CTkFrame(parent_frame, fg_color="transparent")
         output_frame.pack(fill="both", expand=True, padx=15, pady=10)
 
         self.output_text = ctk.CTkTextbox(
@@ -470,8 +494,8 @@ class VersionFinderGUI(ctk.CTk):
         )
         self.output_text.pack(fill="both", expand=True)
 
-    def create_buttons(self):
-        button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+    def create_buttons(self, parent_frame):
+        button_frame = ctk.CTkFrame(parent_frame, fg_color="transparent")
         button_frame.pack(fill="x", padx=15, pady=10)
 
         # Create a gradient effect with multiple buttons

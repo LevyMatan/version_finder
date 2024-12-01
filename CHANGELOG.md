@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v5.4.2 (2024-12-01)
+
+### Bug Fixes
+
+* fix(core): :ambulance: check for ancestor return value
+
+The most annoying --is-ancestor will return an error when the first commit is not the ancestor of the second commit. When it is, it will return an empty BYTEs string! ([`a02ac0d`](https://github.com/LevyMatan/version_finder/commit/a02ac0d789f32ee71fa2b71a138ebee929eefb89))
+
+### Testing
+
+* test(RepoGenerator): :poop: make the test repo with submodule ([`083cf16`](https://github.com/LevyMatan/version_finder/commit/083cf16f3eaf4307ebed6f1193124cc766376d5e))
+
+
 ## v5.4.1 (2024-12-01)
 
 ### Bug Fixes

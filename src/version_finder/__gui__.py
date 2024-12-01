@@ -611,7 +611,7 @@ class VersionFinderGUI(ctk.CTk):
             # Perform the search with error handling
             try:
                 result = self.version_finder.find_first_version_containing_commit(
-                    self.version_finder.get_commit_sha_from_relative_string(commit), submodule)
+                    commit, submodule)
                 if result:
                     self.output_text.insert("end", f"✅ Search completed successfully: The version is {result}\n")
                 else:

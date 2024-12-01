@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v5.4.1 (2024-12-01)
+
+### Bug Fixes
+
+* fix(GUI): don't convert string to SHA in the search function
+
+When evoking Search in the GUI, it first tries to convert a rational string to commit SHA. The issue is when a submodule is given, the conversion is not done with respect to it ([`90e8bbf`](https://github.com/LevyMatan/version_finder/commit/90e8bbfca7fd65587adc60760e13ffdfdc8e4fd7))
+
+
 ## v5.4.0 (2024-11-30)
 
 ### Bug Fixes

@@ -303,11 +303,11 @@ class VersionFinderGUI(ctk.CTk):
 
     def setup_window(self):
         self.title("Version Finder")
-        self.window_height = 1000
-        self.window_width = 900
+        self.window_height = 1200
+        self.window_width = 1100
         self.geometry(f"{self.window_width}x{self.window_height}")
         self.minsize(650, 400)
-        self.maxsize(1200, 900)
+        self.maxsize(1200, 1100)
         self.focus_force()
 
         self.configure(fg_color=("gray95", "gray10"))  # Adaptive background

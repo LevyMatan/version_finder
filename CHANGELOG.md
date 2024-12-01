@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v5.4.3 (2024-12-01)
+
+### Bug Fixes
+
+* fix(GUI): :lipstick: Make the App window bigger ([`ddd2e14`](https://github.com/LevyMatan/version_finder/commit/ddd2e14ebfac76da7171b504fe1529d3e56f142c))
+
+
 ## v5.4.2 (2024-12-01)
 
 ### Bug Fixes

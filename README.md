@@ -1,10 +1,10 @@
 
 # Version Finder
 
-[![Coverage Report](https://img.shields.io/badge/Coverage-Report-blue)](https://LevyMatan.github.io/version_finder/)
+[![Coverage Report](https://img.shields.io/badge/Coverage-Report-green)](https://LevyMatan.github.io/version_finder/)
 [![Latest Release](https://img.shields.io/github/v/release/LevyMatan/version_finder)](https://github.com/LevyMatan/version_finder/releases/latest)
 
-Version Finder is a command-line utility for finding and comparing versions in Git repositories. It provides an easy way to manage and analyze version information across multiple branches and submodules.
+Version Finder is a command-line utility for finding and comparing versions in Git repositories. It provides an easy way to manage and analyze version information across multiple branches and submodules. The tool also supports easier GUI and CLI for more powerful operations.
 
 ## Features
 
@@ -20,8 +20,28 @@ You can install Version Finder in two ways:
 
 Download the latest wheel file from the [releases page](https://github.com/LevyMatan/version_finder/releases/latest) and install with:
 
+Install core library only:
+
 ```bash
 pip install version_finder-*.whl
+```
+
+Install core library with CLI:
+
+```bash
+pip install version_finder-*.whl[cli]
+```
+
+Install core library with GUI:
+
+```bash
+pip install version_finder-*.whl[gui]
+```
+
+(**Recomended**) Install core library with CLI and GUI:
+
+```bash
+pip install version_finder-*.whl[cli+gui]
 ```
 
 ### From Source
@@ -50,14 +70,20 @@ pip install version_finder-*.whl
 
 ## Usage
 
-After installation, you can use the `version_finder` command-line tool. Here are some example commands:
+After installation, you can use the `version_finder` command-line tool.
+
+> **Note:** At the moment it is highly advised to have a separate clone of your repository to be used for version searching.
+
+Here are some example commands:
 
 ```bash
+version_finder -p /path/to/repo -b <branch> -c <commit>  # Find versions in specified repository
 version_finder --gui                            # Run the GUI
 version-finder --cli                            # Run the CLI
-version_finder -p /path/to/repo                 # Find versions in specified repository
 version_finder -v                               # Run with verbose output
-version_finder --timeout 60                     # Set git operation timeout to 60 seconds
+
+# If already in the repository directory, one can ommit the path parameter
+version_finder -b <branch> -c <commit> -s <submodule>
 ```
 
 For a full list of options, run:

@@ -33,6 +33,10 @@ setup(
     name="version-finder",
     version=get_version(),
     package_dir={"": "src"},
+    include_package_data=True,
+    package_data={
+        'version_finder': ['assets/icon.png']
+    },
     packages=find_packages(where="src"),
     extras_require={
         "dev": ["pytest", "pytest-cov", "flake8", "autopep8"],  # Development tools

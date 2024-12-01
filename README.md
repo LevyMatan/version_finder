@@ -151,4 +151,4 @@ Before submitting a pull request, please ensure that all tests pass and the code
 
 ## License
 
-[Include license information here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

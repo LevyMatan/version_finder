@@ -5,6 +5,7 @@ from version_finder import LoggerProtocol
 import logging
 import os
 import argparse
+import importlib.resources
 from PIL import Image, ImageTk
 import customtkinter as ctk
 
@@ -530,15 +531,27 @@ class VersionFinderGUI(ctk.CTk):
         exit_btn.pack(side="right", padx=5, expand=True, fill="x")
 
     def setup_icon(self):
-        # Set the icon for the application
-        icon_path = os.path.join(os.path.dirname(__file__), 'assets/icon.png')
-        if os.path.exists(icon_path):
-            # Load the image
-            icon = Image.open(icon_path)
-            icon = ImageTk.PhotoImage(icon)
+        try:
+            # Use importlib.resources to locate the icon
+            with importlib.resources.path('version_finder.assets', 'icon.png') as icon_path:
+                if os.path.exists(icon_path):
+                    # Load the image
+                    icon = Image.open(icon_path)
+                    icon = ImageTk.PhotoImage(icon)
 
-            # Set the icon
-            self.wm_iconphoto(True, icon)
+                    # Set the icon
+                    self.wm_iconphoto(True, icon)
+        except Exception as e:
+            print(f"Error loading icon: {e}")
+        # # Set the icon for the application
+        # icon_path = os.path.join(os.path.dirname(__file__), 'assets/icon.png')
+        # if os.path.exists(icon_path):
+        #     # Load the image
+        #     icon = Image.open(icon_path)
+        #     icon = ImageTk.PhotoImage(icon)
+
+        #     # Set the icon
+        #     self.wm_iconphoto(True, icon)
 
     def initialize_version_finder(self):
         try:

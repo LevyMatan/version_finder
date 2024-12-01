@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v6.0.0 (2024-12-01)
+
+### Breaking
+
+* fix(main): :bug: set default path to cwd, fix cal to find version
+
+BREAKING CHANGE: When no path argument is given, set the repository path to the current working directory. This now complies with the --help message of the program. Add a call to update_repository with the branch argument before calling the find_first_version_containg_commit. ([`4655005`](https://github.com/LevyMatan/version_finder/commit/4655005dcde097b6bd83971e464fd82e66d12561))
+
+### Documentation
+
+* docs: :memo: update installation instructions ([`bd1b052`](https://github.com/LevyMatan/version_finder/commit/bd1b052e27daf75915f3c9b41a4ed8ea168a67ee))
+
+
 ## v5.6.0 (2024-12-01)
 
 ### Features

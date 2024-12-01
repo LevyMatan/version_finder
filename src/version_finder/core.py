@@ -596,13 +596,13 @@ class VersionFinder:
             self.logger.debug(f"Binary search - Left: {left}, Right: {right}, Mid: {mid}")
             self.logger.debug(f"Checking if {submodule_target_commit} is ancestor of {submodule_ptr}")
 
-            is_ancestor_or_equal = (
-                submodule_target_commit == submodule_ptr or
-                self._git.execute(
-                    [f"-C {submodule_path}", "merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr],
-                    check=False).returncode == 0
-            )
-
+            is_ancestor = self._git.execute(
+                ["-C", submodule_path, "merge-base", "--is-ancestor", submodule_target_commit, submodule_ptr],
+                check=False) == b''
+            self.logger.debug(f"Is ancestor: {is_ancestor}")
+            is_equal = submodule_target_commit == submodule_ptr
+            self.logger.debug(f"Is equal: {is_equal}")
+            is_ancestor_or_equal = is_ancestor or is_equal
             self.logger.debug(f"Is ancestor or equal result: {is_ancestor_or_equal}")
 
             if is_ancestor_or_equal:

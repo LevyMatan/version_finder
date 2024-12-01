@@ -543,15 +543,6 @@ class VersionFinderGUI(ctk.CTk):
                     self.wm_iconphoto(True, icon)
         except Exception as e:
             print(f"Error loading icon: {e}")
-        # # Set the icon for the application
-        # icon_path = os.path.join(os.path.dirname(__file__), 'assets/icon.png')
-        # if os.path.exists(icon_path):
-        #     # Load the image
-        #     icon = Image.open(icon_path)
-        #     icon = ImageTk.PhotoImage(icon)
-
-        #     # Set the icon
-        #     self.wm_iconphoto(True, icon)
 
     def initialize_version_finder(self):
         try:

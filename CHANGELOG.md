@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v5.5.1 (2024-12-01)
+
+### Bug Fixes
+
+* fix(GUI): :package: Add icon asset to the package ([`7a110bc`](https://github.com/LevyMatan/version_finder/commit/7a110bc296dd643f48d46322ac164187291b9b19))
+
+### Code Style
+
+* style(GUI): :art: remove comments ([`d60491d`](https://github.com/LevyMatan/version_finder/commit/d60491d41d779e67c59b7695e0ec2453b29758f1))
+
+
 ## v5.5.0 (2024-12-01)
 
 ### Features

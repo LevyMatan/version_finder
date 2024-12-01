@@ -9,7 +9,7 @@ from .protocols import LoggerProtocol, NullLogger
 from .core import VersionFinder, GitError, InvalidGitRepository, GitRepositoryNotClean, RepositoryNotTaskReady, InvalidCommitError, InvalidSubmoduleError, InvalidBranchError, GitNotInstalledError
 from .git_executer import GitConfig, GitCommandError, GitCommandExecutor
 from .logger.logger import setup_logger
-__version__ = "5.5.0"
+__version__ = "5.5.1"
 
 __all__: List[str] = [
     '__version__',

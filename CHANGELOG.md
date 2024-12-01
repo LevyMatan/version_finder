@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v5.6.0 (2024-12-01)
+
+### Features
+
+* feat: :page_facing_up: Add MIT license ([`e1c0666`](https://github.com/LevyMatan/version_finder/commit/e1c06660cb1dcbc222bd03e57254c343618e1d09))
+
+
 ## v5.5.1 (2024-12-01)
 
 ### Bug Fixes

@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v5.5.0 (2024-12-01)
+
+### Features
+
+* feat(core): :test_tube: Increase the version string finding ([`660db71`](https://github.com/LevyMatan/version_finder/commit/660db71086a303e94f70d5eb497d8d398b636947))
+
+
 ## v5.4.3 (2024-12-01)
 
 ### Bug Fixes

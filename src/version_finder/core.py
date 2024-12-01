@@ -171,8 +171,14 @@ class VersionFinder:
     # - Underscore or hyphen
     # - Numbers
     # - Optional "-" or "_" followed by additional numbers
-    version_pattern = r'(Version:\s*(?:XX_)?)?(\d+(?:[_-]\d+)+(?:[_-]\d+)?)'
-    git_regex_pattern_for_version = "(Version|VERSION): (XX_)?[0-9]+_[0-9]+(-[0-9]+)?"
+    # version_pattern = r'(Version:\s*(?:XX_)?)?(\d+(?:[_-]\d+)+(?:[_-]\d+)?)'
+    # version_pattern = r"(?:Version:?\s*|Updated version\s*)[^\d]*([\d._-]+)"
+    # version_pattern = r"(?:Version:?\s*|Updated version\s*|[^a-zA-Z0-9][^0-9\s]*)?(?:XX_)?(\b\d{1,4}[\d._-]+[\d]{1,4}\b)"
+
+
+    version_pattern = r"(?:Version:?\s*|Updated version\s*|[^a-zA-Z0-9][^0-9\s]*)?(\d{1,4}[\d._-]+[\d]{1,4})"
+
+    git_regex_pattern_for_version = "(Version|VERSION|Updated version)(:)? (XX_)?[0-9]+(_|.)[0-9]+((-|.)[0-9]+)?"
 
     def __init__(self,
                  path: Optional[str] = None,
@@ -290,7 +296,8 @@ class VersionFinder:
 
         match = re.search(self.version_pattern, commit_message)
         if match:
-            return match.group(2)
+            self.logger.debug(f"match.group(0) = {match.group(0)}")
+            return match.group(1)
         return None
 
     def __is_clean_git_repo(self) -> bool:

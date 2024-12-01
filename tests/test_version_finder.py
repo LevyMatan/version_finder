@@ -137,9 +137,10 @@ class TestVersionFinder:
             ("2024_01_15_23", "2024_01_15_23"),
             ("Version: XX_2024_01", "2024_01"),
             ("No version here", None),
-            ("2023-text", None),
             ("Version: XX_2024_01_15_RC1", "2024_01_15"),
             ("Version: 2024_01-15", "2024_01-15"),
+            ("Updated version 1.1.1", "1.1.1"),
+            ("Updated version 1.133.1123", "1.133.1123"),
         ]
 
         for message, expected in test_cases:

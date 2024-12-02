@@ -14,7 +14,24 @@ Version Finder is a command-line utility for finding and comparing versions in G
 
 ## Installation
 
-You can install Version Finder in two ways:
+You can install Version Finder in 3 ways:
+
+### From PyPI
+
+```bash
+# Install core library only:
+pip install version-finder-git-based-verions
+# Install core library with GUI:
+pip install version-finder-git-based-verions[gui]
+# Install core library with CLI:
+pip install version-finder-git-based-verions[cli]
+# Install core library with CLI and GUI:
+pip install version-finder-git-based-verions[cli-gui]
+# Install core library with CLI, GUI and testing tools:
+pip install version-finder-git-based-verions[all]
+```
+
+> **Note:** The installation name is not `version_finder`, but `version-finder-git-based-verions`. Worry Not! Usage name is `version_finder`.
 
 ### From GitHub Release
 

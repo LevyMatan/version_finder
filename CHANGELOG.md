@@ -1,6 +1,35 @@
 # CHANGELOG
 
 
+## v7.0.0 (2024-12-02)
+
+### Breaking
+
+* feat(core): :sparkles: use Commit class as the main cargo of information in APIs
+
+Use the Commit class as the proper return value for all VersionFinder APIs (Tasks). Improve the information recealed to user in the CLI when trying to get a list of commit
+
+BREAKING CHANGE: change return value of APIs from List[str] to List[Commit] ([`1467162`](https://github.com/LevyMatan/version_finder/commit/1467162d04c9f3c3c9bc83bedbdec7a88ffe2ffc))
+
+### Bug Fixes
+
+* fix(Tests): :bug: Handle invalid commit case in get_commit_info ([`682f8d6`](https://github.com/LevyMatan/version_finder/commit/682f8d6f2eb32323de5855ab85471ec56b1daedf))
+
+### Build System
+
+* build(Infra): :heavy_plus_sign: Add pytest-xdist for DEV falvor
+
+Add the package to allow parrallel run of unit tests ([`b1dcae3`](https://github.com/LevyMatan/version_finder/commit/b1dcae3b8359e88fdc538b492a64b692f8e3b9e2))
+
+### Performance Improvements
+
+* perf(Tests): :zap: Improve tests run time by using parallel execution ([`9b43713`](https://github.com/LevyMatan/version_finder/commit/9b43713be90743e41d44e12a94b7d4e19f6c8e79))
+
+### Testing
+
+* test(core): :white_check_mark: tests for get_commit_info ([`8ef0cbb`](https://github.com/LevyMatan/version_finder/commit/8ef0cbbdf71e7bf49c35b23a62d6b5e7e811c177))
+
+
 ## v6.1.0 (2024-12-02)
 
 ### Features

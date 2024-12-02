@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v7.0.1 (2024-12-02)
+
+### Bug Fixes
+
+* fix(Dist): :green_heart: Only upload to PyPI when a new release is created ([`0412a7e`](https://github.com/LevyMatan/version_finder/commit/0412a7ec36566fd99d82e22ddb4d66799d3d62f5))
+
+* fix(Dist): :rocket: change name of package to comply with PyPI
+
+since version-finder name is too similar to other projects, had to change the name, but usage will still be short name ([`4d44b3e`](https://github.com/LevyMatan/version_finder/commit/4d44b3ea9b441fa0d236aaa20e0a0a39a830a7ff))
+
+### Continuous Integration
+
+* ci(Dist): Upload to PyPI when ran manually ([`655cbcf`](https://github.com/LevyMatan/version_finder/commit/655cbcf8db67e29c8f246db284df839a0d3ca809))
+
+* ci(Dist): :package: Upload the release to PyPI ([`581cda1`](https://github.com/LevyMatan/version_finder/commit/581cda14447295099c77558fb3fbf0db893623c5))
+
+### Documentation
+
+* docs(Infra): :memo: update installation instruction with pip install option ([`beb2c35`](https://github.com/LevyMatan/version_finder/commit/beb2c35aeb14b952ed20d7e448c4994146c253cb))
+
+
 ## v7.0.0 (2024-12-02)
 
 ### Breaking

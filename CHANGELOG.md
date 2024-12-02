@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v6.1.0 (2024-12-02)
+
+### Features
+
+* feat: :goal_net: handle version not found error
+
+Create a new Error type to indicate when a version is not found when searching for commits between two versions ([`d2a964c`](https://github.com/LevyMatan/version_finder/commit/d2a964cc42cb14c683ee6cdf7860a30ee0736fa2))
+
+
 ## v6.0.0 (2024-12-01)
 
 ### Breaking

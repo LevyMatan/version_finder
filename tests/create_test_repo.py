@@ -1,3 +1,4 @@
+import re
 import subprocess
 import random
 from pathlib import Path
@@ -50,8 +51,6 @@ def update_submodules(main_repo_path, submodules):
         run_command("git add .gitmodules", cwd=main_repo_path)
         run_command(f"git commit -m 'Add submodule {name}'", cwd=main_repo_path)
 
-import re
-from pathlib import Path
 
 def update_version_commit(repo_path, branch):
     repo_path = Path(repo_path)

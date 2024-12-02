@@ -13,6 +13,7 @@ from version_finder import (
     InvalidSubmoduleError,
     InvalidBranchError,
     VersionNotFoundError,
+    Commit,
     setup_logger,
     GitConfig
 )
@@ -40,6 +41,41 @@ class TestGitConfig:
     def test_init_with_invalid_max_retries(self):
         with pytest.raises(ValueError):
             GitConfig(max_retries=-1)
+
+
+class TestCommit:
+    def test_commit_str_representation(self):
+        commit = Commit(
+            sha="abc123def456",
+            subject="Test commit",
+            message="Full test commit message",
+            author="John Doe",
+            timestamp=1234567890
+        )
+        expected = "abc123def456    Test commit"
+        assert str(commit) == expected
+
+    def test_commit_repr_representation(self):
+        commit = Commit(
+            sha="abc123def456",
+            subject="Test commit",
+            message="Full test commit message",
+            author="John Doe",
+            timestamp=1234567890
+        )
+        expected = "Commit(sha=abc123def456    subject=Test commit)"
+        assert repr(commit) == expected
+
+    def test_commit_with_version(self):
+        commit = Commit(
+            sha="abc123def456",
+            subject="Test commit",
+            message="Full test commit message",
+            author="John Doe",
+            timestamp=1234567890,
+            version="1.0.0"
+        )
+        assert commit.version == "1.0.0"
 
 
 class TestVersionFinder:
@@ -358,9 +394,10 @@ class TestVersionFinder:
 
         # Test finding commits with text
         commits = finder.find_commits_by_text("Test message")
+        commit_shas = [commit.sha for commit in commits]
         assert len(commits) == 2
-        assert first_commit in commits
-        assert second_commit in commits
+        assert first_commit in commit_shas
+        assert second_commit in commit_shas
 
     def test_find_commits_by_text_case_insensitive(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
@@ -372,7 +409,7 @@ class TestVersionFinder:
 
         commits = finder.find_commits_by_text("upper case")
         assert len(commits) == 1
-        assert commit_hash in commits
+        assert commit_hash in commits[0].sha
 
     def test_find_commits_by_text_in_submodule(self, repo_with_submodule: Any):
         finder = VersionFinder(path=repo_with_submodule, logger=debug_logger)
@@ -385,7 +422,7 @@ class TestVersionFinder:
 
         commits = finder.find_commits_by_text("Submodule specific", submodule='sub_repo')
         assert len(commits) == 1
-        assert submodule_commit in commits
+        assert submodule_commit == commits[0].sha
 
     def test_find_commits_by_text_no_matches(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
@@ -420,12 +457,12 @@ class TestVersionFinder:
         finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
         commits = finder.get_commits_between_versions('2024_01', '2024_02')
-
+        commits_shas = [commit.sha for commit in commits]
         # Verify we got the intermediate commits
         assert len(commits) == 4
 
         # Verify commit messages
-        for commit in commits:
+        for commit in commits_shas:
             message = os.popen(f'git log -1 --format=%s {commit}').read().strip()
             assert message in ['Version: 2024_01', 'Intermediate commit 1', 'Intermediate commit 2', 'Version: 2024_02']
 
@@ -453,18 +490,17 @@ class TestVersionFinder:
         finder = VersionFinder(path=repo_with_submodule)
         finder.update_repository('main')
         commits = finder.get_commits_between_versions('2024_01', '2024_02', submodule='sub_repo')
-
+        commits_shas = [commit.sha for commit in commits]
         # Verify we got the submodule commit
         assert len(commits) == 2
-        assert sub_commit1 in commits
-        assert sub_commit2 in commits
+        assert sub_commit1 in commits_shas
+        assert sub_commit2 in commits_shas
 
     def test_get_commits_between_versions_invalid_version(self, test_repo: str):
         finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
         with pytest.raises(VersionNotFoundError):
-            commits = finder.get_commits_between_versions('nonexistent_version1', 'nonexistent_version2')
-
+            _ = finder.get_commits_between_versions('nonexistent_version1', 'nonexistent_version2')
 
     def test_get_commits_between_versions_not_ready(self, test_repo: str):
         finder = VersionFinder(path=test_repo)
@@ -478,6 +514,7 @@ class TestVersionFinder:
         os.system("git commit -m 'Version: 2024_01' --allow-empty")
         commit_sha = os.popen('git rev-parse HEAD').read().strip()
 
+        finder.update_repository('main')
         commit_info = finder.get_commit_info(commit_sha)
         assert commit_info.sha == commit_sha
         assert commit_info.subject == 'Version: 2024_01'
@@ -495,6 +532,7 @@ class TestVersionFinder:
         os.system(f"git commit -m '{message}' --allow-empty")
         commit_sha = os.popen('git rev-parse HEAD').read().strip()
 
+        finder.update_repository('main')
         commit_info = finder.get_commit_info(commit_sha)
         assert commit_info.sha == commit_sha
         assert commit_info.subject == 'Version: 2024_02'
@@ -507,6 +545,7 @@ class TestVersionFinder:
         os.system("git commit -m 'Regular commit without version' --allow-empty")
         commit_sha = os.popen('git rev-parse HEAD').read().strip()
 
+        finder.update_repository('main')
         commit_info = finder.get_commit_info(commit_sha)
         assert commit_info.sha == commit_sha
         assert commit_info.subject == 'Regular commit without version'
@@ -526,10 +565,18 @@ class TestVersionFinder:
         for message, expected_version in test_cases:
             os.system(f"git commit -m '{message}' --allow-empty")
             commit_sha = os.popen('git rev-parse HEAD').read().strip()
+            finder.update_repository('main')
             commit_info = finder.get_commit_info(commit_sha)
             assert commit_info.version == expected_version
 
     def test_get_commit_info_invalid_commit(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder.update_repository('main')
         with pytest.raises(InvalidCommitError):
+            finder.get_commit_info("nonexistent-commit-sha")
+
+    def test_get_commit_info_not_ready(self, test_repo: str):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        # Don't call update_repository to test not ready state
+        with pytest.raises(RepositoryNotTaskReady):
             finder.get_commit_info("nonexistent-commit-sha")

@@ -8,7 +8,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.styles import Style
 from prompt_toolkit.completion import WordCompleter, PathCompleter
 import argparse
-from version_finder.core import  VersionFinderTask, VersionFinderTaskRegistry
+from version_finder.core import VersionFinderTask, VersionFinderTaskRegistry
 from version_finder import VersionFinder, GitError, VersionNotFoundError, setup_logger, LoggerProtocol
 from version_finder.__common__ import parse_arguments
 from prompt_toolkit.validation import Validator, ValidationError

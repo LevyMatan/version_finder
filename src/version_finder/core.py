@@ -324,11 +324,14 @@ class VersionFinder:
         """Get detailed commit information."""
         output = self._git.execute([
             "show", "-s",
-            "--format=%H%n%s%n%B%n%an%n%at",  # Added %B for full message
-            commit_sha
-        ]).decode("utf-8").strip()
-
-        sha, subject, message, author, timestamp = output.split("\n")
+            "--format=%H%x1F%s%x1F%B%x1F%an%x1F%at",  # Using ASCII unit separator (0x1F) as delimiter
+            commit_sha]).decode("utf-8").strip()
+        self.logger.debug(f"Commit info output: {output}")
+        output = output.split('\x1F')
+        for elemetn in output:
+            self.logger.debug(f"Element: {elemetn}")
+        self.logger.debug(f"The length of output is: {len(output)}")
+        sha, subject, message, author, timestamp = output
         version = self.__extract_version_from_message(message)
 
         return Commit(

@@ -39,10 +39,10 @@ jobs:
           git_committer_email: "actions@users.noreply.github.com"
 
       - name: Build Python packages
-        if: steps.release.outputs.released == 'true'
+        if: steps.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch'
         run: |
-          python -m pip install build
-          python -m build
+            python -m pip install build
+            python -m build
 
       - name: Publish | Upload to GitHub Release Assets
         uses: python-semantic-release/publish-action@v9.8.9

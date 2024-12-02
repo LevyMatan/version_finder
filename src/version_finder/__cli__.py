@@ -8,9 +8,8 @@ from prompt_toolkit import prompt
 from prompt_toolkit.styles import Style
 from prompt_toolkit.completion import WordCompleter, PathCompleter
 import argparse
-from version_finder.core import VersionFinder, GitError, VersionFinderTask, VersionFinderTaskRegistry
-from version_finder.logger.logger import setup_logger
-from version_finder.protocols import LoggerProtocol
+from version_finder.core import  VersionFinderTask, VersionFinderTaskRegistry
+from version_finder import VersionFinder, GitError, VersionNotFoundError, setup_logger, LoggerProtocol
 from version_finder.__common__ import parse_arguments
 from prompt_toolkit.validation import Validator, ValidationError
 
@@ -405,6 +404,8 @@ class VersionFinderCLI:
         except KeyboardInterrupt:
             self.logger.info("\nSearch cancelled by user")
             return 1
+        except VersionNotFoundError as e:
+            self.logger.debug("Couldn't find input version. %s", str(e))
         except Exception as e:
             self.logger.error("Error during commit search: %s", str(e))
             return 1

@@ -30,10 +30,13 @@ def get_version():
 
 
 setup(
-    name="version-finder",
+    name="version-finder-git-based-versions",
     version=get_version(),
     package_dir={"": "src"},
     include_package_data=True,
+    long_description=open("README.md").read(),  # Detailed description (e.g., README.md)
+    long_description_content_type="text/markdown",  # Content type of long description
+    license="MIT",  # License information
     package_data={
         'version_finder': ['assets/icon.png']
     },
@@ -55,4 +58,6 @@ setup(
     author="Matan Levy",
     description="A utility for finding versions in Git repositories",
     python_requires=">=3.7",
+    url="https://github.com/LevyMatan/version_finder",
+    issues="https://github.com/LevyMatan/version_finder/issues"
 )

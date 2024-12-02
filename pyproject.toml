@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [tool.semantic_release]
 version_variables = [
     "src/version_finder/__init__.py:__version__",

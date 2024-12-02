@@ -19,7 +19,7 @@ install-dev:
 	pip install -e .[all]
 
 test:
-	pytest
+	pytest -n auto
 
 coverage:
 	pytest --cov=./src --cov-report term-missing --cov-report html

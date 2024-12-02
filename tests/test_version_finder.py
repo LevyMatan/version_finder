@@ -471,3 +471,65 @@ class TestVersionFinder:
         # Don't call update_repository to test not ready state
         with pytest.raises(RepositoryNotTaskReady):
             finder.get_commits_between_versions('2024_01', '2024_02')
+
+    def test_get_commit_info_basic(self, test_repo: str):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        os.chdir(test_repo)
+        os.system("git commit -m 'Version: 2024_01' --allow-empty")
+        commit_sha = os.popen('git rev-parse HEAD').read().strip()
+
+        commit_info = finder.get_commit_info(commit_sha)
+        assert commit_info.sha == commit_sha
+        assert commit_info.subject == 'Version: 2024_01'
+        assert commit_info.version == '2024_01'
+        assert isinstance(commit_info.timestamp, int)
+        assert commit_info.author == 'Test User'
+
+    def test_get_commit_info_with_multiline_message(self, test_repo: str):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        os.chdir(test_repo)
+        message = '''Version: 2024_02
+
+        This is a detailed commit message
+        with multiple lines'''
+        os.system(f"git commit -m '{message}' --allow-empty")
+        commit_sha = os.popen('git rev-parse HEAD').read().strip()
+
+        commit_info = finder.get_commit_info(commit_sha)
+        assert commit_info.sha == commit_sha
+        assert commit_info.subject == 'Version: 2024_02'
+        assert commit_info.version == '2024_02'
+        assert 'detailed commit message' in commit_info.message
+
+    def test_get_commit_info_no_version(self, test_repo: str):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        os.chdir(test_repo)
+        os.system("git commit -m 'Regular commit without version' --allow-empty")
+        commit_sha = os.popen('git rev-parse HEAD').read().strip()
+
+        commit_info = finder.get_commit_info(commit_sha)
+        assert commit_info.sha == commit_sha
+        assert commit_info.subject == 'Regular commit without version'
+        assert commit_info.version is None
+
+    def test_get_commit_info_with_different_version_formats(self, test_repo: str):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        os.chdir(test_repo)
+
+        test_cases = [
+            ("Version: XX_2024_01_15", "2024_01_15"),
+            ("Updated version 1.2.3", "1.2.3"),
+            ("Version: 2024-01-15", "2024-01-15"),
+            ("Version: 2024_01_15_RC1", "2024_01_15")
+        ]
+
+        for message, expected_version in test_cases:
+            os.system(f"git commit -m '{message}' --allow-empty")
+            commit_sha = os.popen('git rev-parse HEAD').read().strip()
+            commit_info = finder.get_commit_info(commit_sha)
+            assert commit_info.version == expected_version
+
+    def test_get_commit_info_invalid_commit(self, test_repo: str):
+        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        with pytest.raises(GitCommandError):
+            finder.get_commit_info("nonexistent-commit-sha")

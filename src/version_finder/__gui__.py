@@ -1,4 +1,4 @@
-from version_finder import VersionFinder, GitError, GitCommandError, InvalidCommitError, InvalidSubmoduleError, InvalidBranchError, GitNotInstalledError
+from version_finder import VersionFinder, GitError, GitCommandError, InvalidCommitError
 from version_finder.__common__ import parse_arguments
 from version_finder import setup_logger
 from version_finder import LoggerProtocol
@@ -325,7 +325,6 @@ class VersionFinderGUI(ctk.CTk):
         self.main_frame.grid_columnconfigure(0, weight=1)  # Make column expandable
         self.main_frame.grid_rowconfigure(1, weight=1)  # Make content row expandable
 
-
         # Create header frame
         self.header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         self.header_frame.grid(row=0, column=0, sticky="new", padx=15, pady=(20, 10))
@@ -360,7 +359,6 @@ class VersionFinderGUI(ctk.CTk):
         content_frame = ctk.CTkFrame(self.main_frame)
         content_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
         content_frame.grid_rowconfigure(4, weight=1)     # Make output area row expandable
-
 
         # Directory selection
         self.create_directory_section(content_frame)

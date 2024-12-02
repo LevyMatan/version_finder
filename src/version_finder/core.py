@@ -79,6 +79,12 @@ class Commit:
     timestamp: int
     version: Optional[str] = None
 
+    def __repr__(self):
+        return f"Commit(sha={self.sha}    subject={self.subject})"
+
+    def __str__(self):
+        return f"{self.sha}    {self.subject}"
+
 
 @dataclass
 class VersionFinderTask:
@@ -178,7 +184,6 @@ class VersionFinder:
     # version_pattern = r'(Version:\s*(?:XX_)?)?(\d+(?:[_-]\d+)+(?:[_-]\d+)?)'
     # version_pattern = r"(?:Version:?\s*|Updated version\s*)[^\d]*([\d._-]+)"
     # version_pattern = r"(?:Version:?\s*|Updated version\s*|[^a-zA-Z0-9][^0-9\s]*)?(?:XX_)?(\b\d{1,4}[\d._-]+[\d]{1,4}\b)"
-
 
     version_pattern = r"(?:Version:?\s*|Updated version\s*|[^a-zA-Z0-9][^0-9\s]*)?(\d{1,4}[\d._-]+[\d]{1,4})"
 
@@ -320,14 +325,19 @@ class VersionFinder:
         """Get list of branches."""
         return self.branches
 
-    def get_commit_info(self, commit_sha: str) -> Commit:
+    def get_commit_info(self, commit_sha: str, submodule: str = None) -> Commit:
         """Get detailed commit information."""
 
+        # Verify ready for Tasks
+        if not self.is_task_ready:
+            raise RepositoryNotTaskReady()
+
+        git_command = ["show", "-s", "--format=%H%x1F%s%x1F%B%x1F%an%x1F%at", commit_sha]
+        if submodule:
+            git_command.insert(0, "--git-dir")
+            git_command.insert(1, f"{submodule}/.git")
         try:
-            output = self._git.execute([
-                "show", "-s",
-                "--format=%H%x1F%s%x1F%B%x1F%an%x1F%at",  # Using ASCII unit separator (0x1F) as delimiter
-                commit_sha]).decode("utf-8").strip()
+            output = self._git.execute(git_command).decode("utf-8").strip()
         except GitCommandError as e:
             raise InvalidCommitError(f"Failed to get commit info: {e}")
         self.logger.debug(f"Commit info output: {output}")
@@ -401,7 +411,7 @@ class VersionFinder:
             self.logger.error(f"Failed to update submodules: {e}")
             raise
 
-    def find_commits_by_text(self, text: str, submodule: str = None) -> List[str]:
+    def find_commits_by_text(self, text: str, submodule: str = None) -> List[Commit]:
         """
         Find commits in the specified branch that contain the given text in either title or description.
 
@@ -448,7 +458,7 @@ class VersionFinder:
                             text.lower() in body.lower()):
                         matching_commits.append(commit_hash)
 
-            return matching_commits
+            return [self.get_commit_info(commit_sha, submodule=submodule) for commit_sha in matching_commits]
         except GitCommandError as e:
             self.logger.error(f"Failed to find commits by text: {e}")
             raise
@@ -679,7 +689,7 @@ class VersionFinder:
         return submodule_ptr[0].split()[2]
 
     def get_commits_between_versions(self, start_version: str,
-                                     end_version: str, submodule: Optional[str] = None) -> List[str]:
+                                     end_version: str, submodule: Optional[str] = None) -> List[Commit]:
         """
         Get the list of commits between two versions.
         """
@@ -705,14 +715,20 @@ class VersionFinder:
             if not end_commit:
                 raise GitError(f"startversion:end_commit: Couldn't find the pointer to submodule: {submodule}")
 
-
         lower_bound_commit = self.get_parent_commit(start_commit, submodule)
         git_command = ["log", "--format=%H", f"{lower_bound_commit}..{end_commit}"]
         if submodule:
             git_command.insert(0, "-C")
             git_command.insert(1, submodule)
-        return self._git.execute(
-            git_command).decode("utf-8").strip().split("\n")
+
+        try:
+            commit_sha_list = self._git.execute(
+                git_command).decode("utf-8").strip().split("\n")
+        except GitCommandError as e:
+            self.logger.error(f"Failed to get commits between versions: {e}")
+            raise e
+
+        return [self.get_commit_info(commit, submodule=submodule) for commit in commit_sha_list]
 
     def get_parent_commit(self, commit: str, submodule=None) -> str:
         """

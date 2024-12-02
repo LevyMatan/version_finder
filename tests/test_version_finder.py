@@ -531,5 +531,5 @@ class TestVersionFinder:
 
     def test_get_commit_info_invalid_commit(self, test_repo: str):
         finder = VersionFinder(path=test_repo, logger=debug_logger)
-        with pytest.raises(GitCommandError):
+        with pytest.raises(InvalidCommitError):
             finder.get_commit_info("nonexistent-commit-sha")

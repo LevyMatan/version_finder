@@ -322,10 +322,14 @@ class VersionFinder:
 
     def get_commit_info(self, commit_sha: str) -> Commit:
         """Get detailed commit information."""
-        output = self._git.execute([
-            "show", "-s",
-            "--format=%H%x1F%s%x1F%B%x1F%an%x1F%at",  # Using ASCII unit separator (0x1F) as delimiter
-            commit_sha]).decode("utf-8").strip()
+
+        try:
+            output = self._git.execute([
+                "show", "-s",
+                "--format=%H%x1F%s%x1F%B%x1F%an%x1F%at",  # Using ASCII unit separator (0x1F) as delimiter
+                commit_sha]).decode("utf-8").strip()
+        except GitCommandError as e:
+            raise InvalidCommitError(f"Failed to get commit info: {e}")
         self.logger.debug(f"Commit info output: {output}")
         output = output.split('\x1F')
         for elemetn in output:

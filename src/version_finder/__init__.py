@@ -6,7 +6,7 @@ from typing import List
 
 # version_finder/__init__.py
 from .protocols import LoggerProtocol, NullLogger
-from .core import VersionFinder, GitError, InvalidGitRepository, GitRepositoryNotClean, RepositoryNotTaskReady, InvalidCommitError, InvalidSubmoduleError, InvalidBranchError, GitNotInstalledError
+from .core import VersionFinder, GitError, InvalidGitRepository, GitRepositoryNotClean, RepositoryNotTaskReady, InvalidCommitError, InvalidSubmoduleError, InvalidBranchError, GitNotInstalledError, VersionNotFoundError
 from .git_executer import GitConfig, GitCommandError, GitCommandExecutor
 from .logger.logger import setup_logger
 __version__ = "6.0.0"
@@ -29,6 +29,7 @@ __all__: List[str] = [
     'InvalidSubmoduleError',
     'InvalidBranchError',
     'GitNotInstalledError',
+    'VersionNotFoundError',
 
     # Logger
     'LoggerProtocol',

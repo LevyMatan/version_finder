@@ -41,6 +41,10 @@ class InvalidBranchError(GitError):
     """Raised when the branch is invalid"""
 
 
+class VersionNotFoundError(GitError):
+    """Raised when version is not found in commits message"""
+
+
 class GitNotInstalledError(GitError):
     """Raised when git is not installed"""
 
@@ -645,6 +649,7 @@ class VersionFinder:
         commits = self._git.execute(
             ["log", "-i", "--grep", version, "--format=%H"]).decode("utf-8").strip().split("\n")
         self.logger.debug(f"Found {len(commits)} commits for version {version}")
+        self.logger.debug(f"The type of commits: {type(commits)}")
         return commits
 
     def get_submodule_commit_hash(self, commit: str, submodule: str) -> Optional[str]:
@@ -675,22 +680,30 @@ class VersionFinder:
             raise RepositoryNotTaskReady()
 
         start_commit = self.find_commit_by_version(start_version)[0]
+        self.logger.debug(f"The commit SHA of version: {start_version} is {start_commit}")
+        if not start_commit:
+            raise VersionNotFoundError(f"Version: {start_version} was not found in the repository.")
         end_commit = self.find_commit_by_version(end_version)[0]
-
-        if not start_commit or not end_commit:
-            return []
+        self.logger.debug(f"The commit SHA of version: {end_version} is {end_commit}")
+        if not end_commit:
+            raise VersionNotFoundError(f"Version: {end_version} was not found in the repository.")
 
         if submodule:
             start_commit = self.get_submodule_commit_hash(start_commit, submodule)
+            self.logger.debug(f"Version {start_version} point to submodule {submodule} commit: {start_commit}")
+            if not start_commit:
+                raise GitError(f"startversion:start_commit: Couldn't find the pointer to submodule: {submodule}")
             end_commit = self.get_submodule_commit_hash(end_commit, submodule)
-            if not start_commit or not end_commit:
-                return []
+            self.logger.debug(f"Version {end_version} point to submodule {submodule} commit: {end_commit}")
+            if not end_commit:
+                raise GitError(f"startversion:end_commit: Couldn't find the pointer to submodule: {submodule}")
+
 
         lower_bound_commit = self.get_parent_commit(start_commit, submodule)
         git_command = ["log", "--format=%H", f"{lower_bound_commit}..{end_commit}"]
         if submodule:
             git_command.insert(0, "-C")
-            git_command.insert(1, f"{submodule}")
+            git_command.insert(1, submodule)
         return self._git.execute(
             git_command).decode("utf-8").strip().split("\n")
 

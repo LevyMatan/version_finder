@@ -12,6 +12,7 @@ from version_finder import (
     InvalidCommitError,
     InvalidSubmoduleError,
     InvalidBranchError,
+    VersionNotFoundError,
     setup_logger,
     GitConfig
 )
@@ -461,8 +462,9 @@ class TestVersionFinder:
     def test_get_commits_between_versions_invalid_version(self, test_repo: str):
         finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
-        commits = finder.get_commits_between_versions('nonexistent_version1', 'nonexistent_version2')
-        assert commits == []
+        with pytest.raises(VersionNotFoundError):
+            commits = finder.get_commits_between_versions('nonexistent_version1', 'nonexistent_version2')
+
 
     def test_get_commits_between_versions_not_ready(self, test_repo: str):
         finder = VersionFinder(path=test_repo)

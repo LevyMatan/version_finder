@@ -39,11 +39,11 @@ setup(
     },
     packages=find_packages(where="src"),
     extras_require={
-        "dev": ["pytest", "pytest-cov", "flake8", "autopep8"],  # Development tools
+        "dev": ["pytest", "pytest-xdist", "pytest-cov", "flake8", "autopep8"],  # Development tools
         "gui": ["customtkinter", "pillow"],
         "cli": ["prompt_toolkit>=3.0.0"],
         "cli+gui": ["customtkinter", "prompt_toolkit>=3.0.0", "pillow"],
-        "all": ["pytest", "pytest-cov", "flake8", "autopep8", "customtkinter", "prompt_toolkit>=3.0.0", "pillow"],
+        "all": ["pytest", "pytest-xdist", "pytest-cov", "flake8", "autopep8", "customtkinter", "prompt_toolkit>=3.0.0", "pillow"],
     },
     entry_points={
         "console_scripts": [

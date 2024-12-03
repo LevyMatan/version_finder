@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v8.0.4 (2024-12-03)
+
+### Bug Fixes
+
+- **Dist**: Fix dist path for the cli package
+  ([`af60acd`](https://github.com/LevyMatan/version_finder/commit/af60acdf71c07a2d105794dfa2100c916638c3d2))
+
+
 ## v8.0.3 (2024-12-03)
 
 ### Bug Fixes

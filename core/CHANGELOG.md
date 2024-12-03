@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v8.0.3 (2024-12-03)
+
+### Bug Fixes
+
+- **core**: Install build before building
+  ([`d77129f`](https://github.com/LevyMatan/version_finder/commit/d77129f8bb1ecfe88e71685a66306ebffeb9a178))
+
+
 ## v8.0.2 (2024-12-03)
 
 ### Bug Fixes

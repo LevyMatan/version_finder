@@ -27,7 +27,7 @@ jobs:
     - name: Build and publish cli
       run: |
         python -m build -s cli/
-        python -m twine upload dist/*
+        python -m twine upload cli/dist/*
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}

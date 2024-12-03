@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v8.1.0 (2024-12-04)
+
+### Features
+
+- **ci**: Poop
+  ([`fdc4006`](https://github.com/LevyMatan/version_finder/commit/fdc400692f4dd92e3b5606b16c1fc818e99dfa62))
+
+
 ## v8.0.5 (2024-12-04)
 
 ### Bug Fixes

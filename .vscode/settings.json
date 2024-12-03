@@ -1,0 +1,13 @@
+{
+    "makefile.configureOnOpen": false,
+    "conventionalCommits.scopes": [
+        "core",
+        "GitExecuter",
+        "ErrorHandling",
+        "Infra",
+        "Tests",
+        "GUI",
+        "main",
+        "Dist"
+    ]
+}

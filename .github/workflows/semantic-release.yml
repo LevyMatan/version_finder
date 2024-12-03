@@ -6,114 +6,34 @@ on:
       - main
   workflow_dispatch:
 
-
 jobs:
-  determine-packages:
+  release:
     runs-on: ubuntu-latest
-    outputs:
-      core: ${{ steps.check-changes.outputs.core }}
-      cli: ${{ steps.check-changes.outputs.cli }}
-      gui: ${{ steps.check-changes.outputs.gui }}
+    concurrency: release
+    permissions:
+      id-token: write
+      contents: write
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
-      - name: Check for changes
-        id: check-changes
-        run: |
-          echo "Checking changes in different packages"
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install python-semantic-release build
 
-          # Check for changes in core package
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^core/'; then
-            echo "core=true" >> $GITHUB_OUTPUT
-          else
-            echo "core=false" >> $GITHUB_OUTPUT
-          fi
-
-          # Check for changes in CLI package
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^cli/'; then
-            echo "cli=true" >> $GITHUB_OUTPUT
-          else
-            echo "cli=false" >> $GITHUB_OUTPUT
-          fi
-
-          # Check for changes in GUI package
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^gui/'; then
-            echo "gui=true" >> $GITHUB_OUTPUT
-          else
-            echo "gui=false" >> $GITHUB_OUTPUT
-          fi
-
-  release-core:
-    needs: determine-packages
-    if: needs.determine-packages.outputs.core == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
-      - name: Install semantic-release
-        run: |
-          pip install python-semantic-release
-
-      - name: Action | Semantic Version Release for core
-        id: release_core
-        uses: python-semantic-release/python-semantic-release@v9.14.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          directory: ./core/
-
-  release-cli:
-    needs: determine-packages
-    if: needs.determine-packages.outputs.cli == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
-      - name: Action | Semantic Version Release for cli
-        id: release_cli
-        uses: python-semantic-release/python-semantic-release@v9.14.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          directory: ./cli/
-
-  release-gui:
-    needs: determine-packages
-    if: needs.determine-packages.outputs.gui == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
-      - name: Action | Semantic Version Release for gui
-        id: release_gui
-        uses: python-semantic-release/python-semantic-release@v9.14.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          directory: ./gui/
+    - name: Python Semantic Release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "action@github.com"
+        semantic-release --multiproject version
+        semantic-release --multiproject publish

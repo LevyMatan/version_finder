@@ -1,19 +1,56 @@
 [tool.semantic_release]
-version_toml = [
-"core/pyproject.toml:tool.poetry.version",
-"cli/pyproject.toml:tool.poetry.version",
-"gui/pyproject.toml:tool.poetry.version"
+commit_parser = "angular"
+major_on_zero = false
+tag_format = "v{version}"
+branch = "main"
+upload_to_pypi = true
+upload_to_release = true
+
+[tool.semantic_release.remote]
+token = "github_token"
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["dist/*"]
+upload_to_vcs_release = true
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+    "cli",
+    "core",
+    "gui",
+    "build",
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "refactor",
+    "style",
+    "test"
 ]
 
-[tool.autopep8]
-max_line_length = 120
-aggressive = 2
-recursive = true
-in_place = true
-select = "E, W, F"
-exclude = ".venv,.git,__pycache__,build,dist,*.md,version_finder_env,pytest"
-src_dirs = [
-    "core/src",
-    "cli/src",
-    "gui/src"
+[tool.semantic_release.version]
+toml = [
+    "pyproject.toml:tool.cli.version",
+    "pyproject.toml:tool.core.version",
+    "pyproject.toml:tool.gui.version"
 ]
+variable = [
+    "cli/src/version_finder_cli/__version__.py:__version__",
+    "core/src/version_finder/__version__.py:__version__",
+    "gui/src/version_finder_gui/__version__.py:__version__"
+]
+
+[tool.semantic_release.monorepo]
+cli = ["cli/*"]
+core = ["core/*"]
+gui = ["gui/*"]
+
+[tool.cli]
+version = "1.0.0"
+
+[tool.core]
+version = "8.0.0"
+
+[tool.gui]
+version = "1.0.0"

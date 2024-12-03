@@ -6,7 +6,7 @@ package-mode = true
 authors = ["Matan Levy <levymatanlevy@gmail.com>"]
 
 [tool.semantic_release]
-version_variable = "src/version_finder/__version__.py:__version__"
+version_variable = "gui/src/version_finder_gui/__version__.py:__version__"
 branch = "main"
 version_pattern = "gui-v{version}"
 commit_version_cli = true

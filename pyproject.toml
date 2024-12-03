@@ -4,7 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.semantic_release]
 version_variables = [
-    "src/version_finder/__init__.py:__version__",
+    "core/src/version_finder/__version__.py:__version__",
+    "cli/src/version_finder_cli/__version__.py:__version__",
+    "gui/src/version_finder_gui/__version__.py:__version__"
 ]
 version_toml = ["pyproject.toml:tool.poetry.version"]
 
@@ -15,3 +17,16 @@ recursive = true
 in_place = true
 select = "E, W, F"
 exclude = ".venv,.git,__pycache__,build,dist,*.md,version_finder_env,pytest"
+src_dirs = [
+    "core/src",
+    "cli/src",
+    "gui/src"
+]
+
+[tool.setuptools]
+# Define package directories for setuptools
+packages = [
+    { include = "core.src.version_finder", from = "core/src" },
+    { include = "cli.src.version_finder_cli", from = "cli/src" },
+    { include = "gui.src.version_finder_gui", from = "gui/src" }
+]

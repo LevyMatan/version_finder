@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "version-finder-cli"
 description = "Command line interface for version finder"
-version = "8.0.0"  # This will be automatically updated
+version = "8.0.1"  # This will be automatically updated
 package-mode = true
 authors = ["Matan Levy <levymatanlevy@gmail.com>"]
 

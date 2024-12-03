@@ -58,5 +58,4 @@ setup(
     description="An App for finding versions in Git repositories",
     python_requires=">=3.7",
     url="https://github.com/LevyMatan/version_finder",
-    issues="https://github.com/LevyMatan/version_finder/issues"
 )

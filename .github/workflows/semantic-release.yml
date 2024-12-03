@@ -63,14 +63,14 @@ jobs:
         run: |
           pip install python-semantic-release
 
-      - name: Run semantic release for core
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          cd core
-          semantic-release version
-          semantic-release publish
+      - name: Action | Semantic Version Release for core
+        id: release_core
+        uses: python-semantic-release/python-semantic-release@v9.14.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_committer_name: "github-actions"
+          git_committer_email: "actions@users.noreply.github.com"
+          directory: ./core/
 
   release-cli:
     needs: determine-packages
@@ -86,18 +86,14 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install semantic-release
-        run: |
-          pip install python-semantic-release
-
-      - name: Run semantic release for CLI
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          cd cli
-          semantic-release version
-          semantic-release publish
+      - name: Action | Semantic Version Release for cli
+        id: release_cli
+        uses: python-semantic-release/python-semantic-release@v9.14.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_committer_name: "github-actions"
+          git_committer_email: "actions@users.noreply.github.com"
+          directory: ./cli/
 
   release-gui:
     needs: determine-packages
@@ -113,15 +109,11 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install semantic-release
-        run: |
-          pip install python-semantic-release
-
-      - name: Run semantic release for GUI
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          cd gui
-          semantic-release version
-          semantic-release publish
+      - name: Action | Semantic Version Release for gui
+        id: release_gui
+        uses: python-semantic-release/python-semantic-release@v9.14.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_committer_name: "github-actions"
+          git_committer_email: "actions@users.noreply.github.com"
+          directory: ./gui/

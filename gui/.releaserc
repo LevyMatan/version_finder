@@ -1,0 +1,21 @@
+{
+  "branches": ["main", "develop", "release/*"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/changelog",
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["src/version_finder/__version__.py", "CHANGELOG.md"],
+        "message": "Version: ${nextRelease.version}\n\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": "dist/*"
+      }
+    ]
+  ]
+}

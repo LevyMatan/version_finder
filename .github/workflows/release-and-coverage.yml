@@ -16,9 +16,7 @@ jobs:
       contents: write
 
     steps:
-      # Note: we need to checkout the repository at the workflow sha in case during the workflow
-      # the branch was updated. To keep PSR working with the configured release branches,
-      # we force a checkout of the desired release branch but at the workflow sha HEAD.
+      # Checkout the repository at the workflow sha to ensure PSR works correctly with the configured release branches
       - name: Setup | Checkout Repository at workflow sha
         uses: actions/checkout@v4
         with:
@@ -29,39 +27,33 @@ jobs:
         run: |
           git checkout -B ${{ github.ref_name }} ${{ github.sha }}
 
-      - name: Action | Semantic Version Release
-        id: release
-        # Adjust tag with desired version if applicable.
-        uses: python-semantic-release/python-semantic-release@v9.12.0
+      # Run semantic-release for each package
+      - name: Action | Semantic Version Release for core
+        id: release_core
+        uses: python-semantic-release/python-semantic-release@v9.14.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
+          directory: ./core/
 
-      - name: Build Python packages
-        if: steps.release.outputs.released == 'true'
-        run: |
-            python -m pip install build
-            python -m build
-
-      - name: Publish | Upload to GitHub Release Assets
-        uses: python-semantic-release/publish-action@v9.8.9
-        if: steps.release.outputs.released == 'true'
+      - name: Action | Semantic Version Release for cli
+        id: release_cli
+        uses: python-semantic-release/python-semantic-release@v9.14.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.release.outputs.tag }}
+          git_committer_name: "github-actions"
+          git_committer_email: "actions@users.noreply.github.com"
+          directory: ./cli/
 
-      - name: Install build tools
-        run: |
-          python -m pip install --upgrade pip setuptools wheel twine
-
-      - name: Publish to PyPI
-        if: steps.release.outputs.released == 'true'
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          python -m twine upload dist/*
+      - name: Action | Semantic Version Release for gui
+        id: release_gui
+        uses: python-semantic-release/python-semantic-release@v9.14.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_committer_name: "github-actions"
+          git_committer_email: "actions@users.noreply.github.com"
+          directory: ./gui/
 
   coverage:
     needs: release

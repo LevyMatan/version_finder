@@ -22,11 +22,3 @@ src_dirs = [
     "cli/src",
     "gui/src"
 ]
-
-[tool.setuptools]
-# Define package directories for setuptools
-packages = [
-    { include = "core.src.version_finder", from = "core/src" },
-    { include = "cli.src.version_finder_cli", from = "cli/src" },
-    { include = "gui.src.version_finder_gui", from = "gui/src" }
-]

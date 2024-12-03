@@ -7,7 +7,7 @@
     [
       "@semantic-release/git",
       {
-        "assets": ["src/version_finder/__version__.py", "CHANGELOG.md"],
+        "assets": ["cli/src/version_finder/__version__.py", "cli/CHANGELOG.md"],
         "message": "Version: ${nextRelease.version}\n\n${nextRelease.notes}"
       }
     ],

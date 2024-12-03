@@ -1,14 +1,9 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [tool.semantic_release]
-version_variables = [
-    "core/src/version_finder/__version__.py:__version__",
-    "cli/src/version_finder_cli/__version__.py:__version__",
-    "gui/src/version_finder_gui/__version__.py:__version__"
+version_toml = [
+"core/pyproject.toml:tool.poetry.version",
+"cli/pyproject.toml:tool.poetry.version",
+"gui/pyproject.toml:tool.poetry.version"
 ]
-version_toml = ["pyproject.toml:tool.poetry.version"]
 
 [tool.autopep8]
 max_line_length = 120

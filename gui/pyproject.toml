@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "version-finder-gui"
+description = "Graphical App for version finder"
+version = "8.0.0"  # This will be automatically updated
+package-mode = true
+authors = ["Matan Levy <levymatanlevy@gmail.com>"]
+
+[tool.semantic_release]
+version_variable = "src/version_finder/__version__.py:__version__"
+branch = "main"
+version_pattern = "gui-v{version}"
+commit_version_cli = true
+prerelease_tag = "rc"
+changelog_file = "CHANGELOG.md"
+build_command = "pip install build && python -m build"
+dist_path = "dist/"
+upload_to_pypi = true
+upload_to_release = true

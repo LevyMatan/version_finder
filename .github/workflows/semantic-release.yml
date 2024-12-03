@@ -1,0 +1,127 @@
+name: Semantic Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+
+jobs:
+  determine-packages:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.check-changes.outputs.core }}
+      cli: ${{ steps.check-changes.outputs.cli }}
+      gui: ${{ steps.check-changes.outputs.gui }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          echo "Checking changes in different packages"
+
+          # Check for changes in core package
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^core/'; then
+            echo "core=true" >> $GITHUB_OUTPUT
+          else
+            echo "core=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for changes in CLI package
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^cli/'; then
+            echo "cli=true" >> $GITHUB_OUTPUT
+          else
+            echo "cli=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for changes in GUI package
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^gui/'; then
+            echo "gui=true" >> $GITHUB_OUTPUT
+          else
+            echo "gui=false" >> $GITHUB_OUTPUT
+          fi
+
+  release-core:
+    needs: determine-packages
+    if: needs.determine-packages.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install semantic-release
+        run: |
+          pip install python-semantic-release
+
+      - name: Run semantic release for core
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd core
+          semantic-release version
+          semantic-release publish
+
+  release-cli:
+    needs: determine-packages
+    if: needs.determine-packages.outputs.cli == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install semantic-release
+        run: |
+          pip install python-semantic-release
+
+      - name: Run semantic release for CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd cli
+          semantic-release version
+          semantic-release publish
+
+  release-gui:
+    needs: determine-packages
+    if: needs.determine-packages.outputs.gui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install semantic-release
+        run: |
+          pip install python-semantic-release
+
+      - name: Run semantic release for GUI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd gui
+          semantic-release version
+          semantic-release publish

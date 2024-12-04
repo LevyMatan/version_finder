@@ -56,6 +56,7 @@ def main():
     if args.version:
         from .__version__ import __version__
         print(f"version_finder v{__version__}")
+        return 0
 
     if args.cli:
         call_cli_app(args)

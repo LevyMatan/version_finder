@@ -58,6 +58,7 @@ jobs:
       - name: Install python custom-scope-commit-parser
         run: |
           source .venv/bin/activate
+          pip install wheel  # To avoid the "legacy setup.py install" warning
           pip install ./custom_scope_commit_parser/
           pip show custom-scope-commit-parser
           # Add directory check
@@ -69,7 +70,7 @@ jobs:
           echo "now going to run python -c 'import custom_scope_commit_parser'"
           python -c "import custom_scope_commit_parser"
           echo "Passed !!!!'"
-          cd core && python -c "import custom_scope_commit_parser"
+          # cd core && python -c "import custom_scope_commit_parser"
 
       # Debug core release
       - name: Debug | Pre-core release check
@@ -77,7 +78,9 @@ jobs:
           source .venv/bin/activate
           echo "Entering core directory"
           cd core
+          pip install ../custom_scope_commit_parser/
           ls -la
+          python -c "import custom_scope_commit_parser"
           git log -3 --pretty=format:"%h - %s (%cr)"
           python -c "import custom_scope_commit_parser"
 

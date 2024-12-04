@@ -51,10 +51,12 @@ jobs:
 
       - name: Install python custom-scope-commit-parser
         run: |
-          pip install -e custom_scope_commit_parser
+          pip install custom_scope_commit_parser
           pip show custom-scope-commit-parser
           # Add directory check
           ls -la custom_scope_commit_parser/
+          # test module is calleable
+          cd core && python -c "import custom_scope_commit_parser"
 
       # Debug core release
       - name: Debug | Pre-core release check
@@ -63,6 +65,7 @@ jobs:
           cd core
           ls -la
           git log -3 --pretty=format:"%h - %s (%cr)"
+          python -c "import custom_scope_commit_parser"
 
       - name: Semantic Version Release for core
         env:

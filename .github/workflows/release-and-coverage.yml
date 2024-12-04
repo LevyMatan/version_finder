@@ -16,66 +16,128 @@ jobs:
       contents: write
 
     steps:
-      # Checkout the repository at the workflow sha to ensure PSR works correctly with the configured release branches
+      # Enable debug logging for actions
+      - name: Enable debug logging
+        run: echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
+
       - name: Setup | Checkout Repository at workflow sha
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
 
+      # Add environment inspection
+      - name: Debug | Environment Information
+        run: |
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub SHA: ${{ github.sha }}"
+          echo "GitHub Event Name: ${{ github.event_name }}"
+          echo "Runner OS: ${{ runner.os }}"
+          pwd
+          ls -la
+
       - name: Setup | Force correct release branch on workflow sha
         run: |
           git checkout -B ${{ github.ref_name }} ${{ github.sha }}
+          # Add git status check
+          git status
+          git branch -v
 
-      # Install custom commit parser
+      - name: Setup | Install python-semantic-release
+        run: |
+          pip install python-semantic-release
+          # Add version check
+          python -m pip list | grep semantic-release
+
       - name: Install python custom-scope-commit-parser
         run: |
           pip install -e custom_scope_commit_parser
           pip show custom-scope-commit-parser
+          # Add directory check
+          ls -la custom_scope_commit_parser/
 
-      # Run semantic-release for each package
-      - name: Action | Semantic Version Release for core
-        id: release_core
-        uses: python-semantic-release/python-semantic-release@v9.14.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          directory: ./core/
+      # Debug core release
+      - name: Debug | Pre-core release check
+        run: |
+          echo "Entering core directory"
+          cd core
+          ls -la
+          git log -3 --pretty=format:"%h - %s (%cr)"
 
-      # Release for cli
+      - name: Semantic Version Release for core
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Add debug mode for semantic-release
+          SEMANTIC_RELEASE_DEBUG: true
+        run: |
+          cd core && semantic-release version
+
+      # Debug CLI release
+      - name: Debug | Pre-cli release check
+        run: |
+          echo "Current git status"
+          git status
+          echo "Latest commits"
+          git log -3 --pretty=format:"%h - %s (%cr)"
+
       - name: Pull latest changes for cli
         run: |
           git config user.name "github-actions"
           git config user.email "actions@users.noreply.github.com"
           git fetch --all
           git rebase origin/main
+          # Add rebase status check
+          git status
+          git log -1
 
-      - name: Action | Semantic Version Release for cli
-        id: release_cli
-        uses: python-semantic-release/python-semantic-release@v9.14.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          directory: ./cli/
+      - name: Semantic Version Release for cli
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEMANTIC_RELEASE_DEBUG: true
+        run: |
+          echo "Entering cli directory"
+          cd cli
+          ls -la
+          semantic-release version
 
-      # Release for cli
+      # Debug GUI release
+      - name: Debug | Pre-gui release check
+        run: |
+          echo "Current git status"
+          git status
+          echo "Latest commits"
+          git log -3 --pretty=format:"%h - %s (%cr)"
+
       - name: Pull latest changes for gui
         run: |
           git config user.name "github-actions"
           git config user.email "actions@users.noreply.github.com"
           git fetch --all
           git rebase origin/main
+          # Add rebase status check
+          git status
+          git log -1
 
-      - name: Action | Semantic Version Release for gui
-        id: release_gui
-        uses: python-semantic-release/python-semantic-release@v9.14.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          directory: ./gui/
+      - name: Semantic Version Release for gui
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEMANTIC_RELEASE_DEBUG: true
+        run: |
+          echo "Entering gui directory"
+          cd gui
+          ls -la
+          semantic-release version
+
+      # Final status check
+      - name: Debug | Final Status
+        if: always()
+        run: |
+          echo "Final git status"
+          git status
+          echo "Final directory structure"
+          ls -la
+          echo "Python packages installed"
+          pip list
 
   coverage:
     needs: release

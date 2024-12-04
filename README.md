@@ -22,11 +22,12 @@ You can install Version Finder in 3 ways:
 # Install core library only:
 pip install version-finder-git-based-verions
 # Install core library with GUI:
-pip install version-finder-git-based-verions[gui]
+pip install version-finder-git-based-verions-gui-app
 # Install core library with CLI:
-pip install version-finder-git-based-verions[cli]
+pip install version-finder-git-based-verions-cli
 # Install core library with CLI and GUI:
-pip install version-finder-git-based-verions[cli-gui]
+pip install version-finder-git-based-verions-gui-app
+pip install version-finder-git-based-verions-cli
 # Install core library with CLI, GUI and testing tools:
 pip install version-finder-git-based-verions[all]
 ```
@@ -35,30 +36,12 @@ pip install version-finder-git-based-verions[all]
 
 ### From GitHub Release
 
-Download the latest wheel file from the [releases page](https://github.com/LevyMatan/version_finder/releases/latest) and install with:
-
-Install core library only:
+Download the latest wheel file from the [releases page](https://github.com/LevyMatan/version_finder/releases/latest).
+Make sure you download the wanted flavor (core/cli/gui).
+Install using pip:
 
 ```bash
 pip install version_finder-*.whl
-```
-
-Install core library with CLI:
-
-```bash
-pip install version_finder-*.whl[cli]
-```
-
-Install core library with GUI:
-
-```bash
-pip install version_finder-*.whl[gui]
-```
-
-(**Recomended**) Install core library with CLI and GUI:
-
-```bash
-pip install version_finder-*.whl[cli+gui]
 ```
 
 ### From Source

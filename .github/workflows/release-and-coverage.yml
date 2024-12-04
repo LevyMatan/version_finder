@@ -89,12 +89,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Add debug mode for semantic-release
           SEMANTIC_RELEASE_DEBUG: true
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           source .venv/bin/activate
           which python
           cd core
           which python
           semantic-release version
+          semantic-release publish
+          python -m twine upload dist/*
+
 
       # Debug CLI release
       - name: Debug | Pre-cli release check
@@ -118,12 +123,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEMANTIC_RELEASE_DEBUG: true
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           source .venv/bin/activate
           echo "Entering cli directory"
           cd cli
           ls -la
           semantic-release version
+          semantic-release publish
+          python -m twine upload dist/*
+
 
       # Debug GUI release
       - name: Debug | Pre-gui release check
@@ -147,12 +157,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEMANTIC_RELEASE_DEBUG: true
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           source .venv/bin/activate
           echo "Entering gui directory"
           cd gui
           ls -la
           semantic-release version
+          semantic-release publish
+          python -m twine upload dist/*
 
       # Final status check
       - name: Debug | Final Status

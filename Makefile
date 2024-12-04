@@ -19,6 +19,8 @@ install-dev:
 	pip install -e cli/
 	pip install -e gui/
 
+commit-parser:
+	pip install -e custom_scope_commit_parser/
 
 install:
 	@echo "Choose an installation option:"

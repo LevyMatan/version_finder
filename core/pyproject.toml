@@ -6,7 +6,6 @@ commit_parser = "custom_scope_commit_parser:CustomCommitParserFilterByScopeCore"
 logging_use_named_masks = false
 major_on_zero = true
 allow_zero_version = true
-repo_dir = "/Users/matanlevy/GitHub/version_finder"
 no_git_verify = false
 tag_format = "v{version}"
 build_command = "pip install --upgrade build && python -m build"

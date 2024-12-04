@@ -5,7 +5,11 @@ on:
     tags:
       - 'gui-v*'  # Trigger when a tag starting with "gui-v" is pushed
   workflow_dispatch:
-
+  workflow_run:
+    workflows:
+      - "Release and Coverage"
+    types:
+      - completed
 
 jobs:
   build-and-publish-gui:

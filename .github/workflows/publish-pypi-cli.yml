@@ -5,7 +5,11 @@ on:
     tags:
       - 'cli-v*'  # Trigger when a tag starting with "cli-v" is pushed
   workflow_dispatch:
-
+  workflow_run:
+    workflows:
+      - "Release and Coverage"
+    types:
+      - completed
 
 jobs:
   build-and-publish-cli:

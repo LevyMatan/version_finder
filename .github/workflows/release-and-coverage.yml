@@ -65,7 +65,10 @@ jobs:
           # test module is calleable
           python -m pip list
           python -c "import sys; print(sys.path)"
+          echo "Just finished to import stuff"
+          echo "now going to run python -c 'import custom_scope_commit_parser'"
           python -c "import custom_scope_commit_parser"
+          echo "Passed !!!!'"
           cd core && python -c "import custom_scope_commit_parser"
 
       # Debug core release

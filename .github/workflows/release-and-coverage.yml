@@ -51,6 +51,8 @@ jobs:
         run: |
           python -m venv .venv
           source .venv/bin/activate
+          which python
+          python -m pip install --upgrade pip
 
       - name: Setup | Install python-semantic-release
         run: |
@@ -64,7 +66,7 @@ jobs:
           source .venv/bin/activate
           which python
           python -m pip install wheel  # To avoid the "legacy setup.py install" warning
-          python -m pip install --user ./custom_scope_commit_parser/
+          python -m pip install ./custom_scope_commit_parser/
           python -m pip show custom-scope-commit-parser
           # Add directory check
           ls -la custom_scope_commit_parser/
@@ -75,7 +77,9 @@ jobs:
           echo "now going to run python -c 'import custom_scope_commit_parser'"
           python -c "import custom_scope_commit_parser"
           echo "Passed !!!!'"
-          # cd core && python -c "import custom_scope_commit_parser"
+          cd core
+          which python
+          python -c "import custom_scope_commit_parser"
 
       # Debug core release
       - name: Debug | Pre-core release check

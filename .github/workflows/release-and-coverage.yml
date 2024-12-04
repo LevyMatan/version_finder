@@ -43,6 +43,11 @@ jobs:
           git status
           git branch -v
 
+      - name: Setup | Create python virtual env
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+
       - name: Setup | Install python-semantic-release
         run: |
           pip install python-semantic-release
@@ -51,7 +56,7 @@ jobs:
 
       - name: Install python custom-scope-commit-parser
         run: |
-          pip install custom_scope_commit_parser
+          pip install -e custom_scope_commit_parser/
           pip show custom-scope-commit-parser
           # Add directory check
           ls -la custom_scope_commit_parser/

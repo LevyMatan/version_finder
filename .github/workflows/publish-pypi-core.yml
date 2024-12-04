@@ -3,7 +3,7 @@ name: Publish Core to PyPI
 on:
   push:
     tags:
-      - 'core-v*'  # Trigger when a tag starting with "core-v" is pushed
+      - 'v*'  # Trigger when a tag starting with "v" is pushed
   workflow_dispatch:
 
 

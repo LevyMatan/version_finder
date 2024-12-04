@@ -411,6 +411,10 @@ class VersionFinderCLI:
 def cli_main(args: argparse.Namespace) -> int:
     """Main entry point for the version finder CLI."""
     # Parse arguments
+    if args.version:
+        from .__version__ import __version__
+        print(f"version_finder cli-v{__version__}")
+        return 0
 
     # Setup logging
     log_level = logging.DEBUG if args.verbose else logging.INFO

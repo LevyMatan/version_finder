@@ -58,7 +58,7 @@ jobs:
       - name: Install python custom-scope-commit-parser
         run: |
           source .venv/bin/activate
-          pip install -e custom_scope_commit_parser/
+          pip install ./custom_scope_commit_parser/
           pip show custom-scope-commit-parser
           # Add directory check
           ls -la custom_scope_commit_parser/

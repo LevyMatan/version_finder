@@ -62,8 +62,9 @@ jobs:
       - name: Install python custom-scope-commit-parser
         run: |
           source .venv/bin/activate
+          which python
           python -m pip install wheel  # To avoid the "legacy setup.py install" warning
-          python -m pip install ./custom_scope_commit_parser/
+          python -m pip install --user ./custom_scope_commit_parser/
           python -m pip show custom-scope-commit-parser
           # Add directory check
           ls -la custom_scope_commit_parser/
@@ -80,8 +81,10 @@ jobs:
       - name: Debug | Pre-core release check
         run: |
           source .venv/bin/activate
+          which python
           echo "Entering core directory"
           cd core
+          which python
           python -m pip install ../custom_scope_commit_parser/
           ls -la
           python -c "import custom_scope_commit_parser"
@@ -95,7 +98,10 @@ jobs:
           SEMANTIC_RELEASE_DEBUG: true
         run: |
           source .venv/bin/activate
-          cd core && semantic-release version
+          which python
+          cd core
+          which python
+          semantic-release version
 
       # Debug CLI release
       - name: Debug | Pre-cli release check

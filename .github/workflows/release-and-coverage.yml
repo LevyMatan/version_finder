@@ -63,107 +63,111 @@ jobs:
 
       - name: Install python custom-scope-commit-parser
         run: |
+          # Step 1: Activate the virtual environment
           source .venv/bin/activate
-          which python
-          python -m pip install wheel  # To avoid the "legacy setup.py install" warning
+
+          # Step 2: Ensure the correct Python interpreter
+          which python  # This should output: /home/runner/work/version_finder/version_finder/.venv/bin/python
+
+          # Step 3: Install the module
+          python -m pip install wheel  # Avoid legacy setup warning
           python -m pip install ./custom_scope_commit_parser/
+
+          # Step 4: Verify installation
           python -m pip show custom-scope-commit-parser
-          # Add directory check
-          ls -la custom_scope_commit_parser/
-          # test module is calleable
-          python -m pip list
           python -c "import sys; print(sys.path)"
-          echo "Just finished to import stuff"
-          echo "now going to run python -c 'import custom_scope_commit_parser'"
-          python -c "import custom_scope_commit_parser"
-          echo "Passed !!!!'"
+          python -c "import custom_scope_commit_parser"  # Ensure it imports without error
+
+          # Step 5: Perform any additional testing
           cd core
-          which python
+          echo "Entered 'core' directory"
+          python -c "import sys; print(sys.path)"
           python -c "import custom_scope_commit_parser"
 
-      # Debug core release
-      - name: Debug | Pre-core release check
-        run: |
-          source .venv/bin/activate
-          which python
-          echo "Entering core directory"
-          cd core
-          which python
-          python -m pip install ../custom_scope_commit_parser/
-          ls -la
-          python -c "import custom_scope_commit_parser"
-          git log -3 --pretty=format:"%h - %s (%cr)"
-          python -c "import custom_scope_commit_parser"
 
-      - name: Semantic Version Release for core
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Add debug mode for semantic-release
-          SEMANTIC_RELEASE_DEBUG: true
-        run: |
-          source .venv/bin/activate
-          which python
-          cd core
-          which python
-          semantic-release version
+      # # Debug core release
+      # - name: Debug | Pre-core release check
+      #   run: |
+      #     source .venv/bin/activate
+      #     which python
+      #     echo "Entering core directory"
+      #     cd core
+      #     which python
+      #     python -m pip install ../custom_scope_commit_parser/
+      #     ls -la
+      #     python -c "import custom_scope_commit_parser"
+      #     git log -3 --pretty=format:"%h - %s (%cr)"
+      #     python -c "import custom_scope_commit_parser"
 
-      # Debug CLI release
-      - name: Debug | Pre-cli release check
-        run: |
-          echo "Current git status"
-          git status
-          echo "Latest commits"
-          git log -3 --pretty=format:"%h - %s (%cr)"
+      # - name: Semantic Version Release for core
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     # Add debug mode for semantic-release
+      #     SEMANTIC_RELEASE_DEBUG: true
+      #   run: |
+      #     source .venv/bin/activate
+      #     which python
+      #     cd core
+      #     which python
+      #     semantic-release version
 
-      - name: Pull latest changes for cli
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@users.noreply.github.com"
-          git fetch --all
-          git rebase origin/main
-          # Add rebase status check
-          git status
-          git log -1
+      # # Debug CLI release
+      # - name: Debug | Pre-cli release check
+      #   run: |
+      #     echo "Current git status"
+      #     git status
+      #     echo "Latest commits"
+      #     git log -3 --pretty=format:"%h - %s (%cr)"
 
-      - name: Semantic Version Release for cli
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SEMANTIC_RELEASE_DEBUG: true
-        run: |
-          source .venv/bin/activate
-          echo "Entering cli directory"
-          cd cli
-          ls -la
-          semantic-release version
+      # - name: Pull latest changes for cli
+      #   run: |
+      #     git config user.name "github-actions"
+      #     git config user.email "actions@users.noreply.github.com"
+      #     git fetch --all
+      #     git rebase origin/main
+      #     # Add rebase status check
+      #     git status
+      #     git log -1
 
-      # Debug GUI release
-      - name: Debug | Pre-gui release check
-        run: |
-          echo "Current git status"
-          git status
-          echo "Latest commits"
-          git log -3 --pretty=format:"%h - %s (%cr)"
+      # - name: Semantic Version Release for cli
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     SEMANTIC_RELEASE_DEBUG: true
+      #   run: |
+      #     source .venv/bin/activate
+      #     echo "Entering cli directory"
+      #     cd cli
+      #     ls -la
+      #     semantic-release version
 
-      - name: Pull latest changes for gui
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@users.noreply.github.com"
-          git fetch --all
-          git rebase origin/main
-          # Add rebase status check
-          git status
-          git log -1
+      # # Debug GUI release
+      # - name: Debug | Pre-gui release check
+      #   run: |
+      #     echo "Current git status"
+      #     git status
+      #     echo "Latest commits"
+      #     git log -3 --pretty=format:"%h - %s (%cr)"
 
-      - name: Semantic Version Release for gui
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SEMANTIC_RELEASE_DEBUG: true
-        run: |
-          source .venv/bin/activate
-          echo "Entering gui directory"
-          cd gui
-          ls -la
-          semantic-release version
+      # - name: Pull latest changes for gui
+      #   run: |
+      #     git config user.name "github-actions"
+      #     git config user.email "actions@users.noreply.github.com"
+      #     git fetch --all
+      #     git rebase origin/main
+      #     # Add rebase status check
+      #     git status
+      #     git log -1
+
+      # - name: Semantic Version Release for gui
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     SEMANTIC_RELEASE_DEBUG: true
+      #   run: |
+      #     source .venv/bin/activate
+      #     echo "Entering gui directory"
+      #     cd gui
+      #     ls -la
+      #     semantic-release version
 
       # Final status check
       - name: Debug | Final Status

@@ -47,19 +47,13 @@ jobs:
           git status
           git branch -v
 
-      - name: Setup | Create python virtual env
+      - name: Setup | Create python virtual env and install dependencies
         run: |
           python -m venv .venv
           source .venv/bin/activate
           which python
           python -m pip install --upgrade pip
-
-      - name: Setup | Install python-semantic-release
-        run: |
-          source .venv/bin/activate
-          python -m pip install python-semantic-release
-          # Add version check
-          python -m pip list | grep semantic-release
+          python -m pip install --upgrade pip setuptools wheel twine build python-semantic-release
 
       - name: Install python custom-scope-commit-parser
         run: |

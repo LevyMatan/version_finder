@@ -1,0 +1,477 @@
+From bda238ad8660fce99e50ad27917e1bab4a9dfb1f Mon Sep 17 00:00:00 2001
+From: Matan Levy <levymatanlevy@gmail.com>
+Date: Wed, 4 Dec 2024 11:16:49 +0200
+Subject: [PATCH] fix(core-gui-cli-versioning): update all the porject file
+ configurations
+
+Updated workflows
+Add custom commit parser
+---
+ .github/workflows/publish-pypi-core.yml       |  2 +-
+ .github/workflows/release-and-coverage.yml    | 22 ++++++
+ .github/workflows/semantic-release.yml        | 39 ----------
+ cli/pyproject.toml                            | 73 ++++++++++++++----
+ core/pyproject.toml                           | 75 ++++++++++++++----
+ custom_scope_commit_parser/__init__.py        |  8 ++
+ custom_scope_commit_parser/setup.py           | 20 +++++
+ .../src/core_scope_parser.py                  | 42 ++++++++++
+ gui/pyproject.toml                            | 73 ++++++++++++++----
+ setup.cfg                                     |  2 -
+ 11 files changed, 277 insertions(+), 155 deletions(-)
+ delete mode 100644 .github/workflows/semantic-release.yml
+ create mode 100644 custom_scope_commit_parser/__init__.py
+ create mode 100644 custom_scope_commit_parser/setup.py
+ create mode 100644 custom_scope_commit_parser/src/core_scope_parser.py
+ delete mode 100644 setup.cfg
+
+diff --git a/.github/workflows/publish-pypi-core.yml b/.github/workflows/publish-pypi-core.yml
+index 35d92f6..48fd5b8 100644
+--- a/.github/workflows/publish-pypi-core.yml
++++ b/.github/workflows/publish-pypi-core.yml
+@@ -3,7 +3,7 @@ name: Publish Core to PyPI
+ on:
+   push:
+     tags:
+-      - 'core-v*'  # Trigger when a tag starting with "core-v" is pushed
++      - 'v*'  # Trigger when a tag starting with "v" is pushed
+   workflow_dispatch:
+
+
+diff --git a/.github/workflows/release-and-coverage.yml b/.github/workflows/release-and-coverage.yml
+index 4bf1183..8936a58 100644
+--- a/.github/workflows/release-and-coverage.yml
++++ b/.github/workflows/release-and-coverage.yml
+@@ -27,6 +27,12 @@ jobs:
+         run: |
+           git checkout -B ${{ github.ref_name }} ${{ github.sha }}
+
++      # Install custom commit parser
++      - name: Install python custom-scope-commit-parser
++        run: |
++          pip install -e custom_scope_commit_parser
++          pip show custom-scope-commit-parser
++
+       # Run semantic-release for each package
+       - name: Action | Semantic Version Release for core
+         id: release_core
+@@ -37,6 +43,14 @@ jobs:
+           git_committer_email: "actions@users.noreply.github.com"
+           directory: ./core/
+
++      # Release for cli
++      - name: Pull latest changes for cli
++        run: |
++          git config user.name "github-actions"
++          git config user.email "actions@users.noreply.github.com"
++          git fetch --all
++          git rebase origin/main
++
+       - name: Action | Semantic Version Release for cli
+         id: release_cli
+         uses: python-semantic-release/python-semantic-release@v9.14.0
+@@ -46,6 +60,14 @@ jobs:
+           git_committer_email: "actions@users.noreply.github.com"
+           directory: ./cli/
+
++      # Release for cli
++      - name: Pull latest changes for gui
++        run: |
++          git config user.name "github-actions"
++          git config user.email "actions@users.noreply.github.com"
++          git fetch --all
++          git rebase origin/main
++
+       - name: Action | Semantic Version Release for gui
+         id: release_gui
+         uses: python-semantic-release/python-semantic-release@v9.14.0
+diff --git a/.github/workflows/semantic-release.yml b/.github/workflows/semantic-release.yml
+deleted file mode 100644
+index ab1acf0..0000000
+--- a/.github/workflows/semantic-release.yml
++++ /dev/null
+@@ -1,39 +0,0 @@
+-name: Semantic Release
+-
+-on:
+-  push:
+-    branches:
+-      - main
+-  workflow_dispatch:
+-
+-jobs:
+-  release:
+-    runs-on: ubuntu-latest
+-    concurrency: release
+-    permissions:
+-      id-token: write
+-      contents: write
+-
+-    steps:
+-    - uses: actions/checkout@v3
+-      with:
+-        fetch-depth: 0
+-
+-    - name: Setup Python
+-      uses: actions/setup-python@v4
+-      with:
+-        python-version: '3.x'
+-
+-    - name: Install dependencies
+-      run: |
+-        python -m pip install --upgrade pip
+-        pip install python-semantic-release build
+-
+-    - name: Python Semantic Release
+-      env:
+-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+-      run: |
+-        git config --global user.name "github-actions"
+-        git config --global user.email "action@github.com"
+-        semantic-release --multiproject version
+-        semantic-release --multiproject publish
+\ No newline at end of file
+diff --git a/cli/pyproject.toml b/cli/pyproject.toml
+index 389e36e..bff6b8b 100644
+--- a/cli/pyproject.toml
++++ b/cli/pyproject.toml
+@@ -1,18 +1,59 @@
+-[tool.poetry]
+-name = "version-finder-cli"
+-description = "Command line interface for version finder"
+-version = "8.0.1"  # This will be automatically updated
+-package-mode = true
+-authors = ["Matan Levy <levymatanlevy@gmail.com>"]
+-
+ [tool.semantic_release]
+-version_variable = "src/version_finder/__version__.py:__version__"
+-branch = "main"
+-version_pattern = "cli-v{version}"
+-commit_version_cli = true
+-prerelease_tag = "rc"
++assets = ["CHANGELOG.md"]
++build_command_env = []
++commit_message = "chore(release-cli): {version}\n\nAutomatically generated by python-semantic-release"
++commit_parser = "custom_scope_commit_parser:CustomCommitParserFilterByScopeCli"
++logging_use_named_masks = false
++major_on_zero = true
++allow_zero_version = true
++no_git_verify = false
++tag_format = "cli-v{version}"
++build_command = "pip install --upgrade build && python -m build"
++version_variables = [
++    "src/version_finder_cli/__version__.py:__version__",
++]
++
++[tool.semantic_release.branches.main]
++match = "(main|master)"
++prerelease_token = "rc"
++prerelease = false
++
++[tool.semantic_release.changelog.default_templates]
+ changelog_file = "CHANGELOG.md"
+-build_command = "pip install build && python -m build"
+-dist_path = "dist/"
+-upload_to_pypi = true
+-upload_to_release = true
+\ No newline at end of file
++output_format = "md"
++mask_initial_release = false
++
++[tool.semantic_release.changelog.environment]
++block_start_string = "{%"
++block_end_string = "%}"
++variable_start_string = "{{"
++variable_end_string = "}}"
++comment_start_string = "{#"
++comment_end_string = "#}"
++trim_blocks = false
++lstrip_blocks = false
++newline_sequence = "\n"
++keep_trailing_newline = false
++extensions = []
++autoescape = false
++
++[tool.semantic_release.commit_author]
++env = "GIT_COMMIT_AUTHOR"
++default = "semantic-release <semantic-release>"
++
++[tool.semantic_release.commit_parser_options]
++minor_tags = ["feat"]
++patch_tags = ["fix", "perf"]
++other_allowed_tags = ["build", "chore", "ci", "docs", "style", "refactor", "test"]
++allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
++default_bump_level = 0
++
++[tool.semantic_release.remote]
++name = "origin"
++type = "github"
++ignore_token_for_push = false
++insecure = false
++
++[tool.semantic_release.publish]
++dist_glob_patterns = ["dist/*"]
++upload_to_vcs_release = true
+diff --git a/core/pyproject.toml b/core/pyproject.toml
+index 56ca570..b70f982 100644
+--- a/core/pyproject.toml
++++ b/core/pyproject.toml
+@@ -1,18 +1,61 @@
+-[tool.poetry]
+-name = "version-finder-core"
+-description = "Core library for version finder"
+-version = "8.0.0"  # This will be automatically updated
+-package-mode = true
+-authors = ["Matan Levy <levymatanlevy@gmail.com>"]
+-
+ [tool.semantic_release]
+-version_variable = "core/src/version_finder/__version__.py:__version__"
+-branch = "main"
+-version_pattern = "core-v{version}"
+-commit_version_cli = true
+-prerelease_tag = "rc"
++assets = ["CHANGELOG.md"]
++build_command_env = []
++commit_message = "chore(release-core): {version}\n\nAutomatically generated by python-semantic-release"
++commit_parser = "custom_scope_commit_parser:CustomCommitParserFilterByScopeCore"
++logging_use_named_masks = false
++major_on_zero = true
++allow_zero_version = true
++repo_dir = "/Users/matanlevy/GitHub/version_finder"
++no_git_verify = false
++tag_format = "v{version}"
++build_command = "pip install --upgrade build && python -m build"
++publish_command = "twine upload dist/*"
++version_variables = [
++    "src/version_finder/__version__.py:__version__",
++]
++
++[tool.semantic_release.branches.main]
++match = "(main|master)"
++prerelease_token = "rc"
++prerelease = false
++
++[tool.semantic_release.changelog.default_templates]
+ changelog_file = "CHANGELOG.md"
+-build_command = "pip install build && python -m build"
+-dist_path = "dist/"
+-upload_to_pypi = true
+-upload_to_release = true
++output_format = "md"
++mask_initial_release = false
++
++[tool.semantic_release.changelog.environment]
++block_start_string = "{%"
++block_end_string = "%}"
++variable_start_string = "{{"
++variable_end_string = "}}"
++comment_start_string = "{#"
++comment_end_string = "#}"
++trim_blocks = false
++lstrip_blocks = false
++newline_sequence = "\n"
++keep_trailing_newline = false
++extensions = []
++autoescape = false
++
++[tool.semantic_release.commit_author]
++env = "GIT_COMMIT_AUTHOR"
++default = "semantic-release <semantic-release>"
++
++[tool.semantic_release.commit_parser_options]
++minor_tags = ["feat"]
++patch_tags = ["fix", "perf"]
++other_allowed_tags = ["build", "chore", "ci", "docs", "style", "refactor", "test"]
++allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
++default_bump_level = 0
++
++[tool.semantic_release.remote]
++name = "origin"
++type = "github"
++ignore_token_for_push = false
++insecure = false
++
++[tool.semantic_release.publish]
++dist_glob_patterns = ["dist/*"]
++upload_to_vcs_release = true
+diff --git a/custom_scope_commit_parser/__init__.py b/custom_scope_commit_parser/__init__.py
+new file mode 100644
+index 0000000..414c77c
+--- /dev/null
++++ b/custom_scope_commit_parser/__init__.py
+@@ -0,0 +1,8 @@
++from typing import List
++from .src.core_scope_parser import CustomCommitParserFilterByScopeCore, CustomCommitParserFilterByScopeGui, CustomCommitParserFilterByScopeCli
++
++__all__: List[str] = [
++    'CustomCommitParserFilterByScopeCore',
++    'CustomCommitParserFilterByScopeCli',
++    'CustomCommitParserFilterByScopeGui',
++]
+\ No newline at end of file
+diff --git a/custom_scope_commit_parser/setup.py b/custom_scope_commit_parser/setup.py
+new file mode 100644
+index 0000000..d45c48e
+--- /dev/null
++++ b/custom_scope_commit_parser/setup.py
+@@ -0,0 +1,20 @@
++"""
++setup.py for version_finder
++This file is used to package and distribute the version_finder module.
++"""
++import os
++from setuptools import setup, find_packages
++
++setup(
++    name="custom-scope-commit-parser",
++    version="1.0.0",
++    description="Custom Commit Parser: to fillter by scope",
++    author="Matan Levy",
++    author_email="levymatanlevy@gmail.com",
++    url="https://github.com/LevyMatan/version_finder",
++    packages=find_packages(where="."),
++    package_dir={"": "src"},
++    include_package_data=True,
++    license="MIT",  # License information
++    python_requires=">=3.7",
++)
+diff --git a/custom_scope_commit_parser/src/core_scope_parser.py b/custom_scope_commit_parser/src/core_scope_parser.py
+new file mode 100644
+index 0000000..74c4d90
+--- /dev/null
++++ b/custom_scope_commit_parser/src/core_scope_parser.py
+@@ -0,0 +1,42 @@
++# core/parsers/core_scope_parser.py
++from semantic_release.commit_parser import AngularCommitParser
++from semantic_release.enums import LevelBump
++from semantic_release.commit_parser.token import ParsedMessageResult
++
++class CustomCommitParserFilterByScopeCore(AngularCommitParser):
++    def parse_message(self, message: str) -> ParsedMessageResult | None:
++        parsed = super().parse_message(message)
++        if parsed is None:
++            return None
++
++        # Only change version level if scope is not 'core'
++        if parsed.scope and "core" not in parsed.scope:
++            parsed = parsed._replace(bump=LevelBump.NO_RELEASE)
++
++        return parsed
++
++
++class CustomCommitParserFilterByScopeGui(AngularCommitParser):
++    def parse_message(self, message: str) -> ParsedMessageResult | None:
++        parsed = super().parse_message(message)
++        if parsed is None:
++            return None
++
++        # Only change version level if scope is not 'core'
++        if parsed.scope and "gui" not in parsed.scope:
++            parsed = parsed._replace(bump=LevelBump.NO_RELEASE)
++
++        return parsed
++
++
++class CustomCommitParserFilterByScopeCli(AngularCommitParser):
++    def parse_message(self, message: str) -> ParsedMessageResult | None:
++        parsed = super().parse_message(message)
++        if parsed is None:
++            return None
++
++        # Only change version level if scope is not 'core'
++        if parsed.scope and "cli" not in parsed.scope:
++            parsed = parsed._replace(bump=LevelBump.NO_RELEASE)
++
++        return parsed
+\ No newline at end of file
+diff --git a/gui/pyproject.toml b/gui/pyproject.toml
+index 388e107..a80206f 100644
+--- a/gui/pyproject.toml
++++ b/gui/pyproject.toml
+@@ -1,18 +1,59 @@
+-[tool.poetry]
+-name = "version-finder-gui"
+-description = "Graphical App for version finder"
+-version = "8.0.0"  # This will be automatically updated
+-package-mode = true
+-authors = ["Matan Levy <levymatanlevy@gmail.com>"]
+-
+ [tool.semantic_release]
+-version_variable = "gui/src/version_finder_gui/__version__.py:__version__"
+-branch = "main"
+-version_pattern = "gui-v{version}"
+-commit_version_cli = true
+-prerelease_tag = "rc"
++assets = ["CHANGELOG.md"]
++build_command_env = []
++commit_message = "chore(release-gui): {version}\n\nAutomatically generated by python-semantic-release"
++commit_parser = "custom_scope_commit_parser:CustomCommitParserFilterByScopeGui"
++logging_use_named_masks = false
++major_on_zero = true
++allow_zero_version = true
++no_git_verify = false
++tag_format = "gui-v{version}"
++build_command = "pip install --upgrade build && python -m build"
++version_variables = [
++    "src/version_finder_gui/__version__.py:__version__",
++]
++
++[tool.semantic_release.branches.main]
++match = "(main|master)"
++prerelease_token = "rc"
++prerelease = false
++
++[tool.semantic_release.changelog.default_templates]
+ changelog_file = "CHANGELOG.md"
+-build_command = "pip install build && python -m build"
+-dist_path = "dist/"
+-upload_to_pypi = true
+-upload_to_release = true
+\ No newline at end of file
++output_format = "md"
++mask_initial_release = false
++
++[tool.semantic_release.changelog.environment]
++block_start_string = "{%"
++block_end_string = "%}"
++variable_start_string = "{{"
++variable_end_string = "}}"
++comment_start_string = "{#"
++comment_end_string = "#}"
++trim_blocks = false
++lstrip_blocks = false
++newline_sequence = "\n"
++keep_trailing_newline = false
++extensions = []
++autoescape = false
++
++[tool.semantic_release.commit_author]
++env = "GIT_COMMIT_AUTHOR"
++default = "semantic-release <semantic-release>"
++
++[tool.semantic_release.commit_parser_options]
++minor_tags = ["feat"]
++patch_tags = ["fix", "perf"]
++other_allowed_tags = ["build", "chore", "ci", "docs", "style", "refactor", "test"]
++allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
++default_bump_level = 0
++
++[tool.semantic_release.remote]
++name = "origin"
++type = "github"
++ignore_token_for_push = false
++insecure = false
++
++[tool.semantic_release.publish]
++dist_glob_patterns = ["dist/*"]
++upload_to_vcs_release = true
+diff --git a/setup.cfg b/setup.cfg
+deleted file mode 100644
+index 0f73cd2..0000000
+--- a/setup.cfg
++++ /dev/null
+@@ -1,2 +0,0 @@
+-[options.package_data]
+-version_finder = src/version_finder_gui/assets/icon.png
+\ No newline at end of file
+--
+2.41.0

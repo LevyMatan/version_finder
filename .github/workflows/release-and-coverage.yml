@@ -64,6 +64,8 @@ jobs:
           ls -la custom_scope_commit_parser/
           # test module is calleable
           python -m pip list
+          python -c "import sys; print(sys.path)"
+          python -c "import custom_scope_commit_parser"
           cd core && python -c "import custom_scope_commit_parser"
 
       # Debug core release

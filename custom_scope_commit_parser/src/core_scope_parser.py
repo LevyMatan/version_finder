@@ -3,6 +3,7 @@ from semantic_release.commit_parser import AngularCommitParser
 from semantic_release.enums import LevelBump
 from semantic_release.commit_parser.token import ParsedMessageResult
 
+
 class CustomCommitParserFilterByScopeCore(AngularCommitParser):
     def parse_message(self, message: str) -> ParsedMessageResult | None:
         parsed = super().parse_message(message)

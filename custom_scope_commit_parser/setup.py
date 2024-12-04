@@ -12,7 +12,7 @@ setup(
     author="Matan Levy",
     author_email="levymatanlevy@gmail.com",
     url="https://github.com/LevyMatan/version_finder",
-    packages=find_packages(where="."),
+    packages=find_packages(where='src'),
     package_dir={"": "src"},
     include_package_data=True,
     license="MIT",  # License information

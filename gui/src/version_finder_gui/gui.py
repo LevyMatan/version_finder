@@ -637,6 +637,8 @@ class VersionFinderGUI(ctk.CTk):
 
 def gui_main(args: argparse.Namespace) -> int:
     if args.version:
+        from .__version__ import __version__
+        print(f"version_finder gui-v{__version__}")
         return 0
 
     log_level = logging.DEBUG if args.verbose else logging.INFO

@@ -38,7 +38,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.16'
+          python-version: '3.13'
 
       - name: Setup | Force correct release branch on workflow sha
         run: |

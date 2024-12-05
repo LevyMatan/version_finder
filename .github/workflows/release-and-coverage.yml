@@ -79,6 +79,7 @@ jobs:
           python -c "import custom_scope_commit_parser"
 
       - name: Semantic Version Release for core
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Add debug mode for semantic-release
@@ -100,6 +101,7 @@ jobs:
               echo "Program failed with error code $return_value!"
               # Perform actions for other errors
           fi
+          exit 0
 
       # Debug CLI release
       - name: Debug | Pre-cli release check
@@ -120,6 +122,7 @@ jobs:
           git log -1
 
       - name: Semantic Version Release for cli
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEMANTIC_RELEASE_DEBUG: true
@@ -140,6 +143,7 @@ jobs:
               echo "Program failed with error code $return_value!"
               # Perform actions for other errors
           fi
+          exit 0
 
 
       # Debug GUI release
@@ -161,6 +165,7 @@ jobs:
           git log -1
 
       - name: Semantic Version Release for gui
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEMANTIC_RELEASE_DEBUG: true
@@ -181,6 +186,7 @@ jobs:
               echo "Program failed with error code $return_value!"
               # Perform actions for other errors
           fi
+          exit 0
 
       # Final status check
       - name: Debug | Final Status

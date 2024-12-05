@@ -90,10 +90,16 @@ jobs:
           which python
           cd core
           which python
-          semantic-release version
-          semantic-release publish
-          python -m twine upload dist/*
-
+          semantic-release --strict version
+          return_code=$?
+          if [ $return_code -e 0 ]; then
+              echo "Semantic release succeeded"
+              semantic-release publish
+              python -m twine upload dist/*
+          else
+              echo "Program failed with error code $return_value!"
+              # Perform actions for other errors
+          fi
 
       # Debug CLI release
       - name: Debug | Pre-cli release check
@@ -124,9 +130,16 @@ jobs:
           echo "Entering cli directory"
           cd cli
           ls -la
-          semantic-release version
-          semantic-release publish
-          python -m twine upload dist/*
+          semantic-release --strict version
+          return_code=$?
+          if [ $return_code -e 0 ]; then
+              echo "Semantic release succeeded"
+              semantic-release publish
+              python -m twine upload dist/*
+          else
+              echo "Program failed with error code $return_value!"
+              # Perform actions for other errors
+          fi
 
 
       # Debug GUI release
@@ -158,9 +171,16 @@ jobs:
           echo "Entering gui directory"
           cd gui
           ls -la
-          semantic-release version
-          semantic-release publish
-          python -m twine upload dist/*
+          semantic-release --strict version
+          return_code=$?
+          if [ $return_code -e 0 ]; then
+              echo "Semantic release succeeded"
+              semantic-release publish
+              python -m twine upload dist/*
+          else
+              echo "Program failed with error code $return_value!"
+              # Perform actions for other errors
+          fi
 
       # Final status check
       - name: Debug | Final Status

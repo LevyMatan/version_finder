@@ -13,8 +13,8 @@ import os
 import re
 import time
 from typing import List, Optional, Dict, Callable
-from .protocols import LoggerProtocol, NullLogger
 from .git_executer import GitCommandExecutor, GitConfig, GitCommandError
+from .logger import setup_logger
 
 
 class GitError(Exception):
@@ -191,22 +191,20 @@ class VersionFinder:
 
     def __init__(self,
                  path: str = '',
-                 config: Optional[GitConfig] = None,
-                 logger: Optional[LoggerProtocol] = None) -> None:
+                 config: Optional[GitConfig] = None) -> None:
         """
         Initialize the VersionFinder with a repository path and configuration.
 
         Args:
             path: Path to the git repository. Uses current directory if None.
             config: Configuration settings for git operations.
-            logger: Logger instance for logging operations.
         """
         self.config = config or GitConfig()
         self.repository_path = Path(path or os.getcwd()).resolve()
-        self.logger = logger or NullLogger()  # Use NullLogger if no logger provided
+        self.logger = setup_logger()
         self.updated_branch = None
         try:
-            self._git = GitCommandExecutor(self.repository_path, self.config, self.logger)
+            self._git = GitCommandExecutor(self.repository_path, self.config)
         except GitCommandError as e:
             self.logger.error(f"Error: {e}")
             raise GitNotInstalledError(e)
@@ -383,7 +381,6 @@ class VersionFinder:
         except GitCommandError as e:
             self.logger.error(f"Failed to get current branch: {e}")
         return current_branch
-
 
     def has_branch(self, branch: str) -> bool:
         """Check if a branch exists."""

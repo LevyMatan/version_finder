@@ -2,7 +2,6 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
-import logging
 from typing import Any
 from ..src.version_finder import (
     VersionFinder,
@@ -18,7 +17,7 @@ from ..src.version_finder import (
     GitConfig
 )
 
-debug_logger = setup_logger(__name__, level=logging.DEBUG)
+debug_logger = setup_logger(verbose=True)
 
 
 class TestGitConfig:
@@ -103,7 +102,7 @@ class TestVersionFinder:
         os.system(f"rm -rf {temp_dir}")
 
     def test_init_valid_repository(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         print(f"Type of finder.config: {type(finder.config)}")
         print(f"Type of GitConfig: {type(GitConfig)}")
         print(f"GitConfig MRO: {GitConfig.__mro__}")
@@ -116,31 +115,31 @@ class TestVersionFinder:
                 VersionFinder(path=temp_dir)
 
     def test_list_branches(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         branches = finder.list_branches()
         assert 'main' in branches or 'master' in branches
         assert 'dev' in branches
         assert 'feature' in branches
 
     def test_has_branch(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         assert finder.has_branch('dev')
         assert not finder.has_branch('nonexistent-branch')
 
     def test_update_repository_valid_branch(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         finder.update_repository('dev')
         # Verify we're on dev branch
         result = os.popen('git branch --show-current').read().strip()
         assert result == 'dev'
 
     def test_update_repository_invalid_branch(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         with pytest.raises(InvalidBranchError):
             finder.update_repository('nonexistent-branch')
 
     def test_get_current_branch(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
 
         # Test getting current branch on main
         current_branch = finder.get_current_branch()
@@ -164,7 +163,7 @@ class TestVersionFinder:
         assert current_branch is None
 
     def test_extract_version_from_message(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
 
         # Test various version formats
         test_cases = [
@@ -265,7 +264,7 @@ class TestVersionFinder:
             f.write("modified content")
 
         with pytest.raises(GitRepositoryNotClean):
-            VersionFinder(path=test_repo, logger=debug_logger)
+            VersionFinder(path=test_repo)
 
     def test_custom_config(self, test_repo: str):
         config = GitConfig(
@@ -326,7 +325,7 @@ class TestVersionFinder:
     def test_list_submodules_empty(self, test_repo: str):
         # This test verifies that the VersionFinder can correctly handle the case where there are no submodules
         # It uses the test_repo fixture which creates a test repo without any submodules
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         # Call list_submodules() to retrieve list of submodules in the repository
         submodules = finder.list_submodules()
         # Verify that the list of submodules is empty
@@ -335,7 +334,7 @@ class TestVersionFinder:
     def test_list_submodules_invalid_repo(self, test_repo: str):
         # This test verifies that the VersionFinder can correctly handle the case where the repository is invalid
         # It uses the test_repo fixture which creates a test repo without any submodules
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         # Call list_submodules() to retrieve list of submodules in the repository
         submodules = finder.list_submodules()
         # Verify that the list of submodules is empty
@@ -381,7 +380,7 @@ class TestVersionFinder:
         assert commits[0] == os.popen('git rev-parse HEAD').read().strip()
 
     def test_find_commits_by_text_basic(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
 
         # Create test commits with specific text
@@ -400,7 +399,7 @@ class TestVersionFinder:
         assert second_commit in commit_shas
 
     def test_find_commits_by_text_case_insensitive(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
 
         os.chdir(test_repo)
@@ -412,7 +411,7 @@ class TestVersionFinder:
         assert commit_hash in commits[0].sha
 
     def test_find_commits_by_text_in_submodule(self, repo_with_submodule: Any):
-        finder = VersionFinder(path=repo_with_submodule, logger=debug_logger)
+        finder = VersionFinder(path=repo_with_submodule)
         finder.update_repository('main')
 
         # Add commit in submodule
@@ -425,21 +424,21 @@ class TestVersionFinder:
         assert submodule_commit == commits[0].sha
 
     def test_find_commits_by_text_no_matches(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
 
         commits = finder.find_commits_by_text("NonexistentText")
         assert len(commits) == 0
 
     def test_find_commits_by_text_invalid_submodule(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
 
         with pytest.raises(InvalidSubmoduleError):
             finder.find_commits_by_text("test", submodule="nonexistent-submodule")
 
     def test_find_commits_by_text_repository_not_ready(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         # Don't call update_repository to test not ready state
 
         with pytest.raises(RepositoryNotTaskReady):
@@ -509,7 +508,7 @@ class TestVersionFinder:
             finder.get_commits_between_versions('2024_01', '2024_02')
 
     def test_get_commit_info_basic(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         os.chdir(test_repo)
         os.system("git commit -m 'Version: 2024_01' --allow-empty")
         commit_sha = os.popen('git rev-parse HEAD').read().strip()
@@ -523,7 +522,7 @@ class TestVersionFinder:
         assert commit_info.author == 'Test User'
 
     def test_get_commit_info_with_multiline_message(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         os.chdir(test_repo)
         message = '''Version: 2024_02
 
@@ -540,7 +539,7 @@ class TestVersionFinder:
         assert 'detailed commit message' in commit_info.message
 
     def test_get_commit_info_no_version(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         os.chdir(test_repo)
         os.system("git commit -m 'Regular commit without version' --allow-empty")
         commit_sha = os.popen('git rev-parse HEAD').read().strip()
@@ -552,7 +551,7 @@ class TestVersionFinder:
         assert commit_info.version is None
 
     def test_get_commit_info_with_different_version_formats(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         os.chdir(test_repo)
 
         test_cases = [
@@ -570,13 +569,13 @@ class TestVersionFinder:
             assert commit_info.version == expected_version
 
     def test_get_commit_info_invalid_commit(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         finder.update_repository('main')
         with pytest.raises(InvalidCommitError):
             finder.get_commit_info("nonexistent-commit-sha")
 
     def test_get_commit_info_not_ready(self, test_repo: str):
-        finder = VersionFinder(path=test_repo, logger=debug_logger)
+        finder = VersionFinder(path=test_repo)
         # Don't call update_repository to test not ready state
         with pytest.raises(RepositoryNotTaskReady):
             finder.get_commit_info("nonexistent-commit-sha")

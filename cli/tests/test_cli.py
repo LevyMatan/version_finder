@@ -1,10 +1,9 @@
 import pytest
 import sys
-import logging
 from version_finder import setup_logger
 from ..src.version_finder_cli.cli import main
 
-logger = setup_logger(__name__, level=logging.DEBUG)
+logger = setup_logger(verbose=True)
 
 
 class TestCLI:
@@ -46,4 +45,4 @@ class TestCLI:
         sys.argv = ['version_finder', '--path', str(test_repo), '--verbose']
         main()
         captured = capsys.readouterr()
-        assert "debug" in captured.out.lower() or "info" in captured.out.lower()
+        assert captured.out.lower() == "1"

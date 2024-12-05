@@ -1,7 +1,6 @@
 import customtkinter as ctk
 import os
 import argparse
-import logging
 from pathlib import Path
 from enum import Enum, auto
 from typing import List
@@ -9,7 +8,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import importlib.resources
 from version_finder import VersionFinder, Commit
-from version_finder import LoggerProtocol, NullLogger, parse_arguments, setup_logger
+from version_finder import parse_arguments, setup_logger
 from .autocomplete_entry import AutocompleteEntry  # We'll reuse this class as it's well-implemented
 
 
@@ -90,11 +89,11 @@ ctk.set_default_color_theme("green")
 
 
 class VersionFinderGUI(ctk.CTk):
-    def __init__(self, path: str = '', logger: LoggerProtocol = NullLogger):
+    def __init__(self, path: str = ''):
         super().__init__()
         self.repo_path = Path(path).resolve() if path else path
         self.version_finder = None
-        self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
+        self.logger = setup_logger()
         self.title("Version Finder")
         self.current_task_frame = None
         self.version_finder = None
@@ -111,7 +110,6 @@ class VersionFinderGUI(ctk.CTk):
 
         if self.repo_path:
             self._initialize_version_finder()
-
 
     def _setup_window(self):
         """Configure the main window settings"""
@@ -280,7 +278,6 @@ class VersionFinderGUI(ctk.CTk):
             self._log_output(f"Repository updated to branch: {branch}")
             if self.version_finder.list_submodules():
                 self._log_output(f"Submodules found on branch: {branch}")
-                self.logger.debug(f"submodules: {self.version_finder.list_submodules()}")
                 self.submodule_entry.set_placeholder("Select a submodule [Optional]")
             else:
                 self.submodule_entry.set_placeholder("No submodules found")
@@ -559,6 +556,7 @@ class VersionFinderGUI(ctk.CTk):
         self.output_text.insert("end", f"✅ {message}\n")
         self.output_text.configure(state="disabled")
         self.output_text.see("end")
+        self.logger.debug(message)
 
     def _log_error(self, message: str):
         """Log error message to the output area"""
@@ -566,6 +564,7 @@ class VersionFinderGUI(ctk.CTk):
         self.output_text.insert("end", f"❌ Error: {message}\n")
         self.output_text.configure(state="disabled")
         self.output_text.see("end")
+        self.logger.error(message)
 
     def _setup_icon(self):
         """Setup application icon"""
@@ -595,9 +594,8 @@ def gui_main(args: argparse.Namespace) -> int:
         print(f"version_finder gui-v{__version__}")
         return 0
 
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logger = setup_logger(name=__name__, level=log_level)
-    app = VersionFinderGUI(args.path, logger=logger)
+    _ = setup_logger(verbose=args.verbose)
+    app = VersionFinderGUI(args.path)
     app.mainloop()
     return 0
 

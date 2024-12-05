@@ -408,6 +408,7 @@ class VersionFinder:
 
         if self.updated_branch == branch:
             self.logger.info(f"The branch {branch} was already updated")
+            self.is_task_ready = True
             return
 
         try:

@@ -42,6 +42,9 @@ setup(
     long_description=open("README.md").read(),  # Detailed description (e.g., README.md)
     long_description_content_type="text/markdown",  # Content type of long description
     license="MIT",  # License information
+    install_requires=[
+        "platformdirs",
+    ]
     extras_require={
         "dev": ["pytest", "pytest-xdist", "pytest-cov", "flake8", "autopep8"],  # Development tools
     },

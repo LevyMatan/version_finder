@@ -92,7 +92,7 @@ jobs:
           which python
           semantic-release --strict version
           return_code=$?
-          if [ $return_code -e 0 ]; then
+          if [ $return_code -eq 0 ]; then
               echo "Semantic release succeeded"
               semantic-release publish
               python -m twine upload dist/*
@@ -132,7 +132,7 @@ jobs:
           ls -la
           semantic-release --strict version
           return_code=$?
-          if [ $return_code -e 0 ]; then
+          if [ $return_code -eq 0 ]; then
               echo "Semantic release succeeded"
               semantic-release publish
               python -m twine upload dist/*
@@ -173,7 +173,7 @@ jobs:
           ls -la
           semantic-release --strict version
           return_code=$?
-          if [ $return_code -e 0 ]; then
+          if [ $return_code -eq 0 ]; then
               echo "Semantic release succeeded"
               semantic-release publish
               python -m twine upload dist/*

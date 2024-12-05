@@ -1,7 +1,5 @@
 from version_finder import VersionFinder, GitError, GitCommandError, InvalidCommitError
 from version_finder.__common__ import parse_arguments
-from version_finder import setup_logger
-from version_finder import LoggerProtocol
 import logging
 import os
 import argparse
@@ -148,11 +146,10 @@ class AutocompleteEntry(ctk.CTkEntry):
 
 
 class VersionFinderGUI(ctk.CTk):
-    def __init__(self, path: str = None, logger: LoggerProtocol = None):
+    def __init__(self, path: str = None):
         super().__init__()
         self.repo_path = path
         self.version_finder = None
-        self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
 
         # Add a class constant for the NVIDIA green color
         self.NVIDIA_GREEN = "#76B900"
@@ -539,7 +536,7 @@ class VersionFinderGUI(ctk.CTk):
 
     def initialize_version_finder(self):
         try:
-            self.version_finder = VersionFinder(self.dir_entry.get(), logger=self.logger)
+            self.version_finder = VersionFinder(self.dir_entry.get())
             self.output_text.insert("end", "✅ Repository loaded successfully\n")
         except GitError as e:
             self.output_text.insert("end", f"❌ Error: {str(e)}\n")
@@ -638,9 +635,7 @@ def gui_main(args: argparse.Namespace) -> int:
         print(f"version_finder gui-v{__version__}")
         return 0
 
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logger = setup_logger(name=__name__, level=log_level)
-    app = VersionFinderGUI(args.path, logger=logger)
+    app = VersionFinderGUI(args.path)
     app.mainloop()
 
 

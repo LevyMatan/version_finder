@@ -1,5 +1,4 @@
 # version_finder/__main__.py
-import logging
 import argparse
 import sys
 import os
@@ -9,7 +8,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.styles import Style
 from prompt_toolkit.completion import WordCompleter, PathCompleter
 from prompt_toolkit.validation import Validator, ValidationError
-from version_finder import setup_logger, LoggerProtocol
+from version_finder import setup_logger
 from version_finder import VersionFinder, GitError, VersionNotFoundError
 from version_finder import VersionFinderTask, VersionFinderTaskRegistry
 from version_finder import parse_arguments
@@ -48,15 +47,12 @@ class VersionFinderCLI:
     Version Finder CLI class.
     """
 
-    def __init__(self, logger: LoggerProtocol):
+    def __init__(self):
         """
         Initialize the VersionFinderCLI with a logger.
-
-        Args:
-            logger: Logger instance for logging operations.
         """
         self.registry = VersionFinderTaskRegistry()
-        self.logger = logger
+        self.logger = setup_logger()
         self.prompt_style = Style.from_dict({
             # User input (default text).
             # '':          '#ff0066',
@@ -97,7 +93,7 @@ class VersionFinderCLI:
         """
         try:
             self.path = self.handle_path_input(args.path)
-            self.finder = VersionFinder(path=self.path, logger=self.logger)
+            self.finder = VersionFinder(path=self.path)
 
             actions = self.get_task_functions()
             params = self.finder.get_task_api_functions_params()
@@ -238,10 +234,6 @@ class VersionFinderCLI:
     def get_branch_selection(self) -> str:
         """
         Get branch selection from user with auto-completion.
-
-        Args:
-            branches: List of available branches
-            logger: Logger instance
 
         Returns:
             Selected branch name
@@ -417,11 +409,10 @@ def cli_main(args: argparse.Namespace) -> int:
         return 0
 
     # Setup logging
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logger = setup_logger(__name__, level=log_level)
+    logger = setup_logger(args.verbose)
 
     # Initialize CLI
-    cli = VersionFinderCLI(logger)
+    cli = VersionFinderCLI()
     # Run CLI
     try:
         cli.run(args)

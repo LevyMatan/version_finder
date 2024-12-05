@@ -5,7 +5,6 @@ main package for version_finder
 from typing import List
 
 # version_finder/__init__.py
-from .protocols import LoggerProtocol, NullLogger
 from .version_finder import VersionFinder, Commit, GitError, InvalidGitRepository, GitRepositoryNotClean, RepositoryNotTaskReady, InvalidCommitError, InvalidSubmoduleError, InvalidBranchError, GitNotInstalledError, VersionNotFoundError
 from .version_finder import VersionFinderTask, VersionFinderTaskRegistry
 from .git_executer import GitConfig, GitCommandError, GitCommandExecutor
@@ -38,8 +37,6 @@ __all__: List[str] = [
     'VersionFinderTaskRegistry',
 
     # Logger
-    'LoggerProtocol',
-    'NullLogger',
     'setup_logger',
 
     # Common

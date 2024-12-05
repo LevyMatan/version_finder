@@ -1,28 +1,6 @@
 # version_finder/protocols.py
 from dataclasses import dataclass
-from typing import Protocol, Optional
-
-
-class LoggerProtocol(Protocol):
-    """Protocol defining the logger interface"""
-
-    def debug(self, msg: str) -> None: ...
-    def info(self, msg: str) -> None: ...
-    def warning(self, msg: str) -> None: ...
-    def error(self, msg: str) -> None: ...
-
-
-class NullLogger:
-    """A logger that does nothing, used as default when no logger is provided."""
-
-    def debug(self, msg: str) -> None: pass
-    def info(self, msg: str) -> None: pass
-    def warning(self, msg: str) -> None: pass
-    def error(self, msg: str) -> None: pass
-
-
-# version_finder/protocols.py
-
+from typing import Optional
 
 @dataclass
 class Version:

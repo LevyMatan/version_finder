@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import time
 from typing import Optional
-from .protocols import LoggerProtocol, NullLogger
+from .logger import setup_logger
 
 
 @dataclass
@@ -34,11 +34,10 @@ class GitCommandError(Exception):
 class GitCommandExecutor:
     def __init__(self,
                  repository_path: Path,
-                 config: Optional[GitConfig] = None,
-                 logger: Optional[LoggerProtocol] = None):
+                 config: Optional[GitConfig] = None):
         self.repository_path = repository_path
         self.config = config or GitConfig()
-        self.logger = logger or NullLogger()
+        self.logger = setup_logger()
 
         # Check Git is installed
         try:

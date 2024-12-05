@@ -42,10 +42,10 @@ def call_cli_app(args):
 def call_gui_app(args):
     """Call the GUI app."""
     # Verify if the GUI app installed in the system
-    if not is_package_installed("version-finder-git-based-versions-gui"):
+    if not is_package_installed("version-finder-git-based-versions-gui-app"):
         raise ExternalInterfaceNotSupportedError("gui")
     # Call the GUI app with the provided arguments
-    os.system(f"version-finder-git-based-versions-gui {args}")
+    os.system(f"version-finder-gui {args_to_command(args)}")
     return 0
 
 
@@ -61,7 +61,7 @@ def main():
     if args.cli:
         call_cli_app(args)
     elif args.gui:
-        call_cli_app(args)
+        call_gui_app(args)
     else:
         if args.path is None:
             args.path = os.getcwd()

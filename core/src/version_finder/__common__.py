@@ -73,11 +73,15 @@ Examples:
 
 
 def args_to_command(args: argparse.Namespace) -> str:
-    command_parts = ["python script_name.py"]  # Replace 'script_name.py' with your actual script name
+    if not isinstance(args, argparse.Namespace):
+        raise AttributeError("Input must be an argparse.Namespace object")
+
+    command_parts = []
     for key, value in vars(args).items():
-        if isinstance(value, bool) and value:  # Handle flags like --verbose
-            command_parts.append(f"--{key.replace('_', '-')}")
-        elif value is not None:
+        if isinstance(value, bool):
+            if value:  # Only add boolean flags if they're True
+                command_parts.append(f"--{key.replace('_', '-')}")
+        elif value is not None:  # Handle non-boolean arguments
             command_parts.append(f"--{key.replace('_', '-')}")
             command_parts.append(str(value))
     return " ".join(command_parts)

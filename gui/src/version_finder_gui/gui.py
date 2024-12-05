@@ -1,12 +1,15 @@
 import customtkinter as ctk
 import os
+import argparse
+import logging
 from enum import Enum, auto
 from typing import List
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import importlib.resources
 from version_finder import VersionFinder, Commit
-from gui import AutocompleteEntry  # We'll reuse this class as it's well-implemented
+from version_finder import LoggerProtocol, parse_arguments, setup_logger
+from .autocomplete_entry import AutocompleteEntry  # We'll reuse this class as it's well-implemented
 
 
 class CommitDetailsWindow(ctk.CTkToplevel):
@@ -82,15 +85,18 @@ class VersionFinderTasks(Enum):
     COMMITS_BY_TEXT = auto()
 
 
-class VersionFinderGUI(ctk.CTk):
-    def __init__(self):
-        super().__init__()
+ctk.set_default_color_theme("green")
 
+
+class VersionFinderGUI(ctk.CTk):
+    def __init__(self, path: str = None, logger: LoggerProtocol = None):
+        super().__init__()
+        self.repo_path = path
+        self.version_finder = None
+        self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
         self.title("Version Finder")
         self.current_task_frame = None
         self.version_finder = None
-        ctk.set_appearance_mode("Dark")
-        ctk.set_default_color_theme("green")
         # Initialize UI
         self._setup_window()
         self._create_window_layout()
@@ -263,17 +269,16 @@ class VersionFinderGUI(ctk.CTk):
     def _on_branch_select(self, branch):
         try:
             self.version_finder.update_repository(branch)
-            self.output_text.insert("end", f"✅ Repository updated to branch: {branch}\n")
-            self.output_text.see("end")
+            self._log_output(f"Repository updated to branch: {branch}")
             if self.version_finder.list_submodules():
-                self.output_text.insert("end", "✅ Submodules found.\n")
-                self.output_text.see("end")
+                self._log_output(f"Submodules found on branch: {branch}")
+                self.logger.debug(f"submodules: {self.version_finder.list_submodules()}")
                 self.submodule_entry.set_placeholder("Select a submodule [Optional]")
             else:
                 self.submodule_entry.set_placeholder("No submodules found")
+                self.submodule_entry.configure(state="readonly")
         except Exception as e:
-            self.output_text.insert("end", f"❌ Error updating repository: {str(e)}\n")
-            self.output_text.see("end")
+            self._log_error(f"Error updating repository: {str(e)}")
 
     def _create_branch_selection(self, parent_frame):
         """Create the branch selection section"""
@@ -557,10 +562,22 @@ class VersionFinderGUI(ctk.CTk):
         self.geometry(f"{width}x{height}+{x}+{y}")
 
 
-def launch_gui():
-    print("lunching GUI")
-    app = VersionFinderGUI()
+def gui_main(args: argparse.Namespace) -> int:
+    if args.version:
+        from .__version__ import __version__
+        print(f"version_finder gui-v{__version__}")
+        return 0
+
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logger = setup_logger(name=__name__, level=log_level)
+    app = VersionFinderGUI(args.path, logger=logger)
     app.mainloop()
 
 
-launch_gui()
+def main():
+    args = parse_arguments()
+    gui_main(args)
+
+
+if __name__ == "__main__":
+    main()

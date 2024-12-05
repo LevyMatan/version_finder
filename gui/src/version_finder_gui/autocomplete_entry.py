@@ -6,7 +6,6 @@ import logging
 import os
 import argparse
 import importlib.resources
-from PIL import Image, ImageTk
 import customtkinter as ctk
 
 

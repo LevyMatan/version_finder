@@ -204,6 +204,7 @@ class VersionFinder:
         self.config = config or GitConfig()
         self.repository_path = Path(path or os.getcwd()).resolve()
         self.logger = logger or NullLogger()  # Use NullLogger if no logger provided
+        self.updated_branch = None
         try:
             self._git = GitCommandExecutor(self.repository_path, self.config, self.logger)
         except GitCommandError as e:
@@ -248,6 +249,8 @@ class VersionFinder:
             self.__fetch_repository()
         self.__load_branches()
         self.__load_submodules()
+        # If the checked out branch is valid, set it as updated
+        self.updated_branch = self.get_current_branch()
 
     def __load_submodules(self) -> None:
         """Load git submodules information."""
@@ -358,7 +361,18 @@ class VersionFinder:
         )
 
     def get_current_branch(self) -> str:
-        """Get current branch."""
+        """Get the current Git branch name.
+
+        Returns:
+            str: The name of the current branch if successfully determined.
+                Returns None if:
+                - The repository is in a detached HEAD state
+                - There was an error executing the git command
+                - The branch name could not be determined
+
+        Raises:
+            GitCommandError: May be raised during git command execution, but is caught internally
+        """
         current_branch = None
         try:
             output = self._git.execute(["rev-parse", "--abbrev-ref", "HEAD"])
@@ -369,6 +383,7 @@ class VersionFinder:
         except GitCommandError as e:
             self.logger.error(f"Failed to get current branch: {e}")
         return current_branch
+
 
     def has_branch(self, branch: str) -> bool:
         """Check if a branch exists."""
@@ -391,6 +406,10 @@ class VersionFinder:
         if not self.has_branch(branch):
             raise InvalidBranchError(f"Invalid branch: {branch}")
 
+        if self.updated_branch == branch:
+            self.logger.info(f"The branch {branch} was already updated")
+            return
+
         try:
             self._git.execute(["checkout", branch])
             if self._has_remote:
@@ -398,6 +417,7 @@ class VersionFinder:
             self.__load_submodules()
             self.__update_all_submodules()
             self.is_task_ready = True
+            self.updated_branch = branch
 
         except GitCommandError as e:
             self.logger.error(f"Failed to update repository: {e}")

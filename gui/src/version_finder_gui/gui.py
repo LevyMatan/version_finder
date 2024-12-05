@@ -2,6 +2,7 @@ import customtkinter as ctk
 import os
 import argparse
 import logging
+from pathlib import Path
 from enum import Enum, auto
 from typing import List
 import tkinter as tk
@@ -91,7 +92,7 @@ ctk.set_default_color_theme("green")
 class VersionFinderGUI(ctk.CTk):
     def __init__(self, path: str = None, logger: LoggerProtocol = None):
         super().__init__()
-        self.repo_path = path
+        self.repo_path = Path(path).resolve() if path else path
         self.version_finder = None
         self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
         self.title("Version Finder")
@@ -107,6 +108,10 @@ class VersionFinderGUI(ctk.CTk):
 
         # Focous on window
         self.focus_force()
+
+        if self.repo_path:
+            self._initialize_version_finder()
+
 
     def _setup_window(self):
         """Configure the main window settings"""
@@ -423,17 +428,27 @@ class VersionFinderGUI(ctk.CTk):
 
     def _browse_directory(self):
         """Open directory browser dialog"""
+        self.repo_path = None
         directory = filedialog.askdirectory(initialdir=os.getcwd())
         if directory:
-            self.dir_entry.delete(0, "end")
-            self.dir_entry.insert(0, directory)
+            # Clear directory entry
+            self.dir_entry.delete(0, tk.END)
+
+            # Clear branch entry
+            self.branch_entry.delete(0, tk.END)
+
+            # Clear submodule entry
+            self.submodule_entry.delete(0, tk.END)
+            self.repo_path = directory
             self._initialize_version_finder()
 
     def _initialize_version_finder(self):
         """Initialize the VersionFinder instance"""
         try:
-            self.version_finder = VersionFinder(self.dir_entry.get())
-            self._log_output("VersionFinder initialized successfully.")
+            self.version_finder = VersionFinder(self.repo_path)
+            self._log_output(f"VersionFinder initialized with: {self.repo_path} successfully.")
+            self.dir_entry.insert(0, self.repo_path)
+
             # Update branch autocomplete
             self.branch_entry.suggestions = self.version_finder.list_branches()
             self.branch_entry.configure(state="normal")

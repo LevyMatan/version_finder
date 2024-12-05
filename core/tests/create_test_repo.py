@@ -1,6 +1,5 @@
 import re
 import subprocess
-import random
 from pathlib import Path
 
 

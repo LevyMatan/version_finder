@@ -1,424 +1,264 @@
-from version_finder import VersionFinder, GitError, GitCommandError, InvalidCommitError
-from version_finder.__common__ import parse_arguments
-from version_finder import setup_logger
-from version_finder import LoggerProtocol
-import logging
-import os
-import argparse
-import importlib.resources
-from PIL import Image, ImageTk
 import customtkinter as ctk
+import os
+from enum import Enum, auto
+from typing import List
+import tkinter as tk
+from tkinter import filedialog, messagebox
+import importlib.resources
+from version_finder import VersionFinder, Commit
+from gui import AutocompleteEntry  # We'll reuse this class as it's well-implemented
 
 
-def check_tkinter():
-    try:
-        import tkinter
-        return True
-    except ImportError:
-        return False
+class CommitDetailsWindow(ctk.CTkToplevel):
+    def __init__(self, parent, commit_data: Commit):
+        super().__init__(parent)
+        self.title("Commit Details")
+        self.geometry("600x400")
+
+        # Create scrollable frame for commit info
+        scroll_frame = ctk.CTkScrollableFrame(self)
+        scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Add commit details
+        for key, value in commit_data.__dict__.items():
+            label = ctk.CTkLabel(scroll_frame, text=f"{key}:", anchor="w")
+            label.pack(fill="x", pady=2)
+            text = ctk.CTkTextbox(scroll_frame, height=50)
+            text.insert("1.0", str(value))
+            text.configure(state="disabled")
+            text.pack(fill="x", pady=(0, 10))
 
 
-def install_tkinter():
-    import platform
-    system = platform.system().lower()
+class CommitListWindow(ctk.CTkToplevel):
+    def __init__(self, parent, commits: List[Commit]):
+        super().__init__(parent)
+        self.title("Commit List")
+        self.geometry("800x600")
 
-    if system == "linux":
-        os.system("sudo apt-get install python3-tk")
-    elif system == "darwin":  # MacOS
-        os.system("brew install python-tk")
-    elif system == "windows":
-        os.system("pip install tk")
+        # Create scrollable frame
+        self.scroll_frame = ctk.CTkScrollableFrame(self)
+        self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Create headers
+        header_frame = ctk.CTkFrame(self.scroll_frame)
+        header_frame.pack(fill="x", pady=(0, 10))
+
+        ctk.CTkLabel(header_frame, text="Commit Hash", width=100).pack(side="left", padx=5)
+        ctk.CTkLabel(header_frame, text="Subject", width=500).pack(side="left", padx=5)
+
+        # Add commits
+        for commit in commits:
+            self._add_commit_row(commit)
+
+    def _add_commit_row(self, commit: Commit):
+        row = ctk.CTkFrame(self.scroll_frame)
+        row.pack(fill="x", pady=2)
+
+        hash_btn = ctk.CTkButton(
+            row,
+            text=commit.sha[:8],
+            width=100,
+            command=lambda: self._copy_to_clipboard(commit.sha)
+        )
+        hash_btn.pack(side="left", padx=5)
+
+        subject_btn = ctk.CTkButton(
+            row,
+            text=commit.subject,
+            width=500,
+            command=lambda: CommitDetailsWindow(self, commit)
+        )
+        subject_btn.pack(side="left", padx=5)
+
+    def _copy_to_clipboard(self, text: str):
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        messagebox.showinfo("Success", "Commit hash copied to clipboard!")
 
 
-def launch_gui():
-    if not check_tkinter():
-        install_tkinter()
-
-
-launch_gui()
-
-
-os.environ['TK_SILENCE_DEPRECATION'] = '1'
-
-
-class AutocompleteEntry(ctk.CTkEntry):
-    def __init__(self, *args, placeholder_text=None, **kwargs):
-        self.suggestions = kwargs.pop('suggestions', [])
-        super().__init__(*args, placeholder_text=placeholder_text, **kwargs)
-
-        self._placeholder_text = placeholder_text
-        self._placeholder_shown = True
-
-        self.suggestion_window = None
-        self.suggestion_listbox = None
-
-        self.bind('<FocusIn>', self._on_focus_in)
-        self.bind('<KeyRelease>', self._on_key_release)
-        self.bind('<FocusOut>', self._on_focus_out)
-
-        # Initialize placeholder if provided
-        if self._placeholder_text:
-            self._show_placeholder()
-
-    def set_placeholder(self, text):
-        self._placeholder_text = text
-        if self._placeholder_shown:
-            self._show_placeholder()
-
-    def _on_focus_in(self, event):
-        if self._placeholder_shown:
-            self.delete(0, 'end')
-            self._placeholder_shown = False
-            self.configure(text_color=self._text_color)  # Reset to normal text color
-
-    def _show_placeholder(self):
-        self.delete(0, 'end')
-        self.insert(0, self._placeholder_text)
-        self.configure(text_color='gray')  # Make placeholder gray
-        self._placeholder_shown = True
-
-    def get(self):
-        # Don't return the placeholder text as the actual value
-        if self._placeholder_shown:
-            return ''
-        return super().get()
-
-    def insert(self, index, string):
-        if self._placeholder_shown:
-            self.delete(0, 'end')
-            self._placeholder_shown = False
-            self.configure(text_color=self._text_color)
-        super().insert(index, string)
-
-    def _on_key_release(self, event):
-        if self.suggestion_window:
-            self.suggestion_window.destroy()
-            self.suggestion_window = None
-
-        if not self.get():  # If entry is empty
-            return
-
-        text = self.get().lower()
-        # First show exact prefix matches, then contains matches
-        exact_matches = [s for s in self.suggestions if s.lower().startswith(text)]
-        contains_matches = [s for s in self.suggestions if text in s.lower() and not s.lower().startswith(text)]
-
-        suggestions = sorted(exact_matches) + sorted(contains_matches)
-
-        if suggestions:
-            x = self.winfo_rootx()
-            y = self.winfo_rooty() + self.winfo_height()
-
-            self.suggestion_window = ctk.CTkToplevel()
-            self.suggestion_window.withdraw()  # Hide initially
-            self.suggestion_window.overrideredirect(True)
-
-            self.suggestion_listbox = ctk.CTkScrollableFrame(self.suggestion_window)
-            self.suggestion_listbox.pack(fill="both", expand=True)
-
-            for suggestion in suggestions:
-                suggestion_button = ctk.CTkButton(
-                    self.suggestion_listbox,
-                    text=suggestion,
-                    command=lambda s=suggestion: self._select_suggestion(s)
-                )
-                suggestion_button.pack(fill="x", padx=2, pady=1)
-
-            self.suggestion_window.geometry(f"{self.winfo_width()}x300+{x}+{y}")
-            self.suggestion_window.deiconify()  # Show window
-
-    def _select_suggestion(self, suggestion):
-        self.delete(0, "end")
-        self.insert(0, suggestion)
-        if self.suggestion_window:
-            self.suggestion_window.destroy()
-            self.suggestion_window = None
-        # Trigger the callback if it exists
-        if hasattr(self, 'callback') and self.callback:
-            self.callback(suggestion)
-
-    def _on_focus_out(self, event):
-        # Add a small delay before destroying the window
-        if self.suggestion_window:
-            self.after(100, self._destroy_suggestion_window)
-
-    def _destroy_suggestion_window(self):
-        if self.suggestion_window:
-            self.suggestion_window.destroy()
-            self.suggestion_window = None
+class VersionFinderTasks(Enum):
+    FIND_VERSION = auto()
+    COMMITS_BETWEEN_VERSIONS = auto()
+    COMMITS_BY_TEXT = auto()
 
 
 class VersionFinderGUI(ctk.CTk):
-    def __init__(self, path: str = None, logger: LoggerProtocol = None):
+    def __init__(self):
         super().__init__()
-        self.repo_path = path
+
+        self.title("Version Finder")
+        self.current_task_frame = None
         self.version_finder = None
-        self.logger = logger or setup_logger("VersionFinderGUI", logging.INFO)
-
-        # Add a class constant for the NVIDIA green color
-        self.NVIDIA_GREEN = "#76B900"
-
         ctk.set_appearance_mode("Dark")
         ctk.set_default_color_theme("green")
-
-        self.setup_icon()
-        self.setup_window()
-
-        # Create main layout with sidebar
-        self.grid_columnconfigure(0, weight=0)  # Sidebar column - no weight
-        self.grid_columnconfigure(1, weight=1)  # Make right column expandable
-        self.grid_rowconfigure(0, weight=1)  # Add this to make rows expandable
-
+        # Initialize UI
+        self._setup_window()
+        self._create_window_layout()
+        self._setup_icon()
+        self._show_find_version()
+        # Center window on screen
         self.center_window()
-        # Main content frame
-        self.main_frame = ctk.CTkFrame(self)
-        self.main_frame.grid(row=0, column=1, rowspan=4, sticky="nsew", padx=5, pady=5)
 
-        self.create_sidebar()
-        self.create_widgets()
-
-    def create_sidebar(self):
-        # Sidebar Frame
-        self.sidebar_frame = ctk.CTkFrame(self, width=350)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew", pady=5, padx=5)
-        self.sidebar_frame.grid_rowconfigure(5, weight=1)  # Allow expansion
-        # Prevent the frame from resizing to fit its contents
-        # self.sidebar_frame.grid_propagate(False)
-        # Create a header frame in sidebar to match main frame's header
-        sidebar_header = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
-        sidebar_header.grid(row=0, column=0, sticky="new", padx=15, pady=(20, 10))
-
-        # Configure header grid
-        sidebar_header.grid_columnconfigure(1, weight=1)
-
-        # Collapse button in header frame (same position as expand button)
-        self.collapse_btn = ctk.CTkButton(
-            sidebar_header,
-            text="◀",
-            width=20,
-            height=20,
-            command=self.collapse_sidebar,
-            fg_color="transparent",
-            text_color=self.NVIDIA_GREEN,
-            hover_color=("#5a8c00", "#5a8c00")
-        )
-        self.collapse_btn.grid(row=0, column=0, sticky="w")
-
-        # Sidebar Title
-        sidebar_title = ctk.CTkLabel(
-            sidebar_header,
-            text="Tasks",
-            font=ctk.CTkFont(size=24),
-            text_color=self.NVIDIA_GREEN
-        )
-        sidebar_title.grid(row=0, column=1, padx=20, pady=10)
-
-        # Sidebar Tasks Buttons
-        tasks = [
-            ("Version Search", self.show_version_search),
-            ("Commit Tracking", self.show_commit_tracking),
-            ("Submodule Analysis", self.show_submodule_analysis)
-        ]
-
-        for i, (task_name, command) in enumerate(tasks, start=1):
-            btn = ctk.CTkButton(
-                self.sidebar_frame,
-                text=task_name,
-                command=command,
-                anchor="w"
-            )
-            btn.grid(row=i, column=0, padx=20, pady=10, sticky="ew")
-
-        # Configuration Button
-        config_btn = ctk.CTkButton(
-            self.sidebar_frame,
-            text="⚙️ Configuration",
-            command=self.open_configuration,
-            anchor="w"
-        )
-        config_btn.grid(row=len(tasks) + 1, column=0, padx=20, pady=10, sticky="ew")
-
-    def collapse_sidebar(self):
-        self.sidebar_frame.grid_remove()  # Hide sidebar
-        self.expand_btn.grid()  # Show expand button
-
-    def expand_sidebar(self):
-        self.expand_btn.grid_remove()  # Hide expand button
-        self.sidebar_frame.grid()  # Show sidebar
-
-    def show_version_search(self):
-        # Clear existing main frame and recreate version search UI
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-        self.create_widgets()
-
-    def show_commit_tracking(self):
-        # Placeholder for commit tracking view
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-        commit_label = ctk.CTkLabel(
-            self.main_frame,
-            text="Commit Tracking\n(Not Implemented)",
-            font=ctk.CTkFont(size=24)
-        )
-        commit_label.pack(expand=True)
-
-    def show_submodule_analysis(self):
-        # Placeholder for submodule analysis view
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-        submodule_label = ctk.CTkLabel(
-            self.main_frame,
-            text="Submodule Analysis\n(Not Implemented)",
-            font=ctk.CTkFont(size=24)
-        )
-        submodule_label.pack(expand=True)
-
-    def open_configuration(self):
-        # Configuration dialog
-        config_window = ctk.CTkToplevel(self)
-        config_window.title("Version Pattern Configuration")
-        config_window.geometry("400x300")
-
-        version_pattern_label = ctk.CTkLabel(
-            config_window,
-            text="Version Pattern Configuration"
-        )
-        version_pattern_label.pack(pady=10)
-
-        # Example version pattern input
-        version_pattern_entry = ctk.CTkEntry(
-            config_window,
-            placeholder_text="Enter version pattern (e.g., v{major}.{minor}.{patch})"
-        )
-        version_pattern_entry.pack(pady=10)
-
-        save_btn = ctk.CTkButton(
-            config_window,
-            text="Save Configuration",
-            command=config_window.destroy
-        )
-        save_btn.pack(pady=10)
-
-    def setup_window(self):
-        self.title("Version Finder")
-        self.window_height = 1200
-        self.window_width = 1100
-        self.geometry(f"{self.window_width}x{self.window_height}")
-        self.minsize(650, 400)
-        self.maxsize(1200, 1100)
+        # Focous on window
         self.focus_force()
 
-        self.configure(fg_color=("gray95", "gray10"))  # Adaptive background
+    def _setup_window(self):
+        """Configure the main window settings"""
+        self.geometry("1200x800")
+        self.minsize(800, 600)
 
-    def center_window(self):
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        x = (screen_width - self.window_width) // 2
-        y = (screen_height - self.window_height) // 2
-        self.geometry(f"+{x}+{y}")
+    def _create_window_layout(self):
+        """Create the main layout with sidebar and content area"""
+        # Configure grid weights for the main window
+        self.grid_columnconfigure(0, weight=0)  # Sidebar column (fixed width)
+        self.grid_columnconfigure(1, weight=1)  # Content column (expandable)
+        self.grid_rowconfigure(0, weight=1)
 
-    def create_widgets(self):
-        # Configure grid for main frame
-        self.main_frame.grid_columnconfigure(0, weight=1)  # Make column expandable
-        self.main_frame.grid_rowconfigure(1, weight=1)  # Make content row expandable
+        # Create sidebar
+        self.sidebar_frame = ctk.CTkFrame(self, width=200)
+        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(0, weight=1)
+        self.sidebar_content_frame = self._create_sidebar(self.sidebar_frame)
+        self.sidebar_content_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
 
-        # Create header frame
-        self.header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.header_frame.grid(row=0, column=0, sticky="new", padx=15, pady=(20, 10))
+        # Create main area
+        self.main_frame = ctk.CTkFrame(self)
+        self.main_frame.grid(row=0, column=1, sticky="nsew")
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_content_frame = self._create_content_area(self.main_frame)
+        self.main_content_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
 
-        # Configure grid for header frame
-        self.header_frame.grid_columnconfigure(1, weight=1)  # Column 1 (after button) should expand
+    def _create_sidebar(self, parent_frame):
+        """Create the sidebar with task selection buttons"""
 
-        # Create expand button in header (initially hidden)
-        self.expand_btn = ctk.CTkButton(
-            self.header_frame,
-            text="▶",
-            width=20,
-            height=20,
-            command=self.expand_sidebar,
-            fg_color="transparent",
-            text_color=self.NVIDIA_GREEN,
-            hover_color=("#5a8c00", "#5a8c00")
+        sidebar_content_frame = ctk.CTkFrame(parent_frame)
+        # Configure sidebar grid
+        sidebar_content_frame.grid_columnconfigure(0, weight=1)
+        sidebar_content_frame.grid_rowconfigure(2, weight=1)
+
+        # App title
+        title = ctk.CTkLabel(
+            sidebar_content_frame,
+            text="Choose Task",
+            font=("Arial", 20, "bold")
         )
-        self.expand_btn.grid(row=0, column=0, sticky="w")
-        self.expand_btn.grid_remove()  # Initially hidden if sidebar is visible
+        title.grid(row=0, column=0, pady=[10, 30], padx=10)
 
+        sidebar_task_buttons_frame = ctk.CTkFrame(sidebar_content_frame, fg_color="transparent")
+        sidebar_task_buttons_frame.grid(row=1, column=0, sticky="nsew")
+        # Task selection buttons
+        tasks = [
+            ("Find Version", self._show_find_version),
+            ("Find Commits", self._show_find_commits),
+            ("Search Commits", self._show_search_commits)
+        ]
+
+        for idx, (text, command) in enumerate(tasks, start=1):
+            btn = ctk.CTkButton(
+                sidebar_task_buttons_frame,
+                text=text,
+                command=command,
+                width=180,
+            )
+            btn.grid(row=idx, column=0, pady=5, padx=10)
+
+        # Add configuration button at the bottom
+        config_btn = ctk.CTkButton(
+            sidebar_content_frame,
+            text="⚙️ Settings",
+            command=self._show_configuration,
+            width=180
+        )
+        config_btn.grid(row=2, column=0, pady=15, padx=10, sticky="s")
+        return sidebar_content_frame
+
+    def _create_header_frame(self, parent_frame):
+        """Create the header frame"""
+        header_frame = ctk.CTkFrame(parent_frame, fg_color="transparent")
         # Header title
         header = ctk.CTkLabel(
-            self.header_frame,
+            header_frame,
             text="Version Finder",
             font=ctk.CTkFont(size=36, weight="bold"),
             text_color="#76B900"
         )
-        header.grid(row=0, column=1, padx=20, pady=10)
+        header.grid(row=0, column=0, padx=20, pady=10)
+        return header_frame
 
-        # Content below header
-        content_frame = ctk.CTkFrame(self.main_frame)
-        content_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
-        content_frame.grid_rowconfigure(4, weight=1)     # Make output area row expandable
+    def _create_content_area(self, parent_frame):
+        """
+        Create the main content area with constant widgets
+        # main_content_frame
+        ####################
+        # Row - 0: hear frame
+        # Row - 1: content frame
+            # content frame
+            ###############
+            # Row - 0: directory frame
+            # Row - 1: branch input frame
+            # Row - 2: submodule input frame
+            # Row - 3: Task input frame
+            # Row - 4: Operation buttons frame
+            # Row - 5: Output frame
+        """
+        main_content_frame = ctk.CTkFrame(parent_frame)
+        main_content_frame.grid_columnconfigure(0, weight=1)
+        main_content_frame.grid_rowconfigure(1, weight=1)
+
+        # Configure header frame grid
+        header_frame = self._create_header_frame(main_content_frame)
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        header_frame.grid_columnconfigure(0, weight=1)
+
+        # Configure content frame grid
+        content_frame = ctk.CTkFrame(main_content_frame)
+        content_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_rowconfigure(5, weight=10)
 
         # Directory selection
-        self.create_directory_section(content_frame)
-        # Branch selection (initially disabled)
-        self.create_branch_selection(content_frame)
-        # Submodule selection (initially disabled)
-        self.create_submodule_selection(content_frame)
-        # Commit section
-        self.create_commit_section(content_frame)
+        dir_frame = self._create_directory_section(content_frame)
+        dir_frame.grid(row=0, column=0, sticky="nsew", padx=15, pady=[10, 5])
+
+        # Branch selection
+        branch_frame = self._create_branch_selection(content_frame)
+        branch_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=5)
+
+        # Submodule selection
+        submodule_frame = self._create_submodule_selection(content_frame)
+        submodule_frame.grid(row=2, column=0, sticky="nsew", padx=15, pady=5)
+
+        # Task-specific content frame
+        self.task_frame = ctk.CTkFrame(content_frame)
+        self.task_frame.grid(row=3, column=0, sticky="nsew", padx=15, pady=5)
+
+        app_buttons_frame = self._create_app_buttons(content_frame)
+        app_buttons_frame.grid(row=4, column=0, sticky="nsew", padx=15, pady=15)
+
         # Output area
-        self.create_output_area(content_frame)
-        # Buttons
-        self.create_buttons(content_frame)
+        output_frame = self._create_output_area(content_frame)
+        output_frame.grid(row=5, column=0, sticky="nsew", padx=15, pady=10)
 
-    def create_commit_section(self, parent_frame):
-        commit_frame = ctk.CTkFrame(parent_frame)
-        commit_frame.pack(fill="x", padx=10, pady=10)
+        return main_content_frame
 
-        commit_label = ctk.CTkLabel(
-            commit_frame,
-            text="Commit SHA",
-            width=100,
-            font=ctk.CTkFont(
-                size=16,
-                weight="bold"),
-            anchor="w",
-            justify="left")
-        commit_label.pack(side="left", padx=5, pady=10)
-
-        self.commit_entry = ctk.CTkEntry(commit_frame, width=300, placeholder_text="Required")
-        self.commit_entry.pack(side="left", padx=5, pady=10, fill="x", expand=True)
-
-    def create_directory_section(self, parent_frame):
+    def _create_directory_section(self, parent_frame):
+        """Create the directory selection section"""
         dir_frame = ctk.CTkFrame(parent_frame)
-        dir_frame.pack(fill="x", padx=10, pady=10)
+        dir_frame.grid(row=0, column=0, sticky="ew", pady=15)
+        dir_frame.grid_columnconfigure(1, weight=1)
 
-        dir_label = ctk.CTkLabel(
-            dir_frame,
-            text="Select Directory:",
-            width=100,
-            font=ctk.CTkFont(size=16, weight="bold"),
-        )
-        dir_label.pack(side="left", padx=5)
-
-        self.dir_entry = ctk.CTkEntry(
-            dir_frame,
-            width=240,
-            border_width=1,
-            corner_radius=10,
-            placeholder_text="Enter repository path",
-        )
-        self.dir_entry.pack(side="left", padx=10, pady=10, fill="x", expand=True)
+        ctk.CTkLabel(dir_frame, text="Repository Path:").grid(row=0, column=0, padx=5)
+        self.dir_entry = ctk.CTkEntry(dir_frame, width=400, placeholder_text="Enter repository path")
+        self.dir_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
 
         browse_btn = ctk.CTkButton(
             dir_frame,
             text="Browse",
-            command=self.browse_directory_btn,
-            width=100,
-            corner_radius=10,
-            hover_color=("green", "darkgreen")  # Adaptive hover color
+            command=self._browse_directory
         )
-        browse_btn.pack(side="right", padx=10, pady=10)
+        browse_btn.grid(row=0, column=2, padx=5)
+        return dir_frame
 
     def _on_branch_select(self, branch):
         try:
@@ -428,78 +268,45 @@ class VersionFinderGUI(ctk.CTk):
             if self.version_finder.list_submodules():
                 self.output_text.insert("end", "✅ Submodules found.\n")
                 self.output_text.see("end")
-                self.submodule_entry.set_placeholder("Optional: Select a submodule")
+                self.submodule_entry.set_placeholder("Select a submodule [Optional]")
             else:
                 self.submodule_entry.set_placeholder("No submodules found")
         except Exception as e:
             self.output_text.insert("end", f"❌ Error updating repository: {str(e)}\n")
             self.output_text.see("end")
 
-    def create_branch_selection(self, parent_frame):
+    def _create_branch_selection(self, parent_frame):
+        """Create the branch selection section"""
         branch_frame = ctk.CTkFrame(parent_frame)
-        branch_frame.pack(fill="x", padx=10, pady=10)
+        branch_frame.grid_columnconfigure(1, weight=1)
 
-        branch_label = ctk.CTkLabel(
-            branch_frame,
-            text="Branch",
-            width=100,
-            font=ctk.CTkFont(
-                size=16,
-                weight="bold"),
-            anchor="w",
-            justify="left")
-        branch_label.pack(side="left", padx=5)
-
-        self.branch_entry = AutocompleteEntry(
-            branch_frame,
-            width=240,
-            placeholder_text="Select a branch",
-        )
-        self.branch_entry.callback = self._on_branch_select  # Add callback
-        self.branch_entry.pack(fill="x", padx=10, pady=10, expand=True)
+        ctk.CTkLabel(branch_frame, text="Branch:").grid(row=0, column=0, padx=5)
+        self.branch_entry = AutocompleteEntry(branch_frame, width=400, placeholder_text="Select a branch")
         self.branch_entry.configure(state="disabled")
+        self.branch_entry.callback = self._on_branch_select
 
-    def create_submodule_selection(self, parent_frame):
+        self.branch_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        return branch_frame
+
+    def _create_submodule_selection(self, parent_frame):
+        """Create the submodule selection section"""
         submodule_frame = ctk.CTkFrame(parent_frame)
-        submodule_frame.pack(fill="x", padx=10, pady=10)
+        submodule_frame.grid_columnconfigure(1, weight=1)
 
-        submodule_label = ctk.CTkLabel(submodule_frame, text="Submodule", width=100,
-                                       font=ctk.CTkFont(size=16, weight="bold"))
-        submodule_label.pack(side="left", padx=5)
-
+        ctk.CTkLabel(submodule_frame, text="Submodule:").grid(row=0, column=0, padx=5)
         self.submodule_entry = AutocompleteEntry(
-            submodule_frame,
-            width=300,
-            placeholder_text='Select a submodule [Optional]'
-        )
-        self.submodule_entry.pack(fill="x", padx=10, pady=10, expand=True)
-        self.submodule_entry.configure(state="disabled")
+            submodule_frame, width=400, placeholder_text='Select a submodule [Optional]')
+        self.submodule_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        return submodule_frame
 
-    def create_output_area(self, parent_frame):
-        output_frame = ctk.CTkFrame(parent_frame, fg_color="transparent")
-        output_frame.pack(fill="both", expand=True, padx=15, pady=10)
-
-        self.output_text = ctk.CTkTextbox(
-            output_frame,
-            wrap="word",
-            font=("Courier New", 11),  # Monospaced font for logs
-            border_width=1,
-            corner_radius=10,
-            fg_color=("white", "gray15"),  # Adaptive background
-            text_color=("black", "white"),  # Adaptive text color
-            scrollbar_button_color=("gray80", "gray30")
-        )
-        self.output_text.pack(fill="both", expand=True)
-
-    def create_buttons(self, parent_frame):
-        button_frame = ctk.CTkFrame(parent_frame, fg_color="transparent")
-        button_frame.pack(fill="x", padx=15, pady=10)
+    def _create_app_buttons(self, parent_frame):
+        buttons_frame = ctk.CTkFrame(parent_frame, fg_color="transparent")
 
         # Create a gradient effect with multiple buttons
         search_btn = ctk.CTkButton(
-            button_frame,
+            buttons_frame,
             text="Search",
-            command=self.search,
+            command=self._search,
             corner_radius=10,
             fg_color=("green", "darkgreen"),
             hover_color=("darkgreen", "forestgreen")
@@ -507,9 +314,9 @@ class VersionFinderGUI(ctk.CTk):
         search_btn.pack(side="left", padx=5, expand=True, fill="x")
 
         clear_btn = ctk.CTkButton(
-            button_frame,
+            buttons_frame,
             text="Clear",
-            command=self.clear_output,
+            command=self._clear_output,
             corner_radius=10,
             fg_color=("gray70", "gray30"),
             hover_color=("gray60", "gray40")
@@ -517,7 +324,7 @@ class VersionFinderGUI(ctk.CTk):
         clear_btn.pack(side="left", padx=5, expand=True, fill="x")
 
         exit_btn = ctk.CTkButton(
-            button_frame,
+            buttons_frame,
             text="Exit",
             command=self.quit,
             corner_radius=10,
@@ -525,132 +332,235 @@ class VersionFinderGUI(ctk.CTk):
             hover_color=("darkred", "firebrick")
         )
         exit_btn.pack(side="right", padx=5, expand=True, fill="x")
+        return buttons_frame
 
-    def setup_icon(self):
-        try:
-            # Use importlib.resources to locate the icon
-            with importlib.resources.path("version_finder_gui.assets", 'icon.png') as icon_path:
-                if os.path.exists(icon_path):
-                    # Load the image
-                    icon = Image.open(icon_path)
-                    icon = ImageTk.PhotoImage(icon)
+    def _create_output_area(self, parent_frame):
+        """Create the output/logging area"""
+        output_frame = ctk.CTkFrame(parent_frame, fg_color="transparent")
+        output_frame.grid_columnconfigure(0, weight=1)
+        output_frame.grid_rowconfigure(0, weight=1)
 
-                    # Set the icon
-                    self.wm_iconphoto(True, icon)
-        except Exception as e:
-            print(f"Error loading icon: {e}")
+        self.output_text = ctk.CTkTextbox(
+            output_frame,
+            wrap="word",
+            height=200,
+            font=("Arial", 12),
+            border_width=1,
+            corner_radius=10,
+            scrollbar_button_color=("gray80", "gray30")
+        )
+        self.output_text.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        return output_frame
 
-    def initialize_version_finder(self):
-        try:
-            self.version_finder = VersionFinder(self.dir_entry.get(), logger=self.logger)
-            self.output_text.insert("end", "✅ Repository loaded successfully\n")
-        except GitError as e:
-            self.output_text.insert("end", f"❌ Error: {str(e)}\n")
+    def _clear_output(self):
+        self.output_text.delete("1.0", "end")
 
-    def browse_directory_btn(self):
-        self.repo_path = None
-        self.browse_directory()
+    def _show_configuration(self):
+        """Show the configuration window"""
+        config_window = tk.Toplevel(self)
+        config_window.title("Settings")
+        config_window.geometry("400x300")
 
-    def browse_directory(self):
-        if self.repo_path:
-            directory = self.repo_path
-        else:
-            directory = ctk.filedialog.askdirectory(initialdir=os.getcwd())
+        # Add your configuration options here
+        # For example:
+        config_frame = ctk.CTkFrame(config_window)
+        config_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Theme selection
+        theme_label = ctk.CTkLabel(config_frame, text="Theme:")
+        theme_label.pack(pady=15)
+
+        theme_var = tk.StringVar(value="Dark")
+        theme_menu = ctk.CTkOptionMenu(
+            config_frame,
+            values=["Light", "Dark", "System"],
+            variable=theme_var,
+            command=lambda x: ctk.set_appearance_mode(x)
+        )
+        theme_menu.pack(pady=15)
+
+    def _show_find_version(self):
+        """Show the find version task interface"""
+        self._clear_task_frame()
+        ctk.CTkLabel(self.task_frame, text="Commit SHA:").grid(row=0, column=0, padx=5)
+        self.commit_entry = ctk.CTkEntry(self.task_frame, width=400, placeholder_text="Required")
+        self.commit_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        self.task_frame.grid_columnconfigure(1, weight=1)
+        self.current_displayed_task = VersionFinderTasks.FIND_VERSION
+
+    def _show_find_commits(self):
+        """Show the find commits between versions task interface"""
+        self._clear_task_frame()
+
+        ctk.CTkLabel(self.task_frame, text="Start Version:").grid(row=0, column=0, padx=5)
+        self.start_version_entry = ctk.CTkEntry(self.task_frame, width=400, placeholder_text="Required")
+        self.start_version_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        ctk.CTkLabel(self.task_frame, text="End Version:").grid(row=0, column=2, padx=5)
+        self.end_version_entry = ctk.CTkEntry(self.task_frame, width=400, placeholder_text="Required")
+        self.end_version_entry.grid(row=0, column=3, padx=10, pady=10, sticky="ew")
+        self.current_displayed_task = VersionFinderTasks.COMMITS_BETWEEN_VERSIONS
+
+    def _show_search_commits(self):
+        """Show the search commits by text task interface"""
+        self._clear_task_frame()
+
+        ctk.CTkLabel(self.task_frame, text="Search Pattern:").grid(row=0, column=0, padx=5)
+        self.search_text_pattern_entry = ctk.CTkEntry(self.task_frame, width=400, placeholder_text="Required")
+        self.search_text_pattern_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        self.task_frame.grid_columnconfigure(1, weight=1)
+        self.current_displayed_task = VersionFinderTasks.COMMITS_BY_TEXT
+
+    def _clear_task_frame(self):
+        """Clear the task-specific frame"""
+        for widget in self.task_frame.winfo_children():
+            widget.destroy()
+        # self.task_frame.grid_forget()
+
+    def _browse_directory(self):
+        """Open directory browser dialog"""
+        directory = filedialog.askdirectory(initialdir=os.getcwd())
         if directory:
             self.dir_entry.delete(0, "end")
             self.dir_entry.insert(0, directory)
-            self.initialize_version_finder()
+            self._initialize_version_finder()
 
+    def _initialize_version_finder(self):
+        """Initialize the VersionFinder instance"""
+        try:
+            self.version_finder = VersionFinder(self.dir_entry.get())
+            self._log_output("VersionFinder initialized successfully.")
+            # Update branch autocomplete
             self.branch_entry.suggestions = self.version_finder.list_branches()
             self.branch_entry.configure(state="normal")
+            self._log_output("Loaded branches successfully.")
 
+            # Update submodule autocomplete
             self.submodule_entry.suggestions = self.version_finder.list_submodules()
-            self.submodule_entry.configure(state="normal")
-
-    def validate_entries(self):
-        required_fields = {
-            "Directory": self.dir_entry.get().strip(),
-            "Branch": self.branch_entry.get().strip(),
-            "Commit": self.commit_entry.get().strip(),
-        }
-
-        valid_input = True
-        for field_name, value in required_fields.items():
-            if not value:
-                self.output_text.insert("end", f"⚠️ {field_name} is required.\n")
-                valid_input = False
+            if self.submodule_entry.suggestions:
+                self.submodule_entry.configure(state="readonly")
+                self._log_output("There are no submodules in the repository (with selected branch).")
             else:
-                # Add logic to check if the value is a valid branch or commit
-                pass
-
-        return valid_input
-
-    def search(self):
-        try:
-            directory = self.dir_entry.get()
-            if not directory:
-                self.output_text.insert("end", "⚠️ Please select a directory first.\n")
-                return
-
-            if not self.validate_entries():
-                self.output_text.insert("end", "⚠️ Please fill in all required fields.\n")
-                self.output_text.see("end")
-                return
-
-            # Get values from entries
-            branch = self.branch_entry.get()
-            submodule = self.submodule_entry.get()
-            commit = self.commit_entry.get()
-
-            # Display search parameters
-            self.output_text.insert("end", f"🔍 Searching in: {directory}\n")
-            self.output_text.insert("end", f"Branch: {branch}\n")
-            self.output_text.insert("end", f"Submodule: {submodule}\n")
-            self.output_text.insert("end", f"Commit: {commit}\n")
-
-            # Perform the search with error handling
-            try:
-                result = self.version_finder.find_first_version_containing_commit(
-                    commit, submodule)
-                if result:
-                    self.output_text.insert("end", f"✅ Search completed successfully: The version is {result}\n")
-                else:
-                    self.output_text.insert(
-                        "end",
-                        "❌ Search completed, but no version was found. If this is a recent commit, it is possible no version was yet created.\n")
-            except InvalidCommitError as e:
-                self.output_text.insert("end", f"❌ Error: {str(e)}\n")
-            except GitCommandError as e:
-                self.output_text.insert("end", f"❌ Git Error: {str(e)}\n")
-            except Exception as e:
-                self.output_text.insert("end", f"❌ Error: An unexpected error occurred - {str(e)}\n")
-
-            self.output_text.see("end")
+                self.submodule_entry.configure(state="normal")
+                self._log_output("Loaded submodules successfully.")
 
         except Exception as e:
-            self.output_text.insert("end", f"❌ System Error: {str(e)}\n")
-            self.output_text.see("end")
+            self._log_error(str(e))
 
-    def clear_output(self):
-        self.output_text.delete("1.0", "end")
+    def _search_version_by_commit(self):
+        try:
+            self.version_finder.update_repository(self.branch_entry.get())
+            commit = self.commit_entry.get()
+            version = self.version_finder.find_first_version_containing_commit(
+                commit,
+                submodule=self.submodule_entry.get()
+            )
+            if version is None:
+                self._log_error(f"No version found for commit {commit}, most likely it is too new.")
+            else:
+                self._log_output(f"Version for commit {commit}: {version}")
+        except Exception as e:
+            self._log_error(str(e))
+
+    def _search(self):
+        """Handle version search"""
+        try:
+            if not self._validate_inputs():
+                return
+            if (self.current_displayed_task == VersionFinderTasks.FIND_VERSION):
+                self._search_version_by_commit()
+            elif (self.current_displayed_task == VersionFinderTasks.COMMITS_BETWEEN_VERSIONS):
+                self._search_commits_between()
+            elif (self.current_displayed_task == VersionFinderTasks.COMMITS_BY_TEXT):
+                self._search_commits_by_text()
+        except Exception as e:
+            self._log_error(str(e))
+
+    def _search_commits_between(self):
+        """Handle commits between versions search"""
+        try:
+
+            self.version_finder.update_repository(self.branch_entry.get())
+            commits = self.version_finder.get_commits_between_versions(
+                self.start_version_entry.get(),
+                self.end_version_entry.get(),
+                submodule=self.submodule_entry.get()
+            )
+            CommitListWindow(self, commits)
+        except Exception as e:
+            self._log_error(str(e))
+
+    def _search_commits_by_text(self):
+        """Handle commits search by text"""
+        try:
+            if not self._validate_inputs():
+                return
+
+            self.version_finder.update_repository(branch=self.branch_entry.get())
+            commits = self.version_finder.find_commits_by_text(
+                self.search_text_pattern_entry.get(),
+                submodule=self.submodule_entry.get()
+            )
+            CommitListWindow(self, commits)
+        except Exception as e:
+            self._log_error(str(e))
+
+    def _validate_inputs(self) -> bool:
+        """Validate required inputs"""
+        if not self.dir_entry.get():
+            messagebox.showerror("Error", "Please select a repository directory")
+            return False
+
+        if not self.branch_entry.get():
+            messagebox.showerror("Error", "Please select a branch")
+            return False
+
+        if not self.version_finder:
+            self._initialize_version_finder()
+            if not self.version_finder:
+                return False
+
+        return True
+
+    def _log_output(self, message: str):
+        """Log output message to the output area"""
+        self.output_text.configure(state="normal")
+        self.output_text.insert("end", f"✅ {message}\n")
+        self.output_text.configure(state="disabled")
+        self.output_text.see("end")
+
+    def _log_error(self, message: str):
+        """Log error message to the output area"""
+        self.output_text.configure(state="normal")
+        self.output_text.insert("end", f"❌ Error: {message}\n")
+        self.output_text.configure(state="disabled")
+        self.output_text.see("end")
+
+    def _setup_icon(self):
+        """Setup application icon"""
+        try:
+            with importlib.resources.path("version_finder_gui.assets", 'icon.png') as icon_path:
+                self.iconphoto(True, tk.PhotoImage(file=str(icon_path)))
+        except Exception:
+            pass
+
+    def center_window(self):
+        """Center the window on the screen"""
+        self.update()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        x = (screen_width - width) // 2
+        y = (screen_height - height) // 2
+
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
 
-def gui_main(args: argparse.Namespace) -> int:
-    if args.version:
-        from .__version__ import __version__
-        print(f"version_finder gui-v{__version__}")
-        return 0
-
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logger = setup_logger(name=__name__, level=log_level)
-    app = VersionFinderGUI(args.path, logger=logger)
+def launch_gui():
+    print("lunching GUI")
+    app = VersionFinderGUI()
     app.mainloop()
 
 
-def main():
-    args = parse_arguments()
-    gui_main(args)
-
-
-if __name__ == "__main__":
-    main()
+launch_gui()

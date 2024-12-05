@@ -47,7 +47,7 @@ class AutocompleteEntry(ctk.CTkEntry):
 
         self._placeholder_text = placeholder_text
         self._placeholder_shown = True
-
+        self.callable = None
         self.suggestion_window = None
         self.suggestion_listbox = None
 

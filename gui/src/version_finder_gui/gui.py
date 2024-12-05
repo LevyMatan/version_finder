@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import importlib.resources
 from version_finder import VersionFinder, Commit
-from version_finder import LoggerProtocol, parse_arguments, setup_logger
+from version_finder import LoggerProtocol, NullLogger, parse_arguments, setup_logger
 from .autocomplete_entry import AutocompleteEntry  # We'll reuse this class as it's well-implemented
 
 
@@ -90,7 +90,7 @@ ctk.set_default_color_theme("green")
 
 
 class VersionFinderGUI(ctk.CTk):
-    def __init__(self, path: str = None, logger: LoggerProtocol = None):
+    def __init__(self, path: str = '', logger: LoggerProtocol = NullLogger):
         super().__init__()
         self.repo_path = Path(path).resolve() if path else path
         self.version_finder = None
@@ -272,6 +272,9 @@ class VersionFinderGUI(ctk.CTk):
         return dir_frame
 
     def _on_branch_select(self, branch):
+        if self.version_finder is None:
+            self._log_error("System error: trying to access unintialized variable")
+            raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
             self.version_finder.update_repository(branch)
             self._log_output(f"Repository updated to branch: {branch}")
@@ -445,7 +448,7 @@ class VersionFinderGUI(ctk.CTk):
     def _initialize_version_finder(self):
         """Initialize the VersionFinder instance"""
         try:
-            self.version_finder = VersionFinder(self.repo_path)
+            self.version_finder = VersionFinder(self.repo_path.__str__())
             self._log_output(f"VersionFinder initialized with: {self.repo_path} successfully.")
             self.dir_entry.insert(0, self.repo_path)
 
@@ -467,6 +470,9 @@ class VersionFinderGUI(ctk.CTk):
             self._log_error(str(e))
 
     def _search_version_by_commit(self):
+        if self.version_finder is None:
+            self._log_error("System error: trying to access unintialized variable")
+            raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
             self.version_finder.update_repository(self.branch_entry.get())
             commit = self.commit_entry.get()
@@ -497,6 +503,9 @@ class VersionFinderGUI(ctk.CTk):
 
     def _search_commits_between(self):
         """Handle commits between versions search"""
+        if self.version_finder is None:
+            self._log_error("System error: trying to access unintialized variable")
+            raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
 
             self.version_finder.update_repository(self.branch_entry.get())
@@ -511,6 +520,9 @@ class VersionFinderGUI(ctk.CTk):
 
     def _search_commits_by_text(self):
         """Handle commits search by text"""
+        if self.version_finder is None:
+            self._log_error("System error: trying to access unintialized variable")
+            raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
             if not self._validate_inputs():
                 return
@@ -587,6 +599,7 @@ def gui_main(args: argparse.Namespace) -> int:
     logger = setup_logger(name=__name__, level=log_level)
     app = VersionFinderGUI(args.path, logger=logger)
     app.mainloop()
+    return 0
 
 
 def main():

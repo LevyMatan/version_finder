@@ -190,7 +190,7 @@ class VersionFinder:
     git_regex_pattern_for_version = "(Version|VERSION|Updated version)(:)? (XX_)?[0-9]+(_|.)[0-9]+((-|.)[0-9]+)?"
 
     def __init__(self,
-                 path: Optional[str] = None,
+                 path: str = '',
                  config: Optional[GitConfig] = None,
                  logger: Optional[LoggerProtocol] = None) -> None:
         """

@@ -9,7 +9,7 @@ from tkinter import filedialog, messagebox
 import importlib.resources
 from version_finder import VersionFinder, Commit
 from version_finder import parse_arguments, setup_logger
-from .autocomplete_entry import AutocompleteEntry  # We'll reuse this class as it's well-implemented
+from version_finder_gui.autocomplete_entry import AutocompleteEntry  # We'll reuse this class as it's well-implemented
 
 
 class CommitDetailsWindow(ctk.CTkToplevel):
@@ -38,6 +38,7 @@ class CommitListWindow(ctk.CTkToplevel):
         self.title("Commit List")
         self.geometry("800x600")
 
+        self.center_window()
         # Create scrollable frame
         self.scroll_frame = ctk.CTkScrollableFrame(self)
         self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -53,6 +54,19 @@ class CommitListWindow(ctk.CTkToplevel):
         for commit in commits:
             self._add_commit_row(commit)
 
+    def center_window(self):
+        """Center the window on the screen"""
+        self.update()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        x = (screen_width - width) // 2
+        y = (screen_height - height) // 2
+
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
     def _add_commit_row(self, commit: Commit):
         row = ctk.CTkFrame(self.scroll_frame)
         row.pack(fill="x", pady=2)
@@ -61,7 +75,8 @@ class CommitListWindow(ctk.CTkToplevel):
             row,
             text=commit.sha[:8],
             width=100,
-            command=lambda: self._copy_to_clipboard(commit.sha)
+            command=lambda: self._copy_to_clipboard(commit.sha),
+            fg_color="transparent"
         )
         hash_btn.pack(side="left", padx=5)
 
@@ -69,7 +84,8 @@ class CommitListWindow(ctk.CTkToplevel):
             row,
             text=commit.subject,
             width=500,
-            command=lambda: CommitDetailsWindow(self, commit)
+            command=lambda: CommitDetailsWindow(self, commit),
+            fg_color="transparent"
         )
         subject_btn.pack(side="left", padx=5)
 
@@ -92,11 +108,11 @@ class VersionFinderGUI(ctk.CTk):
     def __init__(self, path: str = ''):
         super().__init__()
         self.repo_path = Path(path).resolve() if path else path
-        self.version_finder = None
         self.logger = setup_logger()
         self.title("Version Finder")
-        self.current_task_frame = None
-        self.version_finder = None
+        self.version_finder: VersionFinder = None
+        self.selected_branch: str = ''
+        self.selected_submodule: str = ''
         # Initialize UI
         self._setup_window()
         self._create_window_layout()
@@ -269,19 +285,41 @@ class VersionFinderGUI(ctk.CTk):
         browse_btn.grid(row=0, column=2, padx=5)
         return dir_frame
 
+    def _update_submodule_entry(self, submodules):
+        # First ensure the widget is in normal state
+        self.submodule_entry.configure(state="normal")
+        if submodules:
+            self.submodule_entry.set_placeholder("Select a submodule [Optional]")
+            self.submodule_entry.suggestions = submodules
+            self._log_output("Loaded submodules successfully.")
+        else:
+            self.submodule_entry.set_placeholder("No submodules found")
+            self._log_output("There are no submodules in the repository (with selected branch).")
+            # Set readonly state last
+            self.submodule_entry.configure(state="readonly")
+
+        self.submodule_entry.after(100, self.submodule_entry.update)
+
     def _on_branch_select(self, branch):
         if self.version_finder is None:
             self._log_error("System error: trying to access unintialized variable")
             raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
+            self.selected_branch = branch
+            self.selected_submodule = ''
             self.version_finder.update_repository(branch)
-            self._log_output(f"Repository updated to branch: {branch}")
-            if self.version_finder.list_submodules():
-                self._log_output(f"Submodules found on branch: {branch}")
-                self.submodule_entry.set_placeholder("Select a submodule [Optional]")
-            else:
-                self.submodule_entry.set_placeholder("No submodules found")
-                self.submodule_entry.configure(state="readonly")
+            self._log_output(f"Repository updated to branch: {self.selected_branch}")
+            self._update_submodule_entry(self.version_finder.list_submodules())
+
+        except Exception as e:
+            self._log_error(f"Error updating repository: {str(e)}")
+
+    def _on_submodule_select(self, submodule):
+        if self.version_finder is None:
+            self._log_error("System error: trying to access unintialized variable")
+            raise Exception("System error: trying to access unintialized variable: version_finder")
+        try:
+            self.selected_submodule = submodule
         except Exception as e:
             self._log_error(f"Error updating repository: {str(e)}")
 
@@ -306,6 +344,8 @@ class VersionFinderGUI(ctk.CTk):
         ctk.CTkLabel(submodule_frame, text="Submodule:").grid(row=0, column=0, padx=5)
         self.submodule_entry = AutocompleteEntry(
             submodule_frame, width=400, placeholder_text='Select a submodule [Optional]')
+        self.submodule_entry.configure(state="disabled")
+        self.submodule_entry.callback = self._on_submodule_select
         self.submodule_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         return submodule_frame
 
@@ -442,6 +482,18 @@ class VersionFinderGUI(ctk.CTk):
             self.repo_path = directory
             self._initialize_version_finder()
 
+    def _update_branch_entry(self):
+        """Update the branch entry with the current branch"""
+        if self.version_finder:
+            self.branch_entry.suggestions = self.version_finder.list_branches()
+            self.branch_entry.configure(state="normal")
+            self.selected_branch = self.version_finder.get_current_branch()
+            if self.selected_branch:
+                self.branch_entry.delete(0, tk.END)
+                self.branch_entry.insert(0, self.selected_branch)
+                self._log_output("Loaded branches successfully.")
+                self._on_branch_select(self.selected_branch)
+
     def _initialize_version_finder(self):
         """Initialize the VersionFinder instance"""
         try:
@@ -450,18 +502,10 @@ class VersionFinderGUI(ctk.CTk):
             self.dir_entry.insert(0, self.repo_path)
 
             # Update branch autocomplete
-            self.branch_entry.suggestions = self.version_finder.list_branches()
-            self.branch_entry.configure(state="normal")
-            self._log_output("Loaded branches successfully.")
+            self._update_branch_entry()
 
             # Update submodule autocomplete
-            self.submodule_entry.suggestions = self.version_finder.list_submodules()
-            if self.submodule_entry.suggestions:
-                self.submodule_entry.configure(state="readonly")
-                self._log_output("There are no submodules in the repository (with selected branch).")
-            else:
-                self.submodule_entry.configure(state="normal")
-                self._log_output("Loaded submodules successfully.")
+            self._update_submodule_entry(self.version_finder.list_submodules())
 
         except Exception as e:
             self._log_error(str(e))
@@ -471,11 +515,11 @@ class VersionFinderGUI(ctk.CTk):
             self._log_error("System error: trying to access unintialized variable")
             raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
-            self.version_finder.update_repository(self.branch_entry.get())
+            self.version_finder.update_repository(self.selected_branch)
             commit = self.commit_entry.get()
             version = self.version_finder.find_first_version_containing_commit(
                 commit,
-                submodule=self.submodule_entry.get()
+                submodule=self.selected_submodule
             )
             if version is None:
                 self._log_error(f"No version found for commit {commit}, most likely it is too new.")
@@ -505,11 +549,11 @@ class VersionFinderGUI(ctk.CTk):
             raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
 
-            self.version_finder.update_repository(self.branch_entry.get())
+            self.version_finder.update_repository(self.selected_branch)
             commits = self.version_finder.get_commits_between_versions(
                 self.start_version_entry.get(),
                 self.end_version_entry.get(),
-                submodule=self.submodule_entry.get()
+                submodule=self.selected_submodule
             )
             CommitListWindow(self, commits)
         except Exception as e:
@@ -524,10 +568,10 @@ class VersionFinderGUI(ctk.CTk):
             if not self._validate_inputs():
                 return
 
-            self.version_finder.update_repository(branch=self.branch_entry.get())
+            self.version_finder.update_repository(self.selected_branch)
             commits = self.version_finder.find_commits_by_text(
                 self.search_text_pattern_entry.get(),
-                submodule=self.submodule_entry.get()
+                submodule=self.selected_submodule
             )
             CommitListWindow(self, commits)
         except Exception as e:

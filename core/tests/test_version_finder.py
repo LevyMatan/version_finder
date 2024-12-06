@@ -3,7 +3,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any
-from ..src.version_finder.version_finder import (
+from version_finder.version_finder import (
     VersionFinder,
     InvalidGitRepository,
     GitRepositoryNotClean,
@@ -15,7 +15,7 @@ from ..src.version_finder.version_finder import (
     Commit,
     GitConfig
 )
-from ..src.version_finder.logger import (
+from version_finder.logger import (
     setup_logger,
 )
 

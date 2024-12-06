@@ -13,8 +13,8 @@ import os
 import re
 import time
 from typing import List, Optional, Dict, Callable
-from .git_executer import GitCommandExecutor, GitConfig, GitCommandError
-from .logger import setup_logger
+from version_finder.git_executer import GitCommandExecutor, GitConfig, GitCommandError
+from version_finder.logger import setup_logger
 
 
 class GitError(Exception):

@@ -1,7 +1,7 @@
 import os
 import sys
 import subprocess
-from .__common__ import parse_arguments, args_to_command
+from .common import parse_arguments, args_to_command
 from .version_finder import VersionFinder
 
 

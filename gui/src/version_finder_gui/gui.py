@@ -7,9 +7,10 @@ from typing import List
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import importlib.resources
-from version_finder import VersionFinder, Commit
-from version_finder import parse_arguments, setup_logger
-from version_finder_gui.autocomplete_entry import AutocompleteEntry  # We'll reuse this class as it's well-implemented
+from version_finder.version_finder import VersionFinder, Commit
+from version_finder.common import parse_arguments
+from version_finder.logger import setup_logger
+from .autocomplete_entry import AutocompleteEntry  # We'll reuse this class as it's well-implemented
 
 
 class CommitDetailsWindow(ctk.CTkToplevel):

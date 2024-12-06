@@ -1,6 +1,6 @@
 import pytest
 import sys
-from version_finder import setup_logger
+from version_finder.logger import setup_logger
 from ..src.version_finder_cli.cli import main
 
 logger = setup_logger(verbose=True)

@@ -3,7 +3,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any
-from ..src.version_finder import (
+from ..src.version_finder.version_finder import (
     VersionFinder,
     InvalidGitRepository,
     GitRepositoryNotClean,
@@ -13,8 +13,10 @@ from ..src.version_finder import (
     InvalidBranchError,
     VersionNotFoundError,
     Commit,
-    setup_logger,
     GitConfig
+)
+from ..src.version_finder.logger import (
+    setup_logger,
 )
 
 debug_logger = setup_logger(verbose=True)

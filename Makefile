@@ -70,7 +70,7 @@ clean:
 	rm -f .coverage
 
 uninstall:
-	pip uninstall -y version-finder-git-based-versions
-	pip uninstall -y version-finder-git-based-versions-cli
 	pip uninstall -y version-finder-git-based-versions-gui-app
+	pip uninstall -y version-finder-git-based-versions-cli
+	pip uninstall -y version-finder-git-based-versions
 	make clean

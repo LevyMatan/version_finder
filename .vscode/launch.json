@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+
       {
         "name": "Python: Debug Pytest",
         "type": "python",
@@ -29,7 +30,7 @@
         "name": "Python: Debug GUI",
         "type": "python",
         "request": "launch",
-        "program": "${workspaceFolder}/src/version_finder/__gui__.py",
+        "program": "${workspaceFolder}/gui/src/version_finder_gui/gui.py",
         "args": [
           "-v",
           "-p${workspaceFolder}/test_version_repo",

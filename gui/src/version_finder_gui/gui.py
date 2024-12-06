@@ -35,7 +35,7 @@ class CommitDetailsWindow(ctk.CTkToplevel):
 class CommitListWindow(ctk.CTkToplevel):
     def __init__(self, parent, commits: List[Commit]):
         super().__init__(parent)
-        self.title("Commit List")
+        self.title("Commits List")
         self.geometry("800x600")
 
         self.center_window()
@@ -67,27 +67,45 @@ class CommitListWindow(ctk.CTkToplevel):
 
         self.geometry(f"{width}x{height}+{x}+{y}")
 
+    def _create_styled_button(self, parent, text, width=None, command=None):
+        return ctk.CTkButton(
+            parent,
+            text=text,
+            width=width,  # Can be None or 0 for expandable buttons
+            command=command,
+            fg_color="transparent",
+            border_width=1,
+            border_color=("gray70", "gray30"),
+            hover_color=("gray90", "gray20"),
+            text_color=("gray10", "gray90")
+    )
+
     def _add_commit_row(self, commit: Commit):
         row = ctk.CTkFrame(self.scroll_frame)
         row.pack(fill="x", pady=2)
 
-        hash_btn = ctk.CTkButton(
+        # Configure the row to expand the second column (subject)
+        row.grid_columnconfigure(1, weight=1)
+
+        # Hash button (fixed width)
+        hash_btn = self._create_styled_button(
             row,
             text=commit.sha[:8],
             width=100,
-            command=lambda: self._copy_to_clipboard(commit.sha),
-            fg_color="transparent"
+            command=lambda: self._copy_to_clipboard(commit.sha)
         )
-        hash_btn.pack(side="left", padx=5)
+        hash_btn.grid(row=0, column=0, padx=5)  # Changed from pack to grid
 
-        subject_btn = ctk.CTkButton(
+        # Subject button (expandable)
+        subject_btn = self._create_styled_button(
             row,
             text=commit.subject,
-            width=500,
-            command=lambda: CommitDetailsWindow(self, commit),
-            fg_color="transparent"
+            width=0,  # Set width to 0 to allow expansion
+            command=lambda: CommitDetailsWindow(self, commit)
         )
-        subject_btn.pack(side="left", padx=5)
+        subject_btn.grid(row=0, column=1, padx=5, sticky="ew")  # sticky="ew" makes it expand horizontally
+
+
 
     def _copy_to_clipboard(self, text: str):
         self.clipboard_clear()

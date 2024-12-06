@@ -202,7 +202,8 @@ class VersionFinder:
         self.config = config or GitConfig()
         self.repository_path = Path(path or os.getcwd()).resolve()
         self.logger = setup_logger()
-        self.updated_branch = None
+        self.updated_branch: str = ''
+
         try:
             self._git = GitCommandExecutor(self.repository_path, self.config)
         except GitCommandError as e:
@@ -326,7 +327,7 @@ class VersionFinder:
         """Get list of branches."""
         return self.branches
 
-    def get_commit_info(self, commit_sha: str, submodule: str = None) -> Commit:
+    def get_commit_info(self, commit_sha: str, submodule: str = '') -> Commit:
         """Get detailed commit information."""
 
         # Verify ready for Tasks
@@ -410,6 +411,7 @@ class VersionFinder:
 
         try:
             self._git.execute(["checkout", branch])
+            self.logger.debug(f"Checked out branch: {branch}")
             if self._has_remote:
                 self._git.execute(["pull", "origin", branch])
             self.__load_submodules()
@@ -429,7 +431,7 @@ class VersionFinder:
             self.logger.error(f"Failed to update submodules: {e}")
             raise
 
-    def find_commits_by_text(self, text: str, submodule: str = None) -> List[Commit]:
+    def find_commits_by_text(self, text: str, submodule: str = '') -> List[Commit]:
         """
         Find commits in the specified branch that contain the given text in either title or description.
 
@@ -796,7 +798,7 @@ class VersionFinder:
 
         return self.get_version_from_commit(versions_commits[1])
 
-    def get_commit_sha_from_relative_string(self, relative_string: str, submodule: str = None) -> Optional[str]:
+    def get_commit_sha_from_relative_string(self, relative_string: str, submodule: str = '') -> Optional[str]:
         """
         Get the commit SHA from a relative string.
         For example, "HEAD~1" will return the SHA of the commit that is one commit before HEAD.

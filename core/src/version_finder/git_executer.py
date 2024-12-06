@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import time
 from typing import Optional
-from .logger import setup_logger
+from version_finder.logger import setup_logger
 
 
 @dataclass

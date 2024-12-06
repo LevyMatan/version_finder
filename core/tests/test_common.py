@@ -1,4 +1,4 @@
-from ..src.version_finder.common import args_to_command
+from version_finder.common import args_to_command
 import argparse
 import pytest
 

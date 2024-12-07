@@ -13,6 +13,20 @@ from version_finder.logger import setup_logger
 from version_finder_gui.autocomplete_entry import AutocompleteEntry  # We'll reuse this class as it's well-implemented
 
 
+def center_window(window: ctk.CTkToplevel):
+    """Center the window on the screen"""
+    window.update()
+    width = window.winfo_width()
+    height = window.winfo_height()
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+
+    window.geometry(f"{width}x{height}+{x}+{y}")
+
+
 class CommitDetailsWindow(ctk.CTkToplevel):
     def __init__(self, parent, commit_data: Commit):
         super().__init__(parent)
@@ -39,7 +53,7 @@ class CommitListWindow(ctk.CTkToplevel):
         self.title("Commits List")
         self.geometry("800x600")
 
-        self.center_window()
+        center_window(self)
         # Create scrollable frame
         self.scroll_frame = ctk.CTkScrollableFrame(self)
         self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -55,19 +69,6 @@ class CommitListWindow(ctk.CTkToplevel):
         for commit in commits:
             self._add_commit_row(commit)
 
-    def center_window(self):
-        """Center the window on the screen"""
-        self.update()
-        width = self.winfo_width()
-        height = self.winfo_height()
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-
-        x = (screen_width - width) // 2
-        y = (screen_height - height) // 2
-
-        self.geometry(f"{width}x{height}+{x}+{y}")
-
     def _create_styled_button(self, parent, text, width=None, command=None):
         return ctk.CTkButton(
             parent,
@@ -78,8 +79,9 @@ class CommitListWindow(ctk.CTkToplevel):
             border_width=1,
             border_color=("gray70", "gray30"),
             hover_color=("gray90", "gray20"),
-            text_color=("gray10", "gray90")
-    )
+            text_color=("gray10", "gray90"),
+            anchor="w"
+        )
 
     def _add_commit_row(self, commit: Commit):
         row = ctk.CTkFrame(self.scroll_frame)
@@ -102,11 +104,76 @@ class CommitListWindow(ctk.CTkToplevel):
             row,
             text=commit.subject,
             width=0,  # Set width to 0 to allow expansion
-            command=lambda: CommitDetailsWindow(self, commit)
+            command=lambda: self._toggle_commit_details_card(subject_btn, commit)
         )
         subject_btn.grid(row=0, column=1, padx=5, sticky="ew")  # sticky="ew" makes it expand horizontally
 
+    def _toggle_commit_details_card(self, button: ctk.CTkButton, commit: Commit):
+        # Check if the card already exists
+        if hasattr(self, "card") and self.card.winfo_exists():
+            self.card.destroy()  # Close the card if it's already open
+            return
 
+        # Get the button's position
+        x = button.winfo_rootx() - self.winfo_rootx()
+        y = button.winfo_rooty() - self.winfo_rooty() + button.winfo_height()
+        button_width = button.winfo_width()
+
+        # Check if the card would be cut off
+        card_height = 200  # Default height for the card before content calculation
+        app_height = self.winfo_height()
+
+        if y + card_height > app_height:  # If the card would be cut off
+            y = button.winfo_rooty() - self.winfo_rooty() - card_height
+
+        # Create the card
+        self.card = ctk.CTkFrame(self, corner_radius=15, fg_color="white", width=button_width)
+        self.card.place(x=x, y=y)  # Place it on top of the button
+
+        # Split message into first line and rest
+        message_lines = (commit.message or "").split('\n', 1)
+        first_line = message_lines[0]
+        rest_of_message = message_lines[1] if len(message_lines) > 1 else ""
+
+        # Add first line in bold
+        first_line_label = ctk.CTkLabel(self.card, text=first_line, font=("Arial", 14, "bold"))
+        first_line_label.pack(pady=5, padx=10, anchor="w")
+
+        # Add rest of message if it exists
+        if rest_of_message:
+            message_label = ctk.CTkLabel(
+                self.card, text=rest_of_message, font=(
+                    "Arial", 12), wraplength=button_width - 20)
+            message_label.pack(pady=5, padx=10, anchor="w")
+
+        # Author with label
+        author_label = ctk.CTkLabel(self.card, text=f"Author: {commit.author}", font=("Arial", 12))
+        author_label.pack(pady=5, padx=10, anchor="w")
+
+        # Convert timestamp to human readable format
+        from datetime import datetime
+        try:
+            timestamp_dt = datetime.fromtimestamp(float(commit.timestamp))
+            formatted_time = timestamp_dt.strftime("%B %d, %Y at %I:%M %p")
+            timestamp_label = ctk.CTkLabel(self.card, text=formatted_time, font=("Arial", 12))
+            timestamp_label.pack(pady=5, padx=10, anchor="w")
+        except (ValueError, TypeError):
+            # Fallback in case timestamp conversion fails
+            timestamp_label = ctk.CTkLabel(self.card, text=str(commit.timestamp), font=("Arial", 12))
+            timestamp_label.pack(pady=5, padx=10, anchor="w")
+
+        # Version with label (if exists)
+        if commit.version:
+            version_label = ctk.CTkLabel(self.card, text=f"Version: {commit.version}", font=("Arial", 12))
+            version_label.pack(pady=5, padx=10, anchor="w")
+
+        close_button = ctk.CTkButton(self.card, text="Close", command=self.card.destroy)
+        close_button.pack(pady=5)
+
+        # Update the card height dynamically based on content
+        self.card.update_idletasks()
+        card_height = self.card.winfo_reqheight()
+        self.card.configure(height=card_height)
 
     def _copy_to_clipboard(self, text: str):
         self.clipboard_clear()
@@ -138,7 +205,7 @@ class VersionFinderGUI(ctk.CTk):
         self._setup_icon()
         self._show_find_version()
         # Center window on screen
-        self.center_window()
+        center_window(self)
 
         # Focous on window
         self.focus_force()
@@ -430,14 +497,16 @@ class VersionFinderGUI(ctk.CTk):
         config_window.title("Settings")
         config_window.geometry("400x300")
 
+        center_window(config_window)
+
         # Add your configuration options here
         # For example:
         config_frame = ctk.CTkFrame(config_window)
         config_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Theme selection
-        theme_label = ctk.CTkLabel(config_frame, text="Theme:")
-        theme_label.pack(pady=15)
+        theme_label = ctk.CTkLabel(config_frame, text="Theme Settings", font=("Arial", 16, "bold"))
+        theme_label.pack(pady=(15, 10))
 
         theme_var = tk.StringVar(value="Dark")
         theme_menu = ctk.CTkOptionMenu(
@@ -447,6 +516,31 @@ class VersionFinderGUI(ctk.CTk):
             command=lambda x: ctk.set_appearance_mode(x)
         )
         theme_menu.pack(pady=15)
+
+        # Apply button
+        apply_btn = ctk.CTkButton(
+            config_frame,
+            text="Apply Settings",
+            command=self._apply_settings,
+            fg_color=("green", "darkgreen"),
+            hover_color=("darkgreen", "forestgreen")
+        )
+        apply_btn.pack(pady=15)
+        self.config_window = config_window
+
+    def _apply_settings(self):
+        """Apply configuration settings and return to previous view"""
+        # You can add more configuration logic here
+        self._log_output("Settings applied successfully!")
+        # Return to the last active task view
+        if hasattr(self, 'current_displayed_task'):
+            if self.current_displayed_task == VersionFinderTasks.FIND_VERSION:
+                self._show_find_version()
+            elif self.current_displayed_task == VersionFinderTasks.COMMITS_BETWEEN_VERSIONS:
+                self._show_find_commits()
+            elif self.current_displayed_task == VersionFinderTasks.COMMITS_BY_TEXT:
+                self._show_search_commits()
+        self.config_window.destroy()
 
     def _show_find_version(self):
         """Show the find version task interface"""
@@ -637,18 +731,18 @@ class VersionFinderGUI(ctk.CTk):
         except Exception:
             pass
 
-    def center_window(self):
+    def center_window(window):
         """Center the window on the screen"""
-        self.update()
-        width = self.winfo_width()
-        height = self.winfo_height()
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
+        window.update()
+        width = window.winfo_width()
+        height = window.winfo_height()
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
 
         x = (screen_width - width) // 2
         y = (screen_height - height) // 2
 
-        self.geometry(f"{width}x{height}+{x}+{y}")
+        window.geometry(f"{width}x{height}+{x}+{y}")
 
 
 def gui_main(args: argparse.Namespace) -> int:

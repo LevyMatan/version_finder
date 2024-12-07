@@ -11,7 +11,7 @@ class CustomCommitParserFilterByScopeCore(AngularCommitParser):
             return None
 
         # Only change version level if scope is not 'core'
-        if parsed.scope and "core" not in parsed.scope:
+        if parsed.scope and "core" not in parsed.scope.lower():
             parsed = parsed._replace(bump=LevelBump.NO_RELEASE)
 
         return parsed
@@ -24,7 +24,7 @@ class CustomCommitParserFilterByScopeGui(AngularCommitParser):
             return None
 
         # Only change version level if scope is not 'core'
-        if parsed.scope and "gui" not in parsed.scope:
+        if parsed.scope and "gui" not in parsed.scope.lower():
             parsed = parsed._replace(bump=LevelBump.NO_RELEASE)
 
         return parsed
@@ -37,7 +37,7 @@ class CustomCommitParserFilterByScopeCli(AngularCommitParser):
             return None
 
         # Only change version level if scope is not 'core'
-        if parsed.scope and "cli" not in parsed.scope:
+        if parsed.scope and "cli" not in parsed.scope.lower():
             parsed = parsed._replace(bump=LevelBump.NO_RELEASE)
 
         return parsed

@@ -2,12 +2,12 @@
     "makefile.configureOnOpen": false,
     "conventionalCommits.scopes": [
         "core",
-        "GitExecuter",
-        "ErrorHandling",
-        "Infra",
-        "Tests",
-        "GUI",
-        "main",
-        "Dist"
+        "core-cli",
+        "core-gui",
+        "core-cli-gui",
+        "cli",
+        "cli-gui",
+        "gui",
+        "infra",
     ]
 }

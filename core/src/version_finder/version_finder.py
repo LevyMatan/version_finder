@@ -9,6 +9,7 @@ finding and comparing versions.
 """
 from dataclasses import dataclass
 from pathlib import Path
+import difflib
 import os
 import re
 import time
@@ -43,6 +44,9 @@ class InvalidBranchError(GitError):
 
 class VersionNotFoundError(GitError):
     """Raised when version is not found in commits message"""
+
+class InvalidFilepathError(GitError):
+    """Raised when a filepath input is not valid"""
 
 
 class GitNotInstalledError(GitError):
@@ -834,3 +838,122 @@ class VersionFinder:
             1: ["commit_sha"],
             2: ["start_version", "end_version"],
         }
+
+    def is_valid_submodule(self, submodule: str = ''):
+        if not isinstance(submodule, str):
+            raise TypeError("submodule only accepts string or empty string")
+        if submodule in self.submodules or submodule == '':
+            return True
+        raise InvalidSubmoduleError()
+
+    def get_commit_diff_files(self, commit_hash: str, submodule: str = '',):
+        """
+        Get the list of files changed in a commit.
+        """
+        # Validate input and task readiness
+        self.is_valid_submodule(submodule=submodule)
+        self.is_valid_commit(commit_hash=commit_hash, submodule=submodule)
+        if not self.is_task_ready:
+            raise RepositoryNotTaskReady()
+
+
+        # Check if this is the initial commit by trying to get its parent
+        try:
+            self._git.execute(["rev-parse", f"{commit_hash}^"])
+            has_parent = True
+        except:
+            has_parent = False
+
+        if has_parent:
+            diff_output = self._git.execute(["diff", "--name-only", commit_hash + "^", commit_hash])
+        else:
+            # For initial commit, compare with empty tree
+            empty_tree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+            diff_output = self._git.execute(["diff", "--name-only", empty_tree, commit_hash])
+        return diff_output.decode().splitlines()
+
+    def is_valid_commit(self, commit_hash: str, submodule: str = ''):
+        valid_commit = False
+        if not commit_hash or not isinstance(commit_hash, str):
+            raise TypeError("commit_hash only accepts string")
+        if not isinstance(submodule, str):
+            raise TypeError("submodule only accepts string or empty string")
+
+        if submodule:
+            valid_commit = self.submodule_has_commit(submodule_path=submodule, commit_sha=commit_hash)
+        else:
+            valid_commit = self.has_commit(commit_sha=commit_hash)
+        if not valid_commit:
+            raise InvalidCommitError()
+        return valid_commit
+
+    def get_file_content_at_commit(self, commit_hash: str, file_path: str, submodule: str = '',):
+        """
+        Get the content of a file at a specific commit.
+        """
+
+        try:
+            # Validate input and task readiness
+            self.is_valid_submodule(submodule=submodule)
+            self.is_valid_commit(commit_hash=commit_hash, submodule=submodule)
+            if not self.is_task_ready:
+                raise RepositoryNotTaskReady()
+            if not file_path:
+                raise InvalidFilepathError()
+            file_content = self._git.execute(["show", f"{commit_hash}:{file_path}"])
+            return file_content
+        except GitCommandError:
+            # If the file does not exist in the commit (e.g., new file), return an empty string
+            return ""
+
+    def generate_commit_diff_html(self, commit_hash: str, submodule: str = '', output_html="commit_diff.html"):
+        """
+        Generate an HTML file showing diffs for all files changed in a specific commit.
+        """
+        try:
+            # Validate input and task readiness
+            self.is_valid_submodule(submodule=submodule)
+            self.is_valid_commit(commit_hash=commit_hash, submodule=submodule)
+            if not self.is_task_ready:
+                raise RepositoryNotTaskReady()
+
+            # Get changed files
+            changed_files = self.get_commit_diff_files(commit_hash)
+
+            html_content = []
+            for file_path in changed_files:
+                # Get file content before and after the commit
+                old_content = self.get_file_content_at_commit(commit_hash + "^", file_path)
+                new_content = self.get_file_content_at_commit(commit_hash, file_path)
+
+                # Generate the HTML diff for the current file
+                diff_html = difflib.HtmlDiff(wrapcolumn=80).make_file(
+                    old_content.splitlines(),
+                    new_content.splitlines(),
+                    fromdesc=f"{file_path} (before)",
+                    todesc=f"{file_path} (after)",
+                    context=True,
+                    numlines=3
+                )
+                html_content.append(diff_html)
+
+            # Save the generated HTML
+            html_body = "<br><br>".join(html_content)
+            html_template = f"""
+            <html>
+            <head>
+                <title>Commit Diff: {commit_hash}</title>
+            </head>
+            <body>
+                <h1>Commit Diff: {commit_hash}</h1>
+                {html_body}
+            </body>
+            </html>
+            """
+            output_path = Path(output_html)
+            output_path.write_text(html_template, encoding="utf-8")
+            return str(output_path)
+        except TypeError as e:
+            raise e
+        except Exception as e:
+            return f"Error: {str(e)}"

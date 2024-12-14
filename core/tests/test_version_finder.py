@@ -3,6 +3,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 from version_finder.version_finder import (
     VersionFinder,
     InvalidGitRepository,
@@ -12,12 +13,14 @@ from version_finder.version_finder import (
     InvalidSubmoduleError,
     InvalidBranchError,
     VersionNotFoundError,
+    InvalidFilepathError,
     Commit,
     GitConfig
 )
 from version_finder.logger import (
     setup_logger,
 )
+
 
 debug_logger = setup_logger(verbose=True)
 
@@ -581,3 +584,311 @@ class TestVersionFinder:
         # Don't call update_repository to test not ready state
         with pytest.raises(RepositoryNotTaskReady):
             finder.get_commit_info("nonexistent-commit-sha")
+
+
+class TestGetCommitDiffFiles:
+
+    @pytest.fixture
+    def test_repo(self):
+        """Creates a temporary test repository with initial commit"""
+        temp_dir = tempfile.mkdtemp()
+        os.chdir(temp_dir)
+
+        # Initialize repo and create initial commit
+        os.system("git init")
+        os.system("git config user.email 'test@example.com'")
+        os.system("git config user.name 'Test User'")
+        os.system("touch file1")
+        os.system("git add file1")
+        os.system("git commit -m 'Initial commit'")
+
+        # Create test branches
+        os.system("git branch dev")
+        os.system("git branch feature")
+
+        yield temp_dir
+
+        # Cleanup
+        os.system(f"rm -rf {temp_dir}")
+
+    @pytest.fixture
+    def setup_repo(self, test_repo):
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        return finder, test_repo
+
+    def test_get_commit_diff_files_empty_commit_hash(self, setup_repo):
+        """Test get_commit_diff_files with an empty commit hash"""
+        finder, _ = setup_repo
+        with pytest.raises(TypeError):
+            finder.get_commit_diff_files('')
+
+    def test_get_commit_diff_files_incorrect_type(self, setup_repo):
+        """Test get_commit_diff_files with incorrect input type"""
+        finder, _ = setup_repo
+        with pytest.raises(TypeError):
+            finder.get_commit_diff_files(123)
+
+    # def test_get_commit_diff_files_initial_commit(self, setup_repo):
+    #     """Test get_commit_diff_files for the initial commit"""
+    #     finder, repo_path = setup_repo
+    #     initial_commit = os.popen(f'git -C {repo_path} rev-list --max-parents=0 HEAD').read().strip()
+    #     with pytest.raises(InvalidCommitError):
+    #         finder.get_commit_diff_files(initial_commit)
+
+    def test_get_commit_diff_files_invalid_commit_hash(self, setup_repo):
+        """Test get_commit_diff_files with an invalid commit hash"""
+        finder, _ = setup_repo
+        with pytest.raises(InvalidCommitError):
+            finder.get_commit_diff_files('invalid_commit_hash')
+
+    def test_get_commit_diff_files_invalid_submodule(self, setup_repo):
+        """Test get_commit_diff_files with an invalid submodule"""
+        finder, _ = setup_repo
+        with pytest.raises(InvalidSubmoduleError):
+            finder.get_commit_diff_files('HEAD', submodule='nonexistent_submodule')
+
+    def test_get_commit_diff_files_merge_commit(self, setup_repo):
+        """Test get_commit_diff_files for a merge commit"""
+        finder, repo_path = setup_repo
+        os.system(f"cd {repo_path} && git checkout -b test_branch && touch new_file && git add new_file && git commit -m 'New file in test branch'")
+        os.system(f"cd {repo_path} && git checkout main && git merge --no-ff test_branch")
+        merge_commit = os.popen(f'git -C {repo_path} rev-parse HEAD').read().strip()
+        diff_files = finder.get_commit_diff_files(merge_commit)
+        assert 'new_file' in diff_files
+
+    def test_get_commit_diff_files_repository_not_ready(self, test_repo):
+        """Test get_commit_diff_files when repository is not ready"""
+        finder = VersionFinder(path=test_repo)
+        # Don't call update_repository to test not ready state
+        with pytest.raises(RepositoryNotTaskReady):
+            finder.get_commit_diff_files('HEAD')
+
+    # def test_get_commit_diff_files_with_rename(self, setup_repo):
+    #     """Test get_commit_diff_files for a commit with renamed file"""
+    #     finder, repo_path = setup_repo
+    #     os.system(f"cd {repo_path} && mv file1 file1_renamed && git add . && git commit -m 'Renamed file1'")
+    #     rename_commit = os.popen(f'git -C {repo_path} rev-parse HEAD').read().strip()
+    #     diff_files = finder.get_commit_diff_files(rename_commit)
+    #     assert 'file1' in diff_files
+    #     assert 'file1_renamed' in diff_files
+
+
+
+class TestVersionFinderNegative:
+
+    @pytest.fixture
+    def test_repo(self):
+        """Creates a temporary test repository with initial commit"""
+        temp_dir = tempfile.mkdtemp()
+        os.chdir(temp_dir)
+
+        # Initialize repo and create initial commit
+        os.system("git init")
+        os.system("git config user.email 'test@example.com'")
+        os.system("git config user.name 'Test User'")
+        os.system("touch file1")
+        os.system("git add file1")
+        os.system("git commit -m 'Initial commit'")
+
+        # Create test branches
+        os.system("git branch dev")
+        os.system("git branch feature")
+
+        yield temp_dir
+
+        # Cleanup
+        os.system(f"rm -rf {temp_dir}")
+
+    @pytest.fixture
+    def setup_repo(self, test_repo):
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        return finder, test_repo
+
+    def test_get_file_content_at_commit_empty_commit_hash(self, version_finder):
+        """Test get_file_content_at_commit with empty commit hash."""
+        with pytest.raises(TypeError):
+            version_finder.get_file_content_at_commit("", "file.txt")
+
+    def test_get_file_content_at_commit_empty_file_path(self, version_finder):
+        """Test get_file_content_at_commit with empty file path."""
+        with pytest.raises(InvalidFilepathError):
+            version_finder.get_file_content_at_commit("HEAD", "")
+
+
+    # def test_get_file_content_at_commit_file_outside_repository(self, version_finder):
+    #     """Test get_file_content_at_commit with file path outside repository."""
+    #     with pytest.raises(RuntimeError):
+    #         version_finder.get_file_content_at_commit("HEAD", "../outside_repo_file.txt")
+
+    def test_get_file_content_at_commit_incorrect_type(self, version_finder):
+        """Test get_file_content_at_commit with incorrect input types."""
+        with pytest.raises(TypeError):
+            version_finder.get_file_content_at_commit(123, "file.txt")
+
+    def test_get_file_content_at_commit_invalid_commit_hash(self, version_finder):
+        """Test get_file_content_at_commit with invalid commit hash."""
+        with pytest.raises(InvalidCommitError):
+            version_finder.get_file_content_at_commit("invalid_hash", "file.txt")
+
+    def test_get_file_content_at_commit_invalid_submodule(self, version_finder):
+        """Test get_file_content_at_commit with invalid submodule."""
+        with pytest.raises(InvalidSubmoduleError):
+            version_finder.get_file_content_at_commit("HEAD", "file.txt", submodule="invalid_submodule")
+
+    def test_get_file_content_at_commit_nonexistent_file(self, version_finder):
+        """Test get_file_content_at_commit with nonexistent file."""
+        assert '' == version_finder.get_file_content_at_commit(commit_hash="HEAD", file_path="nonexistent_file.txt")
+
+    def test_get_file_content_at_commit_repository_not_ready(self, test_repo):
+        """Test get_file_content_at_commit when repository is not ready."""
+        finder = VersionFinder(path=test_repo)
+        with pytest.raises(RepositoryNotTaskReady):
+            finder.get_file_content_at_commit("HEAD", "file.txt")
+
+    @pytest.fixture
+    def version_finder(self, test_repo):
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        return finder
+
+
+
+    def test_generate_commit_diff_html_empty_commit_hash(self, test_repo):
+        """Test generate_commit_diff_html with an empty commit hash."""
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        with pytest.raises(TypeError):
+            result = finder.generate_commit_diff_html('')
+
+
+    def test_generate_commit_diff_html_exception_handling(self, test_repo, monkeypatch):
+        """Test exception handling in generate_commit_diff_html."""
+        def mock_get_commit_diff_files(*args):
+            raise Exception("Mocked exception")
+
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        monkeypatch.setattr(finder, 'get_commit_diff_files', mock_get_commit_diff_files)
+        result = finder.generate_commit_diff_html('HEAD')
+        assert result == 'Error: Mocked exception'
+
+
+    def test_generate_commit_diff_html_incorrect_type(self, test_repo):
+        """Test generate_commit_diff_html with incorrect type for commit_hash."""
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        with pytest.raises(TypeError):
+            finder.generate_commit_diff_html(123)
+
+
+    def test_generate_commit_diff_html_invalid_commit_hash(self, test_repo):
+        """Test generate_commit_diff_html with an invalid commit hash."""
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        result = finder.generate_commit_diff_html('invalid_commit_hash')
+        assert result.startswith('Error: ')
+
+
+    def test_generate_commit_diff_html_invalid_output_path(self, test_repo):
+        """Test generate_commit_diff_html with an invalid output path."""
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        result = finder.generate_commit_diff_html('HEAD', output_html='/invalid/path/output.html')
+        assert result.startswith('Error: ')
+
+
+    def test_generate_commit_diff_html_invalid_submodule(self, test_repo):
+        """Test generate_commit_diff_html with an invalid submodule."""
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        result = finder.generate_commit_diff_html('HEAD', submodule='nonexistent_submodule')
+        assert result.startswith('Error: ')
+
+
+    # def test_generate_commit_diff_html_no_changes(self, test_repo):
+    #     """Test generate_commit_diff_html when there are no changes in the commit."""
+    #     finder = VersionFinder(path=test_repo)
+    #     finder.update_repository('main')
+    #     os.system("git commit --allow-empty -m 'Empty commit'")
+    #     commit_hash = os.popen('git rev-parse HEAD').read().strip()
+    #     result = finder.generate_commit_diff_html(commit_hash)
+    #     assert 'No changes in this commit' in result
+
+
+    def test_generate_commit_diff_html_nonexistent_commit(self, test_repo):
+        """Test generate_commit_diff_html with a nonexistent commit hash."""
+        finder = VersionFinder(path=test_repo)
+        finder.update_repository('main')
+        result = finder.generate_commit_diff_html('1234567890abcdef')
+        assert result.startswith('Error: ')
+
+
+    def test_generate_commit_diff_html_repository_not_ready(self, test_repo):
+        """Test generate_commit_diff_html when repository is not ready."""
+        finder = VersionFinder(path=test_repo)
+        # Don't call update_repository to test not ready state
+        result = finder.generate_commit_diff_html('some_commit_hash')
+        assert result.startswith('Error: ')
+
+
+    def test_get_file_content_at_commit_existing_file(self, test_repo):
+        """
+        Test getting content of an existing file at a specific commit.
+        """
+        # Setup
+        finder = VersionFinder(test_repo)
+        finder.is_task_ready = True
+        commit_hash = "abc123"
+        file_path = "test.txt"
+        expected_content = b"Test file content"
+
+        # Mock the _git.execute method
+        with patch.object(finder, '_git') as mock_git:
+            mock_git.execute.return_value = expected_content
+
+            # Call the method
+            result = finder.get_file_content_at_commit(commit_hash, file_path)
+
+            # Assertions
+            assert result == expected_content
+            mock_git.execute.assert_called_with(["show", f"{commit_hash}:{file_path}"])
+
+    def test_get_file_content_at_commit_not_ready(self, test_repo):
+        """
+        Test getting file content when the repository is not ready for tasks.
+        """
+        # Setup
+        finder = VersionFinder(test_repo)
+        finder.is_task_ready = False
+        commit_hash = "HEAD"
+        file_path = "test.txt"
+
+        # Call the method and check for RepositoryNotTaskReady exception
+        with pytest.raises(RepositoryNotTaskReady):
+            finder.get_file_content_at_commit(commit_hash, file_path)
+
+
+    # def test_get_file_content_at_commit_with_submodule(self, repo_with_submodule):
+    #     """
+    #     Test getting content of a file in a submodule at a specific commit.
+    #     """
+    #     # Setup
+    #     finder = VersionFinder(repo_with_submodule)
+    #     finder.is_task_ready = True
+    #     commit_hash = "abc123"
+    #     file_path = "submodule/test.txt"
+    #     submodule = "submodule"
+    #     expected_content = b"Submodule file content"
+
+    #     # Mock the _git.execute method
+    #     with patch.object(finder, '_git') as mock_git:
+    #         mock_git.execute.return_value = expected_content
+
+    #         # Call the method
+    #         result = finder.get_file_content_at_commit(commit_hash, file_path, submodule)
+
+    #         # Assertions
+    #         assert result == expected_content
+    #         mock_git.execute.assert_called_once_with(["show", f"{commit_hash}:{file_path}"])

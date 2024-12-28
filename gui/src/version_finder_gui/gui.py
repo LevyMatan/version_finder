@@ -414,7 +414,7 @@ class VersionFinderGUI(ctk.CTk):
     def _browse_directory(self):
         """Open directory browser dialog"""
         self.repo_path = None
-        directory = filedialog.askdirectory(initialdir=os.getcwd())
+        directory = filedialog.askdirectory(initialdir=Path.cwd())
         if directory:
             # Clear directory entry
             self.dir_entry.delete(0, tk.END)
@@ -441,6 +441,9 @@ class VersionFinderGUI(ctk.CTk):
 
     def _initialize_version_finder(self):
         """Initialize the VersionFinder instance"""
+        if not self.repo_path:
+            self._log_error("Invalid repository path.")
+            return
         try:
             self.version_finder = VersionFinder(self.repo_path.__str__())
             self._log_output(f"VersionFinder initialized with: {self.repo_path} successfully.")
@@ -455,10 +458,16 @@ class VersionFinderGUI(ctk.CTk):
         except Exception as e:
             self._log_error(str(e))
 
+    def ensure_version_finder_initialized(func):
+        def wrapper(self, *args, **kwargs):
+            if self.version_finder is None:
+                self._log_error("System error: trying to access unintialized variable")
+                raise Exception("System error: trying to access unintialized variable: version_finder")
+            return func(self, *args, **kwargs)
+        return wrapper
+
+    @ensure_version_finder_initialized
     def _search_version_by_commit(self):
-        if self.version_finder is None:
-            self._log_error("System error: trying to access unintialized variable")
-            raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
             self.version_finder.update_repository(self.selected_branch)
             commit = self.commit_entry.get()
@@ -487,11 +496,9 @@ class VersionFinderGUI(ctk.CTk):
         except Exception as e:
             self._log_error(str(e))
 
+    @ensure_version_finder_initialized
     def _search_commits_between(self):
         """Handle commits between versions search"""
-        if self.version_finder is None:
-            self._log_error("System error: trying to access unintialized variable")
-            raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
 
             self.version_finder.update_repository(self.selected_branch)
@@ -504,11 +511,9 @@ class VersionFinderGUI(ctk.CTk):
         except Exception as e:
             self._log_error(str(e))
 
+    @ensure_version_finder_initialized
     def _search_commits_by_text(self):
         """Handle commits search by text"""
-        if self.version_finder is None:
-            self._log_error("System error: trying to access unintialized variable")
-            raise Exception("System error: trying to access unintialized variable: version_finder")
         try:
             if not self._validate_inputs():
                 return

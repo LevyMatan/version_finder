@@ -224,7 +224,7 @@ class VersionFinder:
     def __has_remote(self) -> bool:
         """Check if the repository has any remotes configured."""
         try:
-            output = self._git.execute(["remote"])
+            output: bytes = self._git.execute(["remote"])
             return bool(output.strip())
         except GitCommandError:
             return False

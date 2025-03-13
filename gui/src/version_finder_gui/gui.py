@@ -3,24 +3,98 @@ import os
 import argparse
 from pathlib import Path
 from enum import Enum, auto
-from typing import List
+from typing import List, Dict, Any, Optional, Callable
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import importlib.resources
+import multiprocessing
+import queue
+import threading
+import time
 from version_finder.version_finder import VersionFinder, Commit
 from version_finder.common import parse_arguments
 from version_finder.logger import setup_logger
-from version_finder_gui.widgets import AutocompleteEntry, CommitListWindow, center_window
+from version_finder_gui.widgets import AutocompleteEntry, CommitListWindow, center_window, LoadingSpinner
 
+# Define message types for inter-process communication
+class MessageType(Enum):
+    TASK_REQUEST = auto()
+    TASK_RESULT = auto()
+    TASK_ERROR = auto()
+    SHUTDOWN = auto()
 
 class VersionFinderTasks(Enum):
     FIND_VERSION = auto()
     COMMITS_BETWEEN_VERSIONS = auto()
     COMMITS_BY_TEXT = auto()
 
+# Worker process function
+def version_finder_worker(request_queue, response_queue, repo_path):
+    """Worker process that handles VersionFinder operations"""
+    try:
+        # Initialize VersionFinder in the worker process
+        finder = VersionFinder(path=repo_path)
+        logger = setup_logger()
+        logger.info(f"Worker process started for repository: {repo_path}")
+        
+        while True:
+            try:
+                # Get task from request queue
+                message = request_queue.get(timeout=0.5)
+                
+                if message["type"] == MessageType.SHUTDOWN:
+                    logger.info("Worker process shutting down")
+                    break
+                    
+                if message["type"] == MessageType.TASK_REQUEST:
+                    task = message["task"]
+                    args = message.get("args", {})
+                    task_id = message.get("task_id")
+                    
+                    try:
+                        # Execute the requested task
+                        if task == "update_repository":
+                            result = finder.update_repository(**args)
+                        elif task == "get_branches":
+                            result = finder.get_branches()
+                        elif task == "get_submodules":
+                            result = finder.get_submodules()
+                        elif task == "find_version":
+                            result = finder.find_version(**args)
+                        elif task == "find_all_commits_between_versions":
+                            result = finder.find_all_commits_between_versions(**args)
+                        elif task == "find_commit_by_text":
+                            result = finder.find_commit_by_text(**args)
+                        else:
+                            raise ValueError(f"Unknown task: {task}")
+                            
+                        # Send result back
+                        response_queue.put({
+                            "type": MessageType.TASK_RESULT,
+                            "task_id": task_id,
+                            "result": result
+                        })
+                    except Exception as e:
+                        logger.error(f"Error executing task {task}: {str(e)}")
+                        # Send error back
+                        response_queue.put({
+                            "type": MessageType.TASK_ERROR,
+                            "task_id": task_id,
+                            "error": str(e),
+                            "error_type": type(e).__name__
+                        })
+            except queue.Empty:
+                # No tasks in queue, continue waiting
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error in worker process: {str(e)}")
+                
+    except Exception as e:
+        logger.error(f"Fatal error in worker process: {str(e)}")
+    finally:
+        logger.info("Worker process terminated")
 
 ctk.set_default_color_theme("green")
-
 
 class VersionFinderGUI(ctk.CTk):
     def __init__(self, path: str = ''):
@@ -31,24 +105,145 @@ class VersionFinderGUI(ctk.CTk):
         self.version_finder: VersionFinder = None
         self.selected_branch: str = ''
         self.selected_submodule: str = ''
+        
+        # Setup multiprocessing
+        self.worker_process = None
+        self.request_queue = None
+        self.response_queue = None
+        self.task_callbacks = {}
+        self.next_task_id = 0
+        
         # Initialize UI
         self._setup_window()
         self._create_window_layout()
         self._setup_icon()
         self._show_find_version()
+        
         # Center window on screen
         center_window(self)
 
-        # Focous on window
+        # Focus on window
         self.focus_force()
+        
+        # Start checking for worker responses
+        self.after(100, self._check_worker_responses)
 
         if self.repo_path:
             self._initialize_version_finder()
-
+            
+    def _start_worker_process(self):
+        """Start the worker process for background operations"""
+        if self.worker_process is not None and self.worker_process.is_alive():
+            return
+            
+        self.request_queue = multiprocessing.Queue()
+        self.response_queue = multiprocessing.Queue()
+        self.worker_process = multiprocessing.Process(
+            target=version_finder_worker,
+            args=(self.request_queue, self.response_queue, self.repo_path),
+            daemon=True
+        )
+        self.worker_process.start()
+        self.logger.info(f"Started worker process with PID: {self.worker_process.pid}")
+        
+    def _stop_worker_process(self):
+        """Stop the worker process"""
+        if self.worker_process is not None and self.worker_process.is_alive():
+            try:
+                self.request_queue.put({"type": MessageType.SHUTDOWN})
+                # Give the process a moment to shut down gracefully
+                self.worker_process.join(timeout=2)
+                if self.worker_process.is_alive():
+                    self.worker_process.terminate()
+                    self.logger.warning("Worker process terminated forcefully")
+                else:
+                    self.logger.info("Worker process shut down gracefully")
+            except Exception as e:
+                self.logger.error(f"Error stopping worker process: {str(e)}")
+                
+    def _check_worker_responses(self):
+        """Check for responses from the worker process"""
+        if self.response_queue is not None:
+            try:
+                # Non-blocking check for messages
+                while True:
+                    try:
+                        message = self.response_queue.get_nowait()
+                        self._handle_worker_message(message)
+                    except queue.Empty:
+                        break
+            except Exception as e:
+                self.logger.error(f"Error checking worker responses: {str(e)}")
+                
+        # Schedule the next check
+        self.after(100, self._check_worker_responses)
+        
+    def _handle_worker_message(self, message):
+        """Handle a message from the worker process"""
+        message_type = message["type"]
+        task_id = message.get("task_id")
+        
+        if task_id in self.task_callbacks:
+            callback_info = self.task_callbacks.pop(task_id)
+            callback = callback_info["callback"]
+            spinner = callback_info.get("spinner")
+            
+            # Stop the spinner if one was created
+            if spinner is not None:
+                spinner.stop()
+                
+            if message_type == MessageType.TASK_RESULT:
+                callback(message["result"])
+            elif message_type == MessageType.TASK_ERROR:
+                error_msg = message["error"]
+                error_type = message["error_type"]
+                self.logger.error(f"Task error ({error_type}): {error_msg}")
+                messagebox.showerror("Error", f"{error_type}: {error_msg}")
+                callback(None, error=error_msg)
+                
+    def _execute_task(self, task_name, args=None, callback=None, show_spinner=True, spinner_parent=None, spinner_text="Processing..."):
+        """Execute a task in the worker process"""
+        if self.worker_process is None or not self.worker_process.is_alive():
+            self._start_worker_process()
+            
+        task_id = self.next_task_id
+        self.next_task_id += 1
+        
+        # Create a spinner if requested
+        spinner = None
+        if show_spinner and spinner_parent is not None:
+            spinner = LoadingSpinner(spinner_parent, text=spinner_text)
+            spinner.start()
+            
+        # Store callback with task ID
+        if callback is not None:
+            self.task_callbacks[task_id] = {
+                "callback": callback,
+                "spinner": spinner
+            }
+            
+        # Send task to worker
+        self.request_queue.put({
+            "type": MessageType.TASK_REQUEST,
+            "task": task_name,
+            "args": args or {},
+            "task_id": task_id
+        })
+        
+        return task_id
+        
     def _setup_window(self):
         """Configure the main window settings"""
         self.geometry("1200x800")
         self.minsize(800, 600)
+        
+        # Handle window close event
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        
+    def _on_close(self):
+        """Handle window close event"""
+        self._stop_worker_process()
+        self.destroy()
 
     def _create_window_layout(self):
         """Create the main layout with sidebar and content area"""
@@ -440,23 +635,76 @@ class VersionFinderGUI(ctk.CTk):
                 self._on_branch_select(self.selected_branch)
 
     def _initialize_version_finder(self):
-        """Initialize the VersionFinder instance"""
-        if not self.repo_path:
-            self._log_error("Invalid repository path.")
-            return
+        """Initialize the VersionFinder with the selected repository path"""
         try:
-            self.version_finder = VersionFinder(self.repo_path.__str__())
-            self._log_output(f"VersionFinder initialized with: {self.repo_path} successfully.")
-            self.dir_entry.insert(0, self.repo_path)
-
-            # Update branch autocomplete
-            self._update_branch_entry()
-
-            # Update submodule autocomplete
-            self._update_submodule_entry(self.version_finder.list_submodules())
-
+            # Start the worker process
+            self._start_worker_process()
+            
+            # Get branches
+            self._execute_task(
+                "get_branches",
+                callback=self._handle_branches_loaded,
+                spinner_parent=self.main_content_frame,
+                spinner_text="Loading branches..."
+            )
         except Exception as e:
-            self._log_error(str(e))
+            self.logger.error(f"Error initializing VersionFinder: {str(e)}")
+            messagebox.showerror("Error", f"Failed to initialize repository: {str(e)}")
+            
+    def _handle_branches_loaded(self, branches, error=None):
+        """Handle branches loaded from worker process"""
+        if error or not branches:
+            return
+            
+        # Update branch dropdown
+        self.branch_var.set("")
+        self.branch_dropdown.configure(values=branches)
+        
+        if branches:
+            # Select first branch by default
+            self.branch_var.set(branches[0])
+            self.selected_branch = branches[0]
+            
+            # Update repository with selected branch
+            self._update_repository()
+            
+    def _update_repository(self):
+        """Update repository with selected branch"""
+        if not self.selected_branch:
+            return
+            
+        self._execute_task(
+            "update_repository",
+            args={"branch": self.selected_branch},
+            callback=self._handle_repository_updated,
+            spinner_parent=self.main_content_frame,
+            spinner_text=f"Updating repository to {self.selected_branch}..."
+        )
+        
+    def _handle_repository_updated(self, result, error=None):
+        """Handle repository update completion"""
+        if error:
+            return
+            
+        # Get submodules
+        self._execute_task(
+            "get_submodules",
+            callback=self._handle_submodules_loaded,
+            spinner_parent=self.main_content_frame,
+            spinner_text="Loading submodules..."
+        )
+        
+    def _handle_submodules_loaded(self, submodules, error=None):
+        """Handle submodules loaded from worker process"""
+        if error:
+            return
+            
+        # Update submodule dropdown
+        self.submodule_var.set("")
+        self.submodule_dropdown.configure(values=[""] + submodules)
+        
+        # Enable UI elements now that repository is ready
+        self._enable_ui_after_repo_load()
 
     def ensure_version_finder_initialized(func):
         def wrapper(self, *args, **kwargs):
@@ -467,20 +715,124 @@ class VersionFinderGUI(ctk.CTk):
         return wrapper
 
     @ensure_version_finder_initialized
-    def _search_version_by_commit(self):
-        try:
-            self.version_finder.update_repository(self.selected_branch)
-            commit = self.commit_entry.get()
-            version = self.version_finder.find_first_version_containing_commit(
-                commit,
-                submodule=self.selected_submodule
-            )
-            if version is None:
-                self._log_error(f"No version found for commit {commit}, most likely it is too new.")
-            else:
-                self._log_output(f"Version for commit {commit}: {version}")
-        except Exception as e:
-            self._log_error(str(e))
+    def _find_version(self):
+        """Find version for the given commit"""
+        commit_sha = self.commit_entry.get().strip()
+        if not commit_sha:
+            messagebox.showwarning("Input Error", "Please enter a commit SHA")
+            return
+            
+        # Get current submodule selection
+        submodule = self.selected_submodule if self.selected_submodule else None
+        
+        # Execute the task in the worker process
+        self._execute_task(
+            "find_version",
+            args={
+                "commit_sha": commit_sha,
+                "submodule": submodule
+            },
+            callback=self._handle_find_version_result,
+            spinner_parent=self.version_result_frame,
+            spinner_text=f"Finding version for commit {commit_sha[:7]}..."
+        )
+        
+    def _handle_find_version_result(self, result, error=None):
+        """Handle the result of find_version task"""
+        if error:
+            self._log_error(f"Error finding version: {error}")
+            return
+            
+        if not result:
+            self._log_error("No version found for this commit")
+            return
+            
+        # Display the result
+        self._log_output(f"Version found: {result}")
+        
+        # Update the result label
+        if hasattr(self, 'version_result_label'):
+            self.version_result_label.configure(text=f"Version: {result}")
+            
+    def _find_all_commits_between_versions(self):
+        """Find all commits between two versions"""
+        from_version = self.start_version_entry.get().strip()
+        to_version = self.end_version_entry.get().strip()
+        
+        if not from_version or not to_version:
+            messagebox.showwarning("Input Error", "Please enter both from and to versions")
+            return
+            
+        # Get current submodule selection
+        submodule = self.selected_submodule if self.selected_submodule else None
+        
+        # Execute the task in the worker process
+        self._execute_task(
+            "find_all_commits_between_versions",
+            args={
+                "from_version": from_version,
+                "to_version": to_version,
+                "submodule": submodule
+            },
+            callback=self._handle_commits_between_versions_result,
+            spinner_parent=self.commits_result_frame,
+            spinner_text=f"Finding commits between {from_version} and {to_version}..."
+        )
+        
+    def _handle_commits_between_versions_result(self, commits, error=None):
+        """Handle the result of find_all_commits_between_versions task"""
+        if error:
+            self._log_error(f"Error finding commits: {error}")
+            return
+            
+        if not commits:
+            self._log_output("No commits found between these versions")
+            return
+            
+        # Log the number of commits found
+        self._log_output(f"Found {len(commits)} commits between versions")
+        
+        # Display commits in a new window
+        CommitListWindow(self, "Commits Between Versions", commits)
+        
+    def _find_commit_by_text(self):
+        """Find commits containing specific text"""
+        search_text = self.search_text_pattern_entry.get().strip()
+        
+        if not search_text:
+            messagebox.showwarning("Input Error", "Please enter search text")
+            return
+            
+        # Get current submodule selection
+        submodule = self.selected_submodule if self.selected_submodule else None
+        
+        # Execute the task in the worker process
+        self._execute_task(
+            "find_commit_by_text",
+            args={
+                "text": search_text,
+                "submodule": submodule
+            },
+            callback=self._handle_find_commit_by_text_result,
+            spinner_parent=self.search_result_frame,
+            spinner_text=f"Searching for commits with text: {search_text}..."
+        )
+        
+    def _handle_find_commit_by_text_result(self, commits, error=None):
+        """Handle the result of find_commit_by_text task"""
+        if error:
+            self._log_error(f"Error searching commits: {error}")
+            return
+            
+        if not commits:
+            self._log_output("No commits found matching the search text")
+            return
+            
+        # Log the number of commits found
+        self._log_output(f"Found {len(commits)} commits matching the search")
+        
+        # Display commits in a new window
+        CommitListWindow(self, "Search Results", commits)
 
     def _search(self):
         """Handle version search"""
@@ -488,42 +840,11 @@ class VersionFinderGUI(ctk.CTk):
             if not self._validate_inputs():
                 return
             if (self.current_displayed_task == VersionFinderTasks.FIND_VERSION):
-                self._search_version_by_commit()
+                self._find_version()
             elif (self.current_displayed_task == VersionFinderTasks.COMMITS_BETWEEN_VERSIONS):
-                self._search_commits_between()
+                self._find_all_commits_between_versions()
             elif (self.current_displayed_task == VersionFinderTasks.COMMITS_BY_TEXT):
-                self._search_commits_by_text()
-        except Exception as e:
-            self._log_error(str(e))
-
-    @ensure_version_finder_initialized
-    def _search_commits_between(self):
-        """Handle commits between versions search"""
-        try:
-
-            self.version_finder.update_repository(self.selected_branch)
-            commits = self.version_finder.get_commits_between_versions(
-                self.start_version_entry.get(),
-                self.end_version_entry.get(),
-                submodule=self.selected_submodule
-            )
-            CommitListWindow(self, commits)
-        except Exception as e:
-            self._log_error(str(e))
-
-    @ensure_version_finder_initialized
-    def _search_commits_by_text(self):
-        """Handle commits search by text"""
-        try:
-            if not self._validate_inputs():
-                return
-
-            self.version_finder.update_repository(self.selected_branch)
-            commits = self.version_finder.find_commits_by_text(
-                self.search_text_pattern_entry.get(),
-                submodule=self.selected_submodule
-            )
-            CommitListWindow(self, commits)
+                self._find_commit_by_text()
         except Exception as e:
             self._log_error(str(e))
 

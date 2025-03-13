@@ -16,6 +16,7 @@ import time
 from typing import List, Optional, Dict, Callable
 from version_finder.git_executer import GitCommandExecutor, GitConfig, GitCommandError
 from version_finder.logger import setup_logger
+from version_finder.common import GIT_CMD_FETCH, GIT_CMD_CHECKOUT, GIT_CMD_SUBMODULE_UPDATE, GIT_CMD_LIST_BRANCHES, GIT_CMD_LIST_SUBMODULES, BRANCH_PATTERN, SUBMODULE_PATTERN
 
 
 class GitError(Exception):
@@ -179,19 +180,22 @@ class VersionFinder:
     branches: List[str]
     _has_remote: bool
 
-    # Pattern matches:
-    # - Optional "Version: XX_" prefix
-    # - Year (2014)
-    # - Underscore or hyphen
-    # - Numbers
-    # - Optional "-" or "_" followed by additional numbers
-    # version_pattern = r'(Version:\s*(?:XX_)?)?(\d+(?:[_-]\d+)+(?:[_-]\d+)?)'
-    # version_pattern = r"(?:Version:?\s*|Updated version\s*)[^\d]*([\d._-]+)"
-    # version_pattern = r"(?:Version:?\s*|Updated version\s*|[^a-zA-Z0-9][^0-9\s]*)?(?:XX_)?(\b\d{1,4}[\d._-]+[\d]{1,4}\b)"
+    # Consolidated version pattern that handles various formats:
+    # - Optional prefixes like "Version:", "VERSION:", "Updated version"
+    # - Optional "XX_" prefix in the version number
+    # - Year formats (e.g., 2023)
+    # - Various separators (., _, -)
+    # - Multiple version components (e.g., 1.2.3, 2023_01_15, etc.)
+    # 
+    # Examples of matched versions:
+    # - Version: 1.2.3
+    # - VERSION: XX_2023_01_15
+    # - Updated version 4.5-2
+    # - 2023.01.15
+    version_pattern = r"(?:(?:Version|VERSION|Updated version)s*:?\s*|[^a-zA-Z0-9][^0-9\s]*)?(?:XX_)?(\d{1,4}(?:[._-]\d+)+)"
 
-    version_pattern = r"(?:Version:?\s*|Updated version\s*|[^a-zA-Z0-9][^0-9\s]*)?(\d{1,4}[\d._-]+[\d]{1,4})"
-
-    git_regex_pattern_for_version = "(Version|VERSION|Updated version)(:)? (XX_)?[0-9]+(_|.)[0-9]+((-|.)[0-9]+)?"
+    # Pattern used specifically for git grep searches
+    git_regex_pattern_for_version = "(Version|VERSION|Updated version)(:)? (XX_)?[0-9]+([._-][0-9]+)+"
 
     def __init__(self,
                  path: str = '',
@@ -391,49 +395,91 @@ class VersionFinder:
         """Check if a branch exists."""
         return branch in self.branches
 
-    def update_repository(self, branch: str = None) -> None:
+    def update_repository(self, branch: str) -> None:
         """
-        Update the repository and its submodules to the specified branch.
+        Update the repository to the specified branch.
 
         Args:
-            branch: Branch name to checkout.
+            branch: Branch name to checkout
 
         Raises:
-            GitCommandError: If update operations fail.
+            InvalidBranchError: If the branch is invalid
+            GitRepositoryNotClean: If the repository has uncommitted changes
         """
-        if branch is None:
-            self.logger.info("No branch specified, using current branch")
-            branch = self.get_current_branch()
+        self.logger.info(f"Updating repository to branch: {branch}")
 
-        if not self.has_branch(branch):
-            raise InvalidBranchError(f"Invalid branch: {branch}")
-
-        if self.updated_branch == branch:
-            self.logger.info(f"The branch {branch} was already updated")
-            self.is_task_ready = True
-            return
-
+        # Fetch latest changes
         try:
-            self._git.execute(["checkout", branch])
-            self.logger.debug(f"Checked out branch: {branch}")
-            if self._has_remote:
-                self._git.execute(["pull", "origin", branch])
-            self.__load_submodules()
-            self.__update_all_submodules()
-            self.is_task_ready = True
-            self.updated_branch = branch
-
+            self._git.execute(GIT_CMD_FETCH)
         except GitCommandError as e:
-            self.logger.error(f"Failed to update repository: {e}")
+            self.logger.error(f"Failed to fetch: {e}")
             raise
 
-    def __update_all_submodules(self) -> None:
-        """Update submodules recursively."""
+        # Check if branch exists
+        branches = self.get_branches()
+        if branch not in branches:
+            raise InvalidBranchError(f"Branch '{branch}' not found in repository")
+
+        # Checkout branch
         try:
-            self._git.execute(["submodule", "update", "--init", "--recursive"])
+            self._git.execute(GIT_CMD_CHECKOUT + [branch])
         except GitCommandError as e:
-            self.logger.error(f"Failed to update submodules: {e}")
+            self.logger.error(f"Failed to checkout branch {branch}: {e}")
             raise
+
+        # Update submodules
+        try:
+            self._git.execute(GIT_CMD_SUBMODULE_UPDATE)
+        except GitCommandError as e:
+            self.logger.warning(f"Failed to update submodules: {e}")
+            # Continue anyway, as this might not be critical
+
+        self.logger.info(f"Repository updated to branch: {branch}")
+
+    def get_branches(self) -> List[str]:
+        """
+        Get list of branches in the repository.
+
+        Returns:
+            List of branch names
+        """
+        try:
+            output = self._git.execute(GIT_CMD_LIST_BRANCHES)
+            branches = []
+            for line in output.decode('utf-8').splitlines():
+                match = re.match(BRANCH_PATTERN, line.strip())
+                if match:
+                    branch = match.group(1)
+                    # Remove remote prefix if present
+                    if branch.startswith('remotes/'):
+                        parts = branch.split('/', 2)
+                        if len(parts) > 2:
+                            branch = parts[2]
+                    branches.append(branch)
+            return sorted(list(set(branches)))  # Remove duplicates and sort
+        except GitCommandError as e:
+            self.logger.error(f"Failed to get branches: {e}")
+            return []
+
+    def get_submodules(self) -> List[str]:
+        """
+        Get list of submodules in the repository.
+
+        Returns:
+            List of submodule names
+        """
+        try:
+            output = self._git.execute(GIT_CMD_LIST_SUBMODULES)
+            submodules = []
+            for line in output.decode('utf-8').splitlines():
+                match = re.match(SUBMODULE_PATTERN, line.strip())
+                if match:
+                    submodule = match.group(2)
+                    submodules.append(submodule)
+            return sorted(submodules)
+        except GitCommandError as e:
+            self.logger.error(f"Failed to get submodules: {e}")
+            return []
 
     def find_commits_by_text(self, text: str, submodule: str = '') -> List[Commit]:
         """

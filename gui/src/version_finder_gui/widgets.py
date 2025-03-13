@@ -260,3 +260,98 @@ class AutocompleteEntry(ctk.CTkEntry):
         if self.suggestion_window:
             self.suggestion_window.destroy()
             self.suggestion_window = None
+
+
+class LoadingSpinner(ctk.CTkFrame):
+    """A loading spinner widget that shows animation during long operations"""
+    
+    def __init__(self, master, text="Loading...", size=30, thickness=3, color=None, text_color=None, **kwargs):
+        super().__init__(master, **kwargs)
+        
+        # Configure the frame
+        self.configure(fg_color=("gray90", "gray10"))
+        
+        # Set default colors if not provided
+        if color is None:
+            color = ctk.ThemeManager.theme["CTkButton"]["fg_color"]
+        if text_color is None:
+            text_color = ctk.ThemeManager.theme["CTkLabel"]["text_color"]
+            
+        # Store parameters
+        self.size = size
+        self.thickness = thickness
+        self.color = color
+        self.angle = 0
+        self.is_running = False
+        self.after_id = None
+        
+        # Create canvas for spinner
+        self.canvas = ctk.CTkCanvas(
+            self, 
+            width=size, 
+            height=size,
+            bg=self.cget("fg_color"),
+            highlightthickness=0
+        )
+        self.canvas.grid(row=0, column=0, padx=10, pady=10)
+        
+        # Create label for text
+        self.label = ctk.CTkLabel(
+            self,
+            text=text,
+            text_color=text_color
+        )
+        self.label.grid(row=0, column=1, padx=10, pady=10)
+        
+        # Draw initial spinner
+        self._draw_spinner()
+        
+    def _draw_spinner(self):
+        """Draw the spinner at the current angle"""
+        self.canvas.delete("spinner")
+        
+        # Calculate coordinates
+        x0 = y0 = self.thickness
+        x1 = y1 = self.size - self.thickness
+        
+        # Draw arc with gradient color
+        start_angle = self.angle
+        extent = 120  # Arc length in degrees
+        
+        # Draw the spinner arc
+        self.canvas.create_arc(
+            x0, y0, x1, y1,
+            start=start_angle,
+            extent=extent,
+            outline=self.color if isinstance(self.color, str) else self.color[1],
+            width=self.thickness,
+            style="arc",
+            tags="spinner"
+        )
+        
+    def _update_spinner(self):
+        """Update the spinner animation"""
+        if not self.is_running:
+            return
+            
+        # Update angle
+        self.angle = (self.angle + 10) % 360
+        self._draw_spinner()
+        
+        # Schedule next update
+        self.after_id = self.after(50, self._update_spinner)
+        
+    def start(self):
+        """Start the spinner animation"""
+        if not self.is_running:
+            self.is_running = True
+            self.grid()  # Make sure the spinner is visible
+            self._update_spinner()
+            
+    def stop(self):
+        """Stop the spinner animation"""
+        self.is_running = False
+        if self.after_id:
+            self.after_cancel(self.after_id)
+            self.after_id = None
+        self.grid_remove()  # Hide the spinner

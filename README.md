@@ -1,4 +1,3 @@
-
 # Version Finder
 
 [![Coverage Report](https://img.shields.io/badge/Coverage-Report-green)](https://LevyMatan.github.io/version_finder/)
@@ -56,17 +55,41 @@ pip install version_finder-*.whl
 
 3. Install the package using pip:
 
+   #### Linux/macOS
+
    ```bash
    make install
    ```
 
-   You will be prompted to use what will be installed, the option are:
+   #### Windows
+
+   You have three options for installation on Windows:
+
+   **Option 1:** Using Make (if you have Make installed)
+
+   ```powershell
+   make install
+   ```
+
+   **Option 2:** Using the batch script
+
+   ```cmd
+   install.bat
+   ```
+
+   **Option 3:** Using the PowerShell script
+
+   ```powershell
+   .\install.ps1
+   ```
+
+   You will be prompted to choose what will be installed, the options are:
    - Core Library only
    - Core Library and CLI
    - Core Library and GUI
    - All
 
-   Please note that this installation does not inlude the requierments for development.
+   Please note that this installation does not include the requirements for development.
 
 ## Usage
 

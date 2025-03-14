@@ -248,7 +248,7 @@ class VersionFinder:
 
         # Skip the clean repository check if the SKIP_CLEAN_CHECK environment variable is set
         # This is useful for running tests
-        if not os.environ.get("SKIP_CLEAN_CHECK") and not self.__is_clean_git_repo():
+        if not self.__is_clean_git_repo():
             raise GitRepositoryNotClean("Repository has uncommitted changes")
 
     def __load_repository_info(self) -> None:
@@ -436,6 +436,7 @@ class VersionFinder:
             self.logger.warning(f"Failed to update submodules: {e}")
             # Continue anyway, as this might not be critical
 
+        self.is_task_ready = True
         self.logger.info(f"Repository updated to branch: {branch}")
 
     def get_branches(self) -> List[str]:

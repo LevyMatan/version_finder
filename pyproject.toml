@@ -1,3 +1,79 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "version-finder-git-based-versions"
+version = "0.1.0"
+description = "A tool for finding and comparing versions in Git repositories"
+authors = [
+    {name = "Matan Levy", email = "your.email@example.com"}
+]
+requires-python = ">=3.6"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+dependencies = [
+    "gitpython>=3.1.0",
+    "prompt_toolkit>=3.0.0",
+]
+
+[project.optional-dependencies]
+# Core component with minimal dependencies
+core = []
+
+# CLI component
+cli = [
+    "prompt_toolkit>=3.0.0",
+]
+
+# GUI component
+gui = [
+    "customtkinter>=5.0.0",
+    "pillow>=9.0.0",  # Often needed for customtkinter
+]
+
+# Development tools
+dev = [
+    "pytest>=7.0.0",
+    "flake8>=5.0.0",
+    "autopep8>=2.0.0",
+    "black>=22.0.0",
+    "isort>=5.0.0",
+]
+
+# All components
+all = [
+    "version-finder-git-based-versions[cli,gui]",
+]
+
+# Complete installation with development tools
+complete = [
+    "version-finder-git-based-versions[all,dev]",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/LevyMatan/version_finder"
+"Bug Tracker" = "https://github.com/LevyMatan/version_finder/issues"
+
+[project.scripts]
+version-finder = "cli.version_finder_cli.cli:main"
+version-finder-gui = "gui.version_finder_gui.gui:main"
+
+[tool.setuptools.packages.find]
+include = ["core.*", "cli.*", "gui.*", "custom_scope_commit_parser.*"]
+
 [tool.autopep8]
 max_line_length = 120
 aggressive = 2

@@ -1,17 +1,29 @@
 .PHONY: test coverage format lint clean install install-dev uninstall
 
+# Detect OS
+ifeq ($(OS),Windows_NT)
+    DETECTED_OS := Windows
+else
+    DETECTED_OS := $(shell uname -s)
+endif
+
 tree:
+ifeq ($(DETECTED_OS),Windows)
+	@echo "Listing directory structure..."
+	@powershell -Command "Get-ChildItem -Recurse -Depth 4 | Where-Object { $$_.Name -notmatch 'version_finder_env|__pycache__|\.egg-info$$' } | Select-Object FullName"
+else
 	tree -L 4 -I "version_finder_env" -I "__pycache__" -I "*.egg-info"
+endif
 
 install-core:
 	pip install core/
 
 install-cli:
-	make install-core
+	$(MAKE) install-core
 	pip install cli/
 
 install-gui:
-	make install-core
+	$(MAKE) install-core
 	pip install gui/
 
 install-dev:
@@ -23,6 +35,21 @@ commit-parser:
 	pip install -e custom_scope_commit_parser/
 
 install:
+ifeq ($(DETECTED_OS),Windows)
+	@echo "Choose an installation option:"
+	@echo "1. Only core"
+	@echo "2. Core + CLI"
+	@echo "3. Core + GUI"
+	@echo "4. Core + GUI + CLI"
+	@powershell -Command "$$choice = Read-Host 'Enter your choice [1-4]'; \
+	switch ($$choice) { \
+		1 { $(MAKE) install-core } \
+		2 { $(MAKE) install-cli } \
+		3 { $(MAKE) install-gui } \
+		4 { $(MAKE) install-gui; $(MAKE) install-cli } \
+		default { Write-Host 'Invalid choice. Exiting.'; exit 1 } \
+	}"
+else
 	@echo "Choose an installation option:"
 	@echo "1. Only core"
 	@echo "2. Core + CLI"
@@ -30,12 +57,13 @@ install:
 	@echo "4. Core + GUI + CLI"
 	@read -p "Enter your choice [1-4]: " choice; \
 	case $$choice in \
-		1) make install-core ;; \
-		2) make install-cli ;; \
-		3) make install-gui ;; \
-		4) make install-gui && make install-cli ;; \
+		1) $(MAKE) install-core ;; \
+		2) $(MAKE) install-cli ;; \
+		3) $(MAKE) install-gui ;; \
+		4) $(MAKE) install-gui && $(MAKE) install-cli ;; \
 		*) echo "Invalid choice. Exiting."; exit 1 ;; \
 	esac
+endif
 
 test-core:
 	cd core && pytest -n auto
@@ -62,15 +90,21 @@ lint:
 	flake8 .
 
 clean:
+ifeq ($(DETECTED_OS),Windows)
+	@powershell -Command "Get-ChildItem -Path . -Recurse -Directory -Include '__pycache__','build','dist','*.egg-info' | Where-Object { $$_.FullName -notmatch '\.venv' } | Remove-Item -Recurse -Force"
+	@powershell -Command "if (Test-Path htmlcov) { Remove-Item -Recurse -Force htmlcov }"
+	@powershell -Command "if (Test-Path .coverage) { Remove-Item -Force .coverage }"
+else
 	find . -type d \( -name ".venv" -prune \) -o -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d \( -name ".venv" -prune \) -o -type d -name "build" -exec rm -rf {} +
 	find . -type d \( -name ".venv" -prune \) -o -type d -name "dist" -exec rm -rf {} +
 	find . -type d \( -name ".venv" -prune \) -o -type d -name "*.egg-info" -exec rm -rf {} +
 	rm -rf htmlcov/
 	rm -f .coverage
+endif
 
 uninstall:
 	pip uninstall -y version-finder-git-based-versions-gui-app
 	pip uninstall -y version-finder-git-based-versions-cli
 	pip uninstall -y version-finder-git-based-versions
-	make clean
+	$(MAKE) clean

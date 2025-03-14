@@ -12,6 +12,8 @@ from version_finder.logger import setup_logger
 from version_finder.version_finder import VersionFinder, GitError, VersionNotFoundError
 from version_finder.version_finder import VersionFinderTask, VersionFinderTaskRegistry
 from version_finder.common import parse_arguments
+import threading
+import time
 
 
 class TaskNumberValidator(Validator):
@@ -40,6 +42,55 @@ class CommitSHAValidator(Validator):
         # Allow full SHA (40 chars), short SHA (min 7 chars), or HEAD~n format
         if not (len(text) >= 7 and len(text) <= 40) and not text.startswith("HEAD~"):
             raise ValidationError(message="Invalid commit SHA format. Use 7-40 hex chars or HEAD~n format")
+
+
+class ProgressIndicator:
+    """A simple progress indicator for CLI operations"""
+    
+    def __init__(self, message="Processing"):
+        self.message = message
+        self.running = False
+        self.thread = None
+        
+    def start(self):
+        """Start the progress indicator"""
+        self.running = True
+        self.thread = threading.Thread(target=self._show_progress)
+        self.thread.daemon = True
+        self.thread.start()
+        
+    def stop(self):
+        """Stop the progress indicator"""
+        self.running = False
+        if self.thread:
+            self.thread.join()
+        # Clear the indicator line
+        sys.stdout.write("\r" + " " * (len(self.message) + 10) + "\r")
+        sys.stdout.flush()
+        
+    def _show_progress(self):
+        """Show the progress indicator animation"""
+        symbols = ["-", "\\", "|", "/"]
+        i = 0
+        while self.running:
+            sys.stdout.write(f"\r{self.message} {symbols[i]} ")
+            sys.stdout.flush()
+            time.sleep(0.1)
+            i = (i + 1) % len(symbols)
+
+def with_progress(message):
+    """Decorator to add progress indicator to functions"""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            progress = ProgressIndicator(message)
+            progress.start()
+            try:
+                result = func(*args, **kwargs)
+                return result
+            finally:
+                progress.stop()
+        return wrapper
+    return decorator
 
 
 class VersionFinderCLI:
@@ -229,6 +280,11 @@ class VersionFinderCLI:
             if not path:
                 path = os.getcwd()
 
+        # Validate the path
+        if not os.path.exists(path) or not os.path.isdir(path):
+            print(f"Error: Invalid path '{path}'", file=sys.stderr)
+            sys.exit(1)
+
         return path
 
     def get_branch_selection(self) -> str:
@@ -279,125 +335,64 @@ class VersionFinderCLI:
             task_args.append(arg_value)
         return task_args
 
-    def find_commit_by_text(self):
+    @with_progress("Finding version for commit")
+    def find_first_version_containing_commit(self, commit_sha: str, submodule: str = None):
         """
-        Process commit search by getting user input and displaying results.
+        Find the first version containing a commit.
 
         Args:
-            finder: VersionFinder instance
-            branch: Name of the branch to search
-            logger: Logger instance
-
-        Returns:
-            int: 0 on success, 1 on error
+            commit_sha: The commit SHA to find the version for
+            submodule: Optional submodule path
         """
         try:
-            text = prompt("Enter search text: ").strip()
-
-            if not text:
-                self.logger.warning("Search text cannot be empty")
-                return 1
-
-            submodule_name = self.handle_submodule_input()
-
-            self.logger.info("Searching for commits containing: %s", text)
-            commits = self.finder.find_commits_by_text(text, submodule_name)
-
-            if not commits:
-                self.logger.info("No commits found containing: %s", text)
-                return 0
-
-            max_commits = 50  # Define reasonable limit
-            if len(commits) > max_commits:
-                self.logger.warning(
-                    "Found %d commits. Please refine your search text (max: %d)",
-                    len(commits), max_commits
-                )
-                return 1
-
-            self.logger.info("\nFound %d commits:", len(commits))
-            for i, commit in enumerate(commits, 1):
-                self.logger.info("  %d. %s", i, commit)
-
-        except KeyboardInterrupt:
-            self.logger.info("\nSearch cancelled by user")
-            return 1
+            version = self.finder.find_version(commit_sha, submodule)
+            if version:
+                print(f"\nVersion for commit {commit_sha}: {version}")
+            else:
+                print(f"\nNo version found for commit {commit_sha}")
         except Exception as e:
-            self.logger.error("Error during commit search: %s", str(e))
-            return 1
+            print(f"\nError: {str(e)}")
 
-    def find_first_version_containing_commit(self):
+    @with_progress("Finding commits between versions")
+    def find_all_commits_between_versions(self, from_version: str, to_version: str, submodule: str = None):
         """
-        Process commit search by getting user input and displaying results.
+        Find all commits between two versions.
 
         Args:
-            finder: VersionFinder instance
-            branch: Name of the branch to search
-            logger: Logger instance
-
-        Returns:
-            int: 0 on success, 1 on error
+            from_version: The starting version
+            to_version: The ending version
+            submodule: Optional submodule path
         """
         try:
-            # Replace the existing input code with:
-            commit_sha = prompt(
-                "Enter commit SHA to search from (Ctrl+C to cancel): ",
-                validator=CommitSHAValidator(),
-                validate_while_typing=True
-            ).strip()
-
-            submodule_name = self.handle_submodule_input()
-
-            self.logger.info("Searching for first version containing commit: %s", commit_sha)
-            version = self.finder.find_first_version_containing_commit(commit_sha, submodule_name)
-
-            if not version:
-                self.logger.info("No version found containing commit: %s", commit_sha)
-                return 0
-
-            self.logger.info("\nFound version: %s", version)
-
-        except KeyboardInterrupt:
-            self.logger.info("\nSearch cancelled by user")
-            return 1
+            commits = self.finder.find_all_commits_between_versions(from_version, to_version, submodule)
+            if commits:
+                print(f"\nFound {len(commits)} commits between {from_version} and {to_version}:")
+                for commit in commits:
+                    print(f"{commit.sha[:8]} - {commit.subject}")
+            else:
+                print(f"\nNo commits found between {from_version} and {to_version}")
         except Exception as e:
-            self.logger.error("Error during version search: %s", str(e))
-            return 1
+            print(f"\nError: {str(e)}")
 
-    def find_all_commits_between_versions(self):
+    @with_progress("Searching for commits")
+    def find_commit_by_text(self, text: str, submodule: str = None):
         """
-        Process commit search by getting user input and displaying results.
+        Find commits containing specific text.
+
         Args:
-            finder: VersionFinder instance
-            branch: Name of the branch to search
-            logger: Logger instance
-            Returns:
-            int: 0 on success, 1 on error
+            text: The text to search for
+            submodule: Optional submodule path
         """
         try:
-            first_version = prompt("Enter first version (Ctrl+C to cancel): ").strip()
-            self.logger.info("First version: %s", first_version)
-            second_version = prompt("Enter second version (Ctrl+C to cancel): ").strip()
-            self.logger.info("Second version: %s", second_version)
-
-            submodule_name = self.handle_submodule_input()
-            self.logger.info("Searching for commits between versions: %s and %s", first_version, second_version)
-            commits = self.finder.get_commits_between_versions(first_version, second_version, submodule_name)
-            if not commits[0]:
-                self.logger.info("No commits found between versions: %s and %s", first_version, second_version)
-                return 0
-            self.logger.info("\nFound %d commits:", len(commits))
-
-            for i, commit in enumerate(commits, 1):
-                self.logger.info("  %d. %s", i, commit)
-        except KeyboardInterrupt:
-            self.logger.info("\nSearch cancelled by user")
-            return 1
-        except VersionNotFoundError as e:
-            self.logger.debug("Couldn't find input version. %s", str(e))
+            commits = self.finder.find_commit_by_text(text, submodule)
+            if commits:
+                print(f"\nFound {len(commits)} commits containing '{text}':")
+                for commit in commits:
+                    print(f"{commit.sha[:8]} - {commit.subject}")
+            else:
+                print(f"\nNo commits found containing '{text}'")
         except Exception as e:
-            self.logger.error("Error during commit search: %s", str(e))
-            return 1
+            print(f"\nError: {str(e)}")
 
 
 def cli_main(args: argparse.Namespace) -> int:

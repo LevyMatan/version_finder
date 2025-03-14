@@ -414,39 +414,36 @@ class VersionFinderGUI(ctk.CTk):
         self.submodule_entry.after(100, self.submodule_entry.update)
 
     def _on_branch_select(self, branch):
-        if self.version_finder is None:
-            self._log_error("System error: trying to access unintialized variable")
-            raise Exception("System error: trying to access unintialized variable: version_finder")
-        try:
-            self.selected_branch = branch
-            self.selected_submodule = ''
-            self.version_finder.update_repository(branch)
-            self._log_output(f"Repository updated to branch: {self.selected_branch}")
-            self._update_submodule_entry(self.version_finder.list_submodules())
-
-        except Exception as e:
-            self._log_error(f"Error updating repository: {str(e)}")
-
+        """Handle branch selection"""
+        if not branch:
+            return
+            
+        self.selected_branch = branch
+        self._update_repository()
+        
     def _on_submodule_select(self, submodule):
-        if self.version_finder is None:
-            self._log_error("System error: trying to access unintialized variable")
-            raise Exception("System error: trying to access unintialized variable: version_finder")
-        try:
-            self.selected_submodule = submodule
-        except Exception as e:
-            self._log_error(f"Error updating repository: {str(e)}")
-
+        """Handle submodule selection"""
+        self.selected_submodule = submodule
+        
     def _create_branch_selection(self, parent_frame):
         """Create the branch selection section"""
         branch_frame = ctk.CTkFrame(parent_frame)
         branch_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(branch_frame, text="Branch:").grid(row=0, column=0, padx=5)
-        self.branch_entry = AutocompleteEntry(branch_frame, width=400, placeholder_text="Select a branch")
-        self.branch_entry.configure(state="disabled")
-        self.branch_entry.callback = self._on_branch_select
-
-        self.branch_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        
+        # Create branch dropdown instead of autocomplete entry
+        self.branch_var = ctk.StringVar()
+        self.branch_dropdown = ctk.CTkOptionMenu(
+            branch_frame, 
+            variable=self.branch_var,
+            values=[],
+            command=self._on_branch_select,
+            width=400,
+            dynamic_resizing=False
+        )
+        self.branch_dropdown.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        
         return branch_frame
 
     def _create_submodule_selection(self, parent_frame):
@@ -455,11 +452,19 @@ class VersionFinderGUI(ctk.CTk):
         submodule_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(submodule_frame, text="Submodule:").grid(row=0, column=0, padx=5)
-        self.submodule_entry = AutocompleteEntry(
-            submodule_frame, width=400, placeholder_text='Select a submodule [Optional]')
-        self.submodule_entry.configure(state="disabled")
-        self.submodule_entry.callback = self._on_submodule_select
-        self.submodule_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        
+        # Create submodule dropdown instead of autocomplete entry
+        self.submodule_var = ctk.StringVar()
+        self.submodule_dropdown = ctk.CTkOptionMenu(
+            submodule_frame, 
+            variable=self.submodule_var,
+            values=[""],
+            command=self._on_submodule_select,
+            width=400,
+            dynamic_resizing=False
+        )
+        self.submodule_dropdown.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        
         return submodule_frame
 
     def _create_app_buttons(self, parent_frame):
@@ -608,19 +613,30 @@ class VersionFinderGUI(ctk.CTk):
 
     def _browse_directory(self):
         """Open directory browser dialog"""
-        self.repo_path = None
         directory = filedialog.askdirectory(initialdir=Path.cwd())
         if directory:
-            # Clear directory entry
-            self.dir_entry.delete(0, tk.END)
-
-            # Clear branch entry
-            self.branch_entry.delete(0, tk.END)
-
-            # Clear submodule entry
-            self.submodule_entry.delete(0, tk.END)
-            self.repo_path = directory
+            # Stop any existing worker process
+            self._stop_worker_process()
+            
+            # Update repository path
+            self.repo_path = Path(directory).resolve()
+            
+            # Update directory entry
+            self.dir_entry.delete(0, "end")
+            self.dir_entry.insert(0, str(self.repo_path))
+            
+            # Clear branch and submodule selections
+            self.branch_var.set("")
+            self.submodule_var.set("")
+            self.selected_branch = ""
+            self.selected_submodule = ""
+            
+            # Initialize with new repository
             self._initialize_version_finder()
+            
+            self._log_output(f"Selected repository: {self.repo_path}")
+        else:
+            self._log_output("No directory selected")
 
     def _update_branch_entry(self):
         """Update the branch entry with the current branch"""
@@ -901,6 +917,15 @@ class VersionFinderGUI(ctk.CTk):
         y = (screen_height - height) // 2
 
         window.geometry(f"{width}x{height}+{x}+{y}")
+
+    def _enable_ui_after_repo_load(self):
+        """Enable UI elements after repository is loaded"""
+        # Enable search button and other UI elements
+        for widget in self.task_frame.winfo_children():
+            if isinstance(widget, ctk.CTkEntry) or isinstance(widget, ctk.CTkButton):
+                widget.configure(state="normal")
+                
+        self._log_output("Repository ready for operations")
 
 
 def gui_main(args: argparse.Namespace) -> int:

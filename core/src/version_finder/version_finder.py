@@ -417,25 +417,106 @@ class VersionFinder:
         """
         Save the current state of the repository.
         
+        This method:
+        1. Saves the current branch (or commit hash if in detached HEAD state)
+        2. Stashes uncommitted changes if present with a unique identifier
+        3. Recursively saves state for all submodules
+        
         Returns:
             dict: A dictionary containing the saved state information
         """
         self.logger.info("Saving repository state")
         
-        # Get current branch
+        # Generate a unique stash identifier
+        stash_id = f"version_finder_stash_{int(time.time())}"
+        
+        # Get current branch or commit hash if in detached HEAD
         current_branch = self.get_current_branch()
+        if not current_branch:  # Detached HEAD state
+            try:
+                # Get the current commit hash
+                output = self._git.execute(["rev-parse", "HEAD"]).decode("utf-8").strip()
+                current_branch = f"HEAD:{output}"
+                self.logger.info(f"Repository is in detached HEAD state at commit {output}")
+            except GitCommandError as e:
+                self.logger.error(f"Failed to get current commit hash: {e}")
         
         # Check for uncommitted changes
         has_changes = not self.__is_clean_git_repo()
+        stash_created = False
+        
+        # Stash changes if needed
+        if has_changes:
+            self.logger.info(f"Repository has uncommitted changes, stashing with ID: {stash_id}")
+            try:
+                self._git.execute(["stash", "push", "-m", stash_id])
+                stash_created = True
+                self.logger.info("Changes stashed successfully")
+            except GitCommandError as e:
+                self.logger.error(f"Failed to stash changes: {e}")
+        
+        # Save submodule states
+        submodule_states = {}
+        if self.submodules:
+            self.logger.info(f"Saving state for {len(self.submodules)} submodules")
+            for submodule in self.submodules:
+                try:
+                    # Get submodule branch
+                    git_command = ["--git-dir", f"{submodule}/.git", "rev-parse", "--abbrev-ref", "HEAD"]
+                    submodule_branch = self._git.execute(git_command).decode("utf-8").strip()
+                    
+                    # Check if submodule has changes
+                    git_command = ["--git-dir", f"{submodule}/.git", "diff", "--quiet", "HEAD"]
+                    submodule_has_changes = False
+                    try:
+                        self._git.execute(git_command)
+                    except GitCommandError:
+                        submodule_has_changes = True
+                    
+                    # Stash submodule changes if needed
+                    submodule_stash_created = False
+                    if submodule_has_changes:
+                        submodule_stash_id = f"{stash_id}_{submodule}"
+                        try:
+                            git_command = ["-C", submodule, "stash", "push", "-m", submodule_stash_id]
+                            self._git.execute(git_command)
+                            submodule_stash_created = True
+                            self.logger.info(f"Stashed changes in submodule {submodule}")
+                        except GitCommandError as e:
+                            self.logger.error(f"Failed to stash changes in submodule {submodule}: {e}")
+                    
+                    # Save submodule state
+                    submodule_states[submodule] = {
+                        "branch": submodule_branch if submodule_branch != "HEAD" else None,
+                        "has_changes": submodule_has_changes,
+                        "stash_created": submodule_stash_created,
+                        "stash_id": f"{stash_id}_{submodule}" if submodule_has_changes else None
+                    }
+                    
+                    # If in detached HEAD, get the commit hash
+                    if submodule_branch == "HEAD":
+                        try:
+                            git_command = ["--git-dir", f"{submodule}/.git", "rev-parse", "HEAD"]
+                            commit_hash = self._git.execute(git_command).decode("utf-8").strip()
+                            submodule_states[submodule]["commit_hash"] = commit_hash
+                        except GitCommandError as e:
+                            self.logger.error(f"Failed to get commit hash for submodule {submodule}: {e}")
+                    
+                except GitCommandError as e:
+                    self.logger.error(f"Failed to save state for submodule {submodule}: {e}")
+                    submodule_states[submodule] = {"error": str(e)}
         
         # Save state
         self._initial_state = {
             "branch": current_branch,
-            "has_changes": has_changes
+            "has_changes": has_changes,
+            "stash_created": stash_created,
+            "stash_id": stash_id if has_changes else None,
+            "submodules": submodule_states
         }
         self._state_saved = True
         
-        self.logger.info(f"Saved repository state: branch={current_branch}, has_changes={has_changes}")
+        self.logger.info(f"Saved repository state: {self._initial_state}")
         return self._initial_state
     
     def get_saved_state(self) -> dict:
@@ -469,6 +550,11 @@ class VersionFinder:
         """
         Restore the repository to its saved state.
         
+        This method:
+        1. Restores the original branch (or commit if in detached HEAD)
+        2. Pops stashed changes if they were stashed during save
+        3. Recursively restores state for all submodules
+        
         Returns:
             bool: True if restoration was successful, False otherwise
         """
@@ -481,17 +567,122 @@ class VersionFinder:
             self.logger.warning("No branch information in saved state")
             return False
             
-        self.logger.info(f"Restoring repository to branch: {original_branch}")
+        self.logger.info(f"Restoring repository to original state: {original_branch}")
         
+        # Restore submodules first (in reverse order)
+        submodule_states = self._initial_state.get("submodules", {})
+        if submodule_states:
+            self.logger.info(f"Restoring state for {len(submodule_states)} submodules")
+            for submodule, state in reversed(list(submodule_states.items())):
+                try:
+                    # Skip if there was an error during save
+                    if "error" in state:
+                        self.logger.warning(f"Skipping submodule {submodule} due to previous error: {state['error']}")
+                        continue
+                    
+                    # Checkout original branch or commit
+                    if state.get("branch"):
+                        git_command = ["-C", submodule, "checkout", state["branch"]]
+                        self._git.execute(git_command)
+                        self.logger.info(f"Restored submodule {submodule} to branch {state['branch']}")
+                    elif state.get("commit_hash"):
+                        git_command = ["-C", submodule, "checkout", state["commit_hash"]]
+                        self._git.execute(git_command)
+                        self.logger.info(f"Restored submodule {submodule} to commit {state['commit_hash']}")
+                    
+                    # Pop stashed changes if they were stashed
+                    if state.get("stash_created"):
+                        stash_id = state.get("stash_id")
+                        if stash_id:
+                            try:
+                                # Find the stash by its message
+                                git_command = ["-C", submodule, "stash", "list"]
+                                stash_output = self._git.execute(git_command).decode("utf-8").strip()
+                                
+                                if not stash_output:
+                                    self.logger.warning(f"No stashes found for submodule {submodule}")
+                                    continue
+                                    
+                                stash_list = stash_output.split("\n")
+                                stash_index = None
+                                
+                                for i, stash in enumerate(stash_list):
+                                    if stash_id in stash:
+                                        stash_index = i
+                                        break
+                                
+                                if stash_index is not None:
+                                    # Use apply instead of pop to avoid conflicts
+                                    git_command = ["-C", submodule, "stash", "apply", f"stash@{{{stash_index}}}"]
+                                    self._git.execute(git_command)
+                                    self.logger.info(f"Applied stashed changes in submodule {submodule}")
+                                    
+                                    # Now drop the stash
+                                    git_command = ["-C", submodule, "stash", "drop", f"stash@{{{stash_index}}}"]
+                                    self._git.execute(git_command)
+                                    self.logger.info(f"Dropped stash for submodule {submodule}")
+                                else:
+                                    self.logger.warning(f"Could not find stash with ID {stash_id} for submodule {submodule}")
+                            except GitCommandError as e:
+                                self.logger.error(f"Failed to restore stashed changes for submodule {submodule}: {e}")
+                    
+                except GitCommandError as e:
+                    self.logger.error(f"Failed to restore state for submodule {submodule}: {e}")
+        
+        # Restore main repository
         try:
-            # Checkout original branch
-            self._git.execute(GIT_CMD_CHECKOUT + [original_branch])
-            self.logger.info(f"Successfully restored repository to branch: {original_branch}")
+            # Check if we're restoring to a detached HEAD state
+            if original_branch.startswith("HEAD:"):
+                commit_hash = original_branch.split(":", 1)[1]
+                self._git.execute(GIT_CMD_CHECKOUT + [commit_hash])
+                self.logger.info(f"Restored repository to detached HEAD at commit {commit_hash}")
+            else:
+                # Checkout original branch
+                self._git.execute(GIT_CMD_CHECKOUT + [original_branch])
+                self.logger.info(f"Restored repository to branch {original_branch}")
+            
+            # Pop stashed changes if they were stashed
+            if self._initial_state.get("stash_created"):
+                stash_id = self._initial_state.get("stash_id")
+                if stash_id:
+                    try:
+                        # Find the stash by its message
+                        stash_output = self._git.execute(["stash", "list"]).decode("utf-8").strip()
+                        
+                        if not stash_output:
+                            self.logger.warning("No stashes found in repository")
+                            return True  # Still consider restoration successful
+                            
+                        stash_list = stash_output.split("\n")
+                        stash_index = None
+                        
+                        for i, stash in enumerate(stash_list):
+                            if stash_id in stash:
+                                stash_index = i
+                                break
+                        
+                        if stash_index is not None:
+                            # Use apply instead of pop to avoid conflicts
+                            self._git.execute(["stash", "apply", f"stash@{{{stash_index}}}"])
+                            self.logger.info("Applied stashed changes")
+                            
+                            # Now drop the stash
+                            self._git.execute(["stash", "drop", f"stash@{{{stash_index}}}"])
+                            self.logger.info("Dropped stash after successful apply")
+                        else:
+                            self.logger.warning(f"Could not find stash with ID {stash_id}")
+                    except GitCommandError as e:
+                        self.logger.error(f"Failed to restore stashed changes: {e}")
+                        # Continue anyway, as we've at least restored the branch
+            
+            # Set a flag to indicate that state has been restored
+            self._state_restored = True
+            
             return True
         except GitCommandError as e:
             self.logger.error(f"Failed to restore repository state: {e}")
             return False
-    
+
     def update_repository(self, branch: str, save_state: bool = True) -> None:
         """
         Update the repository to the specified branch.
@@ -1222,3 +1413,20 @@ class VersionFinder:
             state["error"] = f"Not a valid git repository: {str(e)}"
             
         return state
+
+    def __del__(self):
+        """
+        Destructor to ensure repository state is restored when the object is garbage collected.
+        This provides an additional safety net to ensure changes are always restored.
+        """
+        try:
+            # Check if we need to restore the state
+            # If _state_restored is True, it means the state was already restored explicitly
+            if (hasattr(self, '_state_saved') and self._state_saved and 
+                not (hasattr(self, '_state_restored') and self._state_restored)):
+                self.logger.info("VersionFinder being destroyed, attempting to restore repository state")
+                self.restore_repository_state()
+        except Exception as e:
+            # We can't raise exceptions in __del__, so just log them
+            if hasattr(self, 'logger'):
+                self.logger.error(f"Error in VersionFinder destructor: {str(e)}")

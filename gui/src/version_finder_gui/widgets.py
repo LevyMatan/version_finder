@@ -290,7 +290,7 @@ class LoadingSpinner(ctk.CTkFrame):
             self, 
             width=size, 
             height=size,
-            bg=self.cget("fg_color"),
+            bg=self.cget("fg_color")[0 if ctk.get_appearance_mode() == "Light" else 1],
             highlightthickness=0
         )
         self.canvas.grid(row=0, column=0, padx=10, pady=10)

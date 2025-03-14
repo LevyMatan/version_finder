@@ -1,5 +1,4 @@
 import customtkinter as ctk
-import os
 import argparse
 from pathlib import Path
 from enum import Enum, auto
@@ -9,13 +8,13 @@ from tkinter import filedialog, messagebox
 import importlib.resources
 import multiprocessing
 import queue
-import threading
-import time
 from version_finder.version_finder import VersionFinder, Commit
 from version_finder.common import parse_arguments
 from version_finder.logger import setup_logger
 from version_finder_gui.widgets import AutocompleteEntry, CommitListWindow, center_window, LoadingSpinner
+import time
 
+logger = setup_logger()
 # Define message types for inter-process communication
 class MessageType(Enum):
     TASK_REQUEST = auto()
@@ -34,7 +33,6 @@ def version_finder_worker(request_queue, response_queue, repo_path):
     try:
         # Initialize VersionFinder in the worker process
         finder = VersionFinder(path=repo_path)
-        logger = setup_logger()
         logger.info(f"Worker process started for repository: {repo_path}")
         
         while True:
@@ -75,22 +73,53 @@ def version_finder_worker(request_queue, response_queue, repo_path):
                             "result": result
                         })
                     except Exception as e:
-                        logger.error(f"Error executing task {task}: {str(e)}")
+                        # Get full traceback for better debugging
+                        import traceback
+                        error_traceback = traceback.format_exc()
+                        logger.error(f"Error executing task {task}: {str(e)}\n{error_traceback}")
+                        
                         # Send error back
                         response_queue.put({
                             "type": MessageType.TASK_ERROR,
                             "task_id": task_id,
                             "error": str(e),
-                            "error_type": type(e).__name__
+                            "error_type": type(e).__name__,
+                            "traceback": error_traceback
                         })
             except queue.Empty:
                 # No tasks in queue, continue waiting
                 continue
             except Exception as e:
-                logger.error(f"Unexpected error in worker process: {str(e)}")
+                import traceback
+                error_traceback = traceback.format_exc()
+                logger.error(f"Unexpected error in worker process: {str(e)}\n{error_traceback}")
+                
+                # Try to send error back if we have a task_id
+                if 'message' in locals() and isinstance(message, dict) and 'task_id' in message:
+                    response_queue.put({
+                        "type": MessageType.TASK_ERROR,
+                        "task_id": message.get("task_id"),
+                        "error": f"Unexpected error: {str(e)}",
+                        "error_type": type(e).__name__,
+                        "traceback": error_traceback
+                    })
                 
     except Exception as e:
-        logger.error(f"Fatal error in worker process: {str(e)}")
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"Fatal error in worker process: {str(e)}\n{error_traceback}")
+        
+        # Try to send a general error message back to the main process
+        try:
+            response_queue.put({
+                "type": MessageType.TASK_ERROR,
+                "task_id": None,  # No specific task ID
+                "error": f"Fatal worker error: {str(e)}",
+                "error_type": "WorkerInitializationError",
+                "traceback": error_traceback
+            })
+        except:
+            pass  # If this fails, we can't do much more
     finally:
         logger.info("Worker process terminated")
 
@@ -100,7 +129,6 @@ class VersionFinderGUI(ctk.CTk):
     def __init__(self, path: str = ''):
         super().__init__()
         self.repo_path = Path(path).resolve() if path else path
-        self.logger = setup_logger()
         self.title("Version Finder")
         self.version_finder: VersionFinder = None
         self.selected_branch: str = ''
@@ -144,7 +172,7 @@ class VersionFinderGUI(ctk.CTk):
             daemon=True
         )
         self.worker_process.start()
-        self.logger.info(f"Started worker process with PID: {self.worker_process.pid}")
+        logger.info(f"Started worker process with PID: {self.worker_process.pid}")
         
     def _stop_worker_process(self):
         """Stop the worker process"""
@@ -155,11 +183,11 @@ class VersionFinderGUI(ctk.CTk):
                 self.worker_process.join(timeout=2)
                 if self.worker_process.is_alive():
                     self.worker_process.terminate()
-                    self.logger.warning("Worker process terminated forcefully")
+                    logger.warning("Worker process terminated forcefully")
                 else:
-                    self.logger.info("Worker process shut down gracefully")
+                    logger.info("Worker process shut down gracefully")
             except Exception as e:
-                self.logger.error(f"Error stopping worker process: {str(e)}")
+                logger.error(f"Error stopping worker process: {str(e)}")
                 
     def _check_worker_responses(self):
         """Check for responses from the worker process"""
@@ -172,17 +200,74 @@ class VersionFinderGUI(ctk.CTk):
                         self._handle_worker_message(message)
                     except queue.Empty:
                         break
+                        
+                # Check for timed-out tasks
+                self._check_task_timeouts()
+                
             except Exception as e:
-                self.logger.error(f"Error checking worker responses: {str(e)}")
+                logger.error(f"Error checking worker responses: {str(e)}")
                 
         # Schedule the next check
         self.after(100, self._check_worker_responses)
+        
+    def _check_task_timeouts(self):
+        """Check for tasks that have timed out"""
+        current_time = time.time()
+        timed_out_tasks = []
+        
+        # Find timed-out tasks
+        for task_id, callback_info in self.task_callbacks.items():
+            start_time = callback_info.get("start_time", 0)
+            timeout = callback_info.get("timeout", 30)
+            
+            if current_time - start_time > timeout:
+                timed_out_tasks.append(task_id)
+                
+        # Handle timed-out tasks
+        for task_id in timed_out_tasks:
+            callback_info = self.task_callbacks.pop(task_id)
+            callback = callback_info["callback"]
+            spinner = callback_info.get("spinner")
+            
+            # Stop the spinner
+            if spinner is not None:
+                spinner.stop()
+                
+            # Log timeout error
+            error_msg = f"Task timed out after {callback_info.get('timeout', 30)} seconds"
+            logger.error(f"Task timeout: {error_msg}")
+            
+            # Display error in UI
+            self._log_error(f"Timeout: {error_msg}")
+            
+            # Call callback with error
+            if callback is not None:
+                callback(None, error=error_msg)
         
     def _handle_worker_message(self, message):
         """Handle a message from the worker process"""
         message_type = message["type"]
         task_id = message.get("task_id")
         
+        # Handle general worker errors (no specific task ID)
+        if message_type == MessageType.TASK_ERROR and task_id is None:
+            error_msg = message.get("error", "Unknown error")
+            error_type = message.get("error_type", "Error")
+            
+            # Log the error
+            logger.error(f"Worker error ({error_type}): {error_msg}")
+            
+            # Display error in UI
+            self._log_error(f"{error_type}: {error_msg}")
+            
+            # Show error dialog
+            messagebox.showerror("Worker Error", f"{error_type}: {error_msg}")
+            
+            # Stop all active spinners
+            self._stop_all_spinners()
+            return
+        
+        # Handle task-specific messages
         if task_id in self.task_callbacks:
             callback_info = self.task_callbacks.pop(task_id)
             callback = callback_info["callback"]
@@ -197,11 +282,45 @@ class VersionFinderGUI(ctk.CTk):
             elif message_type == MessageType.TASK_ERROR:
                 error_msg = message["error"]
                 error_type = message["error_type"]
-                self.logger.error(f"Task error ({error_type}): {error_msg}")
-                messagebox.showerror("Error", f"{error_type}: {error_msg}")
-                callback(None, error=error_msg)
+                logger.error(f"Task error ({error_type}): {error_msg}")
                 
-    def _execute_task(self, task_name, args=None, callback=None, show_spinner=True, spinner_parent=None, spinner_text="Processing..."):
+                # Display error in UI
+                self._log_error(f"{error_type}: {error_msg}")
+                
+                # Show error dialog
+                messagebox.showerror("Error", f"{error_type}: {error_msg}")
+                
+                # Call callback with error
+                callback(None, error=error_msg)
+        elif message_type == MessageType.TASK_ERROR:
+            # Handle error for unknown task ID
+            error_msg = message.get("error", "Unknown error")
+            error_type = message.get("error_type", "Error")
+            
+            # Log the error
+            logger.error(f"Task error for unknown task ({error_type}): {error_msg}")
+            
+            # Display error in UI
+            self._log_error(f"{error_type}: {error_msg}")
+            
+            # Show error dialog
+            messagebox.showerror("Error", f"{error_type}: {error_msg}")
+            
+            # Stop all active spinners as a precaution
+            self._stop_all_spinners()
+    
+    def _stop_all_spinners(self):
+        """Stop all active spinners"""
+        # Stop all spinners in task_callbacks
+        for task_id, callback_info in list(self.task_callbacks.items()):
+            spinner = callback_info.get("spinner")
+            if spinner is not None:
+                spinner.stop()
+        
+        # Clear task callbacks since we've handled all pending tasks
+        self.task_callbacks.clear()
+
+    def _execute_task(self, task_name, args=None, callback=None, show_spinner=True, spinner_parent=None, spinner_text="Processing...", timeout=30):
         """Execute a task in the worker process"""
         if self.worker_process is None or not self.worker_process.is_alive():
             self._start_worker_process()
@@ -219,7 +338,9 @@ class VersionFinderGUI(ctk.CTk):
         if callback is not None:
             self.task_callbacks[task_id] = {
                 "callback": callback,
-                "spinner": spinner
+                "spinner": spinner,
+                "start_time": time.time(),
+                "timeout": timeout
             }
             
         # Send task to worker
@@ -664,7 +785,7 @@ class VersionFinderGUI(ctk.CTk):
                 spinner_text="Loading branches..."
             )
         except Exception as e:
-            self.logger.error(f"Error initializing VersionFinder: {str(e)}")
+            logger.error(f"Error initializing VersionFinder: {str(e)}")
             messagebox.showerror("Error", f"Failed to initialize repository: {str(e)}")
             
     def _handle_branches_loaded(self, branches, error=None):
@@ -887,7 +1008,7 @@ class VersionFinderGUI(ctk.CTk):
         self.output_text.insert("end", f"✅ {message}\n")
         self.output_text.configure(state="disabled")
         self.output_text.see("end")
-        self.logger.debug(message)
+        logger.debug(message)
 
     def _log_error(self, message: str):
         """Log error message to the output area"""
@@ -895,7 +1016,7 @@ class VersionFinderGUI(ctk.CTk):
         self.output_text.insert("end", f"❌ Error: {message}\n")
         self.output_text.configure(state="disabled")
         self.output_text.see("end")
-        self.logger.error(message)
+        logger.error(message)
 
     def _setup_icon(self):
         """Setup application icon"""

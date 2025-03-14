@@ -15,6 +15,8 @@ from version_finder.common import parse_arguments
 import threading
 import time
 
+logger = setup_logger()
+
 
 class TaskNumberValidator(Validator):
     def __init__(self, min_index: int, max_index: int):
@@ -103,7 +105,6 @@ class VersionFinderCLI:
         Initialize the VersionFinderCLI with a logger.
         """
         self.registry = VersionFinderTaskRegistry()
-        self.logger = setup_logger()
         self.prompt_style = Style.from_dict({
             # User input (default text).
             # '':          '#ff0066',
@@ -159,10 +160,10 @@ class VersionFinderCLI:
             self.run_task(self.task_name)
 
         except KeyboardInterrupt:
-            self.logger.info("\nOperation cancelled by user")
+            logger.info("\nOperation cancelled by user")
             return 0
         except Exception as e:
-            self.logger.error("Error during task execution: %s", str(e))
+            logger.error("Error during task execution: %s", str(e))
             return 1
 
     def handle_task_input(self, task_name: str) -> str:
@@ -185,9 +186,9 @@ class VersionFinderCLI:
                 validate_while_typing=True
             ).strip())
 
-            self.logger.debug("Selected task: %d", task_idx)
+            logger.debug("Selected task: %d", task_idx)
             if not self.registry.has_index(task_idx):
-                self.logger.error("Invalid task selected")
+                logger.error("Invalid task selected")
                 sys.exit(1)
 
             task_struct = self.registry.get_by_index(task_idx)
@@ -216,7 +217,7 @@ class VersionFinderCLI:
         )
 
         current_branch = self.finder.get_current_branch()
-        self.logger.info("Current branch: %s", current_branch)
+        logger.info("Current branch: %s", current_branch)
 
         if current_branch:
             prompt_message = [
@@ -299,9 +300,9 @@ class VersionFinderCLI:
 
         while True:
             try:
-                self.logger.debug("\nAvailable branches:")
+                logger.debug("\nAvailable branches:")
                 for branch in branches:
-                    self.logger.debug(f"  - {branch}")
+                    logger.debug(f"  - {branch}")
 
                 branch = prompt(
                     "\nEnter branch name (Tab for completion): ",
@@ -312,10 +313,10 @@ class VersionFinderCLI:
                 if branch in branches:
                     return branch
 
-                self.logger.error("Invalid branch selected")
+                logger.error("Invalid branch selected")
 
             except (KeyboardInterrupt, EOFError):
-                self.logger.info("\nOperation cancelled by user")
+                logger.info("\nOperation cancelled by user")
                 sys.exit(0)
 
     def run_task(self, task_name: str):
@@ -402,9 +403,6 @@ def cli_main(args: argparse.Namespace) -> int:
         from .__version__ import __version__
         print(f"version_finder cli-v{__version__}")
         return 0
-
-    # Setup logging
-    logger = setup_logger(args.verbose)
 
     # Initialize CLI
     cli = VersionFinderCLI()

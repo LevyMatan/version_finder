@@ -54,6 +54,14 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--config", "-c", type=str, default=DEFAULT_CONFIG_PATH, help="Path to configuration file")
     parser.add_argument("--version", "-v", action="store_true", help="Show version information")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument("--force", "-f", action="store_true", help="Force operation even if repository has uncommitted changes")
+    parser.add_argument("--restore-state", "-r", action="store_true", help="Restore repository to original state after operation")
+    parser.add_argument("--branch", "-b", type=str, help="Branch to use")
+    parser.add_argument("--commit", type=str, help="Commit SHA to find version for")
+    parser.add_argument("--submodule", "-s", type=str, help="Submodule to use")
+    parser.add_argument("--cli", action="store_true", help="Run the CLI version")
+    parser.add_argument("--gui", action="store_true", help="Run the GUI version")
+    parser.add_argument("--task", "-t", type=str, help="Task to run")
     
     return parser.parse_args()
 

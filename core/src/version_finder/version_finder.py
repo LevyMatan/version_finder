@@ -199,18 +199,28 @@ class VersionFinder:
 
     def __init__(self,
                  path: str = '',
-                 config: Optional[GitConfig] = None) -> None:
+                 config: Optional[GitConfig] = None,
+                 force: bool = False) -> None:
         """
         Initialize the VersionFinder with a repository path and configuration.
 
         Args:
             path: Path to the git repository. Uses current directory if None.
             config: Configuration settings for git operations.
+            force: If True, allow initialization even if the repository has uncommitted changes.
         """
         self.config = config or GitConfig()
         self.repository_path = Path(path or os.getcwd()).resolve()
         self.logger = setup_logger()
         self.updated_branch: str = ''
+        self.force = force
+
+        # State tracking
+        self._initial_state = {
+            "branch": None,
+            "has_changes": False
+        }
+        self._state_saved = False
 
         try:
             self._git = GitCommandExecutor(self.repository_path, self.config)
@@ -246,9 +256,12 @@ class VersionFinder:
         self._has_remote = self.__has_remote()
         self.logger.debug(f"Repository has remote: {self._has_remote}")
 
-        # Skip the clean repository check if the SKIP_CLEAN_CHECK environment variable is set
-        # This is useful for running tests
-        if not self.__is_clean_git_repo():
+        # Check for uncommitted changes
+        has_changes = not self.__is_clean_git_repo()
+        
+        # Only raise an error if force is False
+        if has_changes and not self.force:
+            self.logger.warning("Repository has uncommitted changes. Use force=True to proceed anyway.")
             raise GitRepositoryNotClean("Repository has uncommitted changes")
 
     def __load_repository_info(self) -> None:
@@ -260,6 +273,9 @@ class VersionFinder:
         self.__load_submodules()
         # If the checked out branch is valid, set it as updated
         self.updated_branch = self.get_current_branch()
+        
+        # Save initial repository state
+        self.save_repository_state()
 
     def __load_submodules(self) -> None:
         """Load git submodules information."""
@@ -397,18 +413,102 @@ class VersionFinder:
         """Check if a branch exists."""
         return branch in self.branches
 
-    def update_repository(self, branch: str) -> None:
+    def save_repository_state(self) -> dict:
+        """
+        Save the current state of the repository.
+        
+        Returns:
+            dict: A dictionary containing the saved state information
+        """
+        self.logger.info("Saving repository state")
+        
+        # Get current branch
+        current_branch = self.get_current_branch()
+        
+        # Check for uncommitted changes
+        has_changes = not self.__is_clean_git_repo()
+        
+        # Save state
+        self._initial_state = {
+            "branch": current_branch,
+            "has_changes": has_changes
+        }
+        self._state_saved = True
+        
+        self.logger.info(f"Saved repository state: branch={current_branch}, has_changes={has_changes}")
+        return self._initial_state
+    
+    def get_saved_state(self) -> dict:
+        """
+        Get the saved repository state.
+        
+        Returns:
+            dict: A dictionary containing the saved state information
+        """
+        return self._initial_state
+    
+    def has_saved_state(self) -> bool:
+        """
+        Check if the repository state has been saved.
+        
+        Returns:
+            bool: True if state has been saved, False otherwise
+        """
+        return self._state_saved
+    
+    def has_uncommitted_changes(self) -> bool:
+        """
+        Check if the repository has uncommitted changes.
+        
+        Returns:
+            bool: True if there are uncommitted changes, False otherwise
+        """
+        return not self.__is_clean_git_repo()
+    
+    def restore_repository_state(self) -> bool:
+        """
+        Restore the repository to its saved state.
+        
+        Returns:
+            bool: True if restoration was successful, False otherwise
+        """
+        if not self._state_saved:
+            self.logger.warning("No saved state to restore")
+            return False
+            
+        original_branch = self._initial_state.get("branch")
+        if not original_branch:
+            self.logger.warning("No branch information in saved state")
+            return False
+            
+        self.logger.info(f"Restoring repository to branch: {original_branch}")
+        
+        try:
+            # Checkout original branch
+            self._git.execute(GIT_CMD_CHECKOUT + [original_branch])
+            self.logger.info(f"Successfully restored repository to branch: {original_branch}")
+            return True
+        except GitCommandError as e:
+            self.logger.error(f"Failed to restore repository state: {e}")
+            return False
+    
+    def update_repository(self, branch: str, save_state: bool = True) -> None:
         """
         Update the repository to the specified branch.
 
         Args:
             branch: Branch name to checkout
+            save_state: Whether to save the current state before updating
 
         Raises:
             InvalidBranchError: If the branch is invalid
             GitRepositoryNotClean: If the repository has uncommitted changes
         """
         self.logger.info(f"Updating repository to branch: {branch}")
+        
+        # Save current state if requested
+        if save_state and not self._state_saved:
+            self.save_repository_state()
 
         # Fetch latest changes
         try:
@@ -524,8 +624,10 @@ class VersionFinder:
                     continue
                 # Split the commit info using the ASCII delimiter
                 commit_parts = commit.split("\x1F")
-                if len(commit_parts) >= 3:
-                    commit_hash, subject, body = commit_parts
+                if len(commit_parts) >= 2:  # Only require hash and subject
+                    commit_hash = commit_parts[0]
+                    subject = commit_parts[1]
+                    body = commit_parts[2] if len(commit_parts) >= 3 else ""
                     # Search in both subject and body
                     if (text.lower() in subject.lower() or
                             text.lower() in body.lower()):
@@ -1097,3 +1199,26 @@ class VersionFinder:
         except Exception as e:
             self.logger.error(f"Error finding commits: {e}")
             raise
+
+    def check_repository_state(self) -> dict:
+        """
+        Check the current state of the repository without raising exceptions.
+        
+        Returns:
+            dict: A dictionary containing information about the repository state
+        """
+        state = {
+            "branch": self.get_current_branch(),
+            "has_changes": not self.__is_clean_git_repo(),
+            "is_valid": True,
+            "error": None
+        }
+        
+        try:
+            # Check if directory is a git repository
+            self._git.execute(["status"])
+        except GitCommandError as e:
+            state["is_valid"] = False
+            state["error"] = f"Not a valid git repository: {str(e)}"
+            
+        return state

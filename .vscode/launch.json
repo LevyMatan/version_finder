@@ -32,8 +32,8 @@
         "request": "launch",
         "program": "${workspaceFolder}/gui/src/version_finder_gui/gui.py",
         "args": [
-          "-v",
-          "-p${workspaceFolder}/test_version_repo",
+          "--verbose",
+          "-p${workspaceFolder}/../test",
         ],
         "console": "integratedTerminal",
         "justMyCode": false

@@ -145,7 +145,19 @@ class VersionFinderCLI:
         """
         try:
             self.path = self.handle_path_input(args.path)
-            self.finder = VersionFinder(path=self.path)
+            
+            # Initialize VersionFinder with force=True to allow uncommitted changes
+            self.finder = VersionFinder(path=self.path, force=True)
+            
+            # Check for uncommitted changes
+            state = self.finder.get_saved_state()
+            if state.get("has_changes", False):
+                logger.warning("Repository has uncommitted changes")
+                if not args.force:
+                    proceed = input("Repository has uncommitted changes. Proceed anyway? (y/N): ").lower() == 'y'
+                    if not proceed:
+                        logger.info("Operation cancelled by user")
+                        return 0
 
             actions = self.get_task_functions()
             params = self.finder.get_task_api_functions_params()
@@ -158,12 +170,38 @@ class VersionFinderCLI:
             self.task_name = self.handle_task_input(args.task)
 
             self.run_task(self.task_name)
+            
+            # Restore original state if requested
+            if args.restore_state:
+                logger.info("Restoring original repository state")
+                if self.finder.restore_repository_state():
+                    logger.info("Original repository state restored successfully")
+                else:
+                    logger.warning("Failed to restore original repository state")
 
         except KeyboardInterrupt:
             logger.info("\nOperation cancelled by user")
+            
+            # Try to restore original state
+            if hasattr(self, 'finder') and self.finder and args.restore_state:
+                logger.info("Restoring original repository state")
+                if self.finder.restore_repository_state():
+                    logger.info("Original repository state restored successfully")
+                else:
+                    logger.warning("Failed to restore original repository state")
+                    
             return 0
         except Exception as e:
             logger.error("Error during task execution: %s", str(e))
+            
+            # Try to restore original state
+            if hasattr(self, 'finder') and self.finder and args.restore_state:
+                logger.info("Restoring original repository state")
+                if self.finder.restore_repository_state():
+                    logger.info("Original repository state restored successfully")
+                else:
+                    logger.warning("Failed to restore original repository state")
+                    
             return 1
 
     def handle_task_input(self, task_name: str) -> str:

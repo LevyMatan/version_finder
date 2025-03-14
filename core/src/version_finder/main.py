@@ -89,8 +89,27 @@ def main():
                 # Restore original state if requested
                 if args.restore_state:
                     print("Restoring original repository state")
+                    
+                    # Get the state before restoration for logging
+                    state = vf.get_saved_state()
+                    has_changes = state.get("has_changes", False)
+                    stash_created = state.get("stash_created", False)
+                    
+                    if has_changes:
+                        if stash_created:
+                            print("Attempting to restore stashed changes")
+                        else:
+                            print("Warning: Repository had changes but they were not stashed")
+                    
+                    # Perform the restoration
                     if vf.restore_repository_state():
                         print("Original repository state restored successfully")
+                        
+                        # Verify the restoration
+                        if has_changes and vf.has_uncommitted_changes():
+                            print("Uncommitted changes were successfully restored")
+                        elif has_changes and not vf.has_uncommitted_changes():
+                            print("Error: Failed to restore uncommitted changes")
                     else:
                         print("Failed to restore original repository state")
                         

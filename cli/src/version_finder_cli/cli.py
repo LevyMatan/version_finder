@@ -153,8 +153,23 @@ class VersionFinderCLI:
             state = self.finder.get_saved_state()
             if state.get("has_changes", False):
                 logger.warning("Repository has uncommitted changes")
+                has_submodules = bool(state.get("submodules", {}))
+                
                 if not args.force:
-                    proceed = input("Repository has uncommitted changes. Proceed anyway? (y/N): ").lower() == 'y'
+                    # Build message with details about what will happen
+                    message = (
+                        "Repository has uncommitted changes. Version Finder will:\n"
+                        "1. Stash your changes with a unique identifier\n"
+                        "2. Perform the requested operations\n"
+                        "3. Restore your original branch and stashed changes when closing\n"
+                    )
+                    
+                    if has_submodules:
+                        message += "Submodules with uncommitted changes will also be handled similarly.\n"
+                    
+                    message += "Proceed anyway? (y/N): "
+                    
+                    proceed = input(message).lower() == 'y'
                     if not proceed:
                         logger.info("Operation cancelled by user")
                         return 0
@@ -174,8 +189,36 @@ class VersionFinderCLI:
             # Restore original state if requested
             if args.restore_state:
                 logger.info("Restoring original repository state")
+                
+                # Get the state before restoration for logging
+                state = self.finder.get_saved_state()
+                has_changes = state.get("has_changes", False)
+                stash_created = state.get("stash_created", False)
+                
+                if has_changes:
+                    if stash_created:
+                        logger.info("Attempting to restore stashed changes")
+                    else:
+                        logger.warning("Repository had changes but they were not stashed")
+                
+                # Perform the restoration
                 if self.finder.restore_repository_state():
                     logger.info("Original repository state restored successfully")
+                    
+                    # Verify the restoration
+                    current_branch = self.finder.get_current_branch()
+                    original_branch = state.get("branch")
+                    if original_branch and current_branch:
+                        if original_branch.startswith("HEAD:"):
+                            logger.info(f"Restored to detached HEAD state")
+                        else:
+                            logger.info(f"Restored to branch: {current_branch}")
+                    
+                    # Check if we still have uncommitted changes
+                    if has_changes and self.finder.has_uncommitted_changes():
+                        logger.info("Uncommitted changes were successfully restored")
+                    elif has_changes and not self.finder.has_uncommitted_changes():
+                        logger.error("Failed to restore uncommitted changes")
                 else:
                     logger.warning("Failed to restore original repository state")
 

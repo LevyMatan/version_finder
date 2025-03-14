@@ -30,7 +30,7 @@ class VersionFinderTasks(Enum):
     COMMITS_BY_TEXT = auto()
 
 # Worker process function
-def version_finder_worker(request_queue, response_queue):
+def version_finder_worker(request_queue, response_queue, exit_event=None):
     """Worker process for version finder operations"""
     logger.info("Worker process started")
     
@@ -42,23 +42,77 @@ def version_finder_worker(request_queue, response_queue):
     # Process tasks until shutdown
     while True:
         try:
-            # Get the next task from the queue
-            request = request_queue.get()
+            # Check if exit event is set
+            if exit_event and exit_event.is_set():
+                logger.info("Worker process detected exit event")
+                # Restore original branch if needed
+                if version_finder and version_finder.has_saved_state():
+                    try:
+                        logger.info("Restoring original repository state due to exit event")
+                        version_finder.restore_repository_state()
+                        # Set flag to prevent destructor from trying to restore again
+                        version_finder._state_restored = True
+                    except Exception as e:
+                        logger.error(f"Failed to restore original repository state: {str(e)}")
+                break
             
+            # Get the next task from the queue with timeout
+            try:
+                request = request_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+                
             # Check if we should shut down
             if request["type"] == MessageType.SHUTDOWN:
                 logger.info("Worker process shutting down")
                 
                 # Restore original branch if needed
+                # Note: We're explicitly restoring here for better control and logging
+                # The VersionFinder.__del__ method will also try to restore as a safety net
                 if version_finder and version_finder.has_saved_state():
                     try:
                         logger.info("Restoring original repository state")
+                        # Get the state before restoration for logging
+                        state = version_finder.get_saved_state()
+                        has_changes = state.get("has_changes", False)
+                        stash_created = state.get("stash_created", False)
+                        
+                        if has_changes:
+                            if stash_created:
+                                logger.info("Attempting to restore stashed changes")
+                            else:
+                                logger.warning("Repository had changes but they were not stashed")
+                        
+                        # Perform the restoration
                         if version_finder.restore_repository_state():
                             logger.info("Original repository state restored successfully")
+                            
+                            # Verify the restoration
+                            current_branch = version_finder.get_current_branch()
+                            original_branch = state.get("branch")
+                            if original_branch and current_branch:
+                                if original_branch.startswith("HEAD:"):
+                                    logger.info(f"Restored to detached HEAD state")
+                                else:
+                                    logger.info(f"Restored to branch: {current_branch}")
+                            
+                            # Check if we still have uncommitted changes
+                            if has_changes and version_finder.has_uncommitted_changes():
+                                logger.info("Uncommitted changes were successfully restored")
+                            elif has_changes and not version_finder.has_uncommitted_changes():
+                                logger.error("Failed to restore uncommitted changes")
+                            
+                            # Set a flag to indicate we've already restored the state
+                            # This will prevent the destructor from trying to restore again
+                            version_finder._state_restored = True
                         else:
                             logger.error("Failed to restore original repository state")
                     except Exception as e:
                         logger.error(f"Failed to restore original repository state: {str(e)}")
+                        # Get full traceback for better debugging
+                        import traceback
+                        error_traceback = traceback.format_exc()
+                        logger.error(f"Restoration error details: {error_traceback}")
                 
                 break
                 
@@ -200,6 +254,34 @@ def version_finder_worker(request_queue, response_queue):
                             "task_id": task_id,
                             "result": result
                         })
+                    elif task == "restore_state":
+                        if not version_finder:
+                            raise ValueError("Version finder not initialized")
+                        # Explicitly restore repository state
+                        if version_finder.has_saved_state():
+                            logger.info("Explicitly restoring repository state on close")
+                            result = version_finder.restore_repository_state()
+                            # Set flag to prevent destructor from trying to restore again
+                            version_finder._state_restored = True
+                            
+                            # Force the destructor to be called by deleting the reference
+                            logger.info("Forcing VersionFinder destructor by deleting reference")
+                            version_finder_copy = version_finder
+                            version_finder = None
+                            del version_finder_copy
+                            
+                            response_queue.put({
+                                "type": MessageType.TASK_RESULT,
+                                "task_id": task_id,
+                                "result": {"status": "success", "restored": result, "forced_destructor": True}
+                            })
+                        else:
+                            logger.info("No saved state to restore")
+                            response_queue.put({
+                                "type": MessageType.TASK_RESULT,
+                                "task_id": task_id,
+                                "result": {"status": "success", "restored": False}
+                            })
                     else:
                         raise ValueError(f"Unknown task: {task}")
                 except Exception as e:
@@ -286,10 +368,11 @@ class VersionFinderGUI(ctk.CTk):
             
         self.request_queue = multiprocessing.Queue()
         self.response_queue = multiprocessing.Queue()
+        self.exit_event = multiprocessing.Event()
         self.worker_process = multiprocessing.Process(
             target=version_finder_worker,
-            args=(self.request_queue, self.response_queue),
-            daemon=True
+            args=(self.request_queue, self.response_queue, self.exit_event),
+            daemon=False  # Use non-daemon process for proper cleanup
         )
         self.worker_process.start()
         logger.info(f"Started worker process with PID: {self.worker_process.pid}")
@@ -298,12 +381,23 @@ class VersionFinderGUI(ctk.CTk):
         """Stop the worker process"""
         if self.worker_process is not None and self.worker_process.is_alive():
             try:
-                self.request_queue.put({"type": MessageType.SHUTDOWN})
+                # First try to signal exit via event
+                logger.info("Setting exit event for worker process")
+                self.exit_event.set()
+                
                 # Give the process a moment to shut down gracefully
                 self.worker_process.join(timeout=2)
+                
+                # If still alive, try shutdown message
                 if self.worker_process.is_alive():
+                    logger.info("Worker still alive, sending shutdown message")
+                    self.request_queue.put({"type": MessageType.SHUTDOWN})
+                    self.worker_process.join(timeout=2)
+                
+                # If still alive, terminate
+                if self.worker_process.is_alive():
+                    logger.warning("Worker process did not exit, terminating forcefully")
                     self.worker_process.terminate()
-                    logger.warning("Worker process terminated forcefully")
                 else:
                     logger.info("Worker process shut down gracefully")
             except Exception as e:
@@ -487,9 +581,14 @@ class VersionFinderGUI(ctk.CTk):
         """Handle the initial repository state message"""
         branch = state.get("branch")
         has_changes = state.get("has_changes", False)
+        has_submodules = bool(state.get("submodules", {}))
         
         if branch:
-            self._log_output(f"Repository is on branch: {branch}")
+            if branch.startswith("HEAD:"):
+                commit = branch.split(":", 1)[1][:8]  # Show first 8 chars of commit hash
+                self._log_output(f"Repository is in detached HEAD state at commit {commit}")
+            else:
+                self._log_output(f"Repository is on branch: {branch}")
             
         if has_changes:
             self._log_warning("Repository has uncommitted changes")
@@ -501,12 +600,23 @@ class VersionFinderGUI(ctk.CTk):
             # Set flag to indicate we're waiting for confirmation
             self.waiting_for_confirmation = True
             
+            # Build message with details about what will happen
+            message = (
+                "The repository has uncommitted changes. Version Finder will:\n\n"
+                "1. Stash your changes with a unique identifier\n"
+                "2. Perform the requested operations\n"
+                "3. Restore your original branch and stashed changes when closing\n"
+            )
+            
+            if has_submodules:
+                message += "\nSubmodules with uncommitted changes will also be handled similarly."
+            
+            message += "\n\nDo you want to proceed?"
+            
             # Ask user if they want to proceed
             proceed = messagebox.askyesno(
                 "Uncommitted Changes",
-                "The repository has uncommitted changes. Version Finder will restore your current branch when closing, " +
-                "but any branch switching operations may affect your working directory.\n\n" +
-                "Do you want to proceed anyway?",
+                message,
                 icon="warning"
             )
             
@@ -600,7 +710,50 @@ class VersionFinderGUI(ctk.CTk):
         
     def _on_close(self):
         """Handle window close event"""
-        self._stop_worker_process()
+        # Explicitly restore repository state before shutting down
+        if self.worker_process is not None and self.worker_process.is_alive():
+            try:
+                # Log that we're closing
+                logger.info("Application closing, restoring repository state...")
+                self._log_output("Closing application, restoring repository state...")
+                
+                # First try to signal exit via event
+                logger.info("Setting exit event for worker process")
+                self.exit_event.set()
+                
+                # Explicitly request state restoration
+                try:
+                    # Send a task to explicitly restore state and delete the version_finder
+                    self._execute_task(
+                        "restore_state",
+                        callback=lambda result, error=None: logger.info(f"State restoration result: {result}, error: {error}"),
+                        timeout=5
+                    )
+                    # Give a moment for the task to complete
+                    time.sleep(1)
+                except Exception as e:
+                    logger.error(f"Error during explicit state restoration: {str(e)}")
+                
+                # Wait for the worker to finish (with timeout)
+                self.worker_process.join(timeout=3)
+                
+                # If still alive, try shutdown message
+                if self.worker_process.is_alive():
+                    logger.info("Worker still alive, sending shutdown message")
+                    self.request_queue.put({"type": MessageType.SHUTDOWN})
+                    self.worker_process.join(timeout=2)
+                
+                # If still alive, terminate
+                if self.worker_process.is_alive():
+                    logger.warning("Worker process did not exit, terminating forcefully")
+                    self.worker_process.terminate()
+                else:
+                    logger.info("Worker process shut down gracefully")
+                    
+            except Exception as e:
+                logger.error(f"Error during shutdown: {str(e)}")
+                
+        # Now destroy the window
         self.destroy()
 
     def _create_window_layout(self):
@@ -852,7 +1005,7 @@ class VersionFinderGUI(ctk.CTk):
         exit_btn = ctk.CTkButton(
             buttons_frame,
             text="Exit",
-            command=self.quit,
+            command=self._on_close,
             corner_radius=10,
             fg_color=("red", "darkred"),
             hover_color=("darkred", "firebrick")
@@ -1299,11 +1452,12 @@ class VersionFinderGUI(ctk.CTk):
         if not self.worker_process or not self.worker_process.is_alive():
             self.request_queue = multiprocessing.Queue()
             self.response_queue = multiprocessing.Queue()
+            self.exit_event = multiprocessing.Event()
             
             self.worker_process = multiprocessing.Process(
                 target=version_finder_worker,
-                args=(self.request_queue, self.response_queue),
-                daemon=True
+                args=(self.request_queue, self.response_queue, self.exit_event),
+                daemon=False  # Use non-daemon process for proper cleanup
             )
             self.worker_process.start()
             

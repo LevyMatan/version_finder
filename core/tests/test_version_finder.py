@@ -19,11 +19,11 @@ from version_finder.version_finder import (
     GitConfig
 )
 from version_finder.logger import (
-    setup_logger,
+    get_logger,
 )
 
 
-debug_logger = setup_logger(verbose=True)
+debug_logger = get_logger(__name__, verbose=True)
 
 
 class TestGitConfig:

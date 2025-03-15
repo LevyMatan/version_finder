@@ -10,13 +10,13 @@ import multiprocessing
 import queue
 from version_finder.version_finder import VersionFinder, Commit
 from version_finder.common import parse_arguments
-from version_finder.logger import setup_logger
+from version_finder.logger import get_logger, configure_logging
 from version_finder_gui.widgets import AutocompleteEntry, CommitListWindow, center_window, LoadingSpinner
 import time
 import subprocess
 import os
 
-logger = setup_logger()
+logger = get_logger(__name__)
 # Define message types for inter-process communication
 class MessageType(Enum):
     TASK_REQUEST = auto()
@@ -1496,11 +1496,11 @@ class VersionFinderGUI(ctk.CTk):
 
 def gui_main(args: argparse.Namespace) -> int:
     if args.version:
-        from gui.__version__ import __version__
+        from version_finder_gui.__version__ import __version__
         print(f"version_finder gui-v{__version__}")
         return 0
 
-    _ = setup_logger(verbose=args.verbose)
+    configure_logging(verbose=args.verbose)
     app = VersionFinderGUI(args.path)
     app.mainloop()
     return 0

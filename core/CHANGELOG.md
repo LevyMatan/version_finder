@@ -1,6 +1,87 @@
 # CHANGELOG
 
 
+## v10.3.0 (2025-03-15)
+
+### Bug Fixes
+
+- **core**: Enhance repository state restoration and commit search functionality
+  ([`310f414`](https://github.com/LevyMatan/version_finder/commit/310f414e268bef3ac68afaad80af1415108c7ca2))
+
+- Added checks for repository directory existence before restoring state. - Improved commit search
+  by using a more specific pattern for version commits. - Filtered out empty commit strings to
+  ensure cleaner results.
+
+- **core**: Improve version commit search pattern and enhance logging
+  ([`cb19e0d`](https://github.com/LevyMatan/version_finder/commit/cb19e0d725bc12dff2c68ae6e132da84c295a8f6))
+
+- Updated version pattern to include optional XX_ prefix for better matching. - Enhanced commit
+  search with extended regex for more accurate results. - Refactored commit retrieval to handle
+  multiple commits for start and end versions. - Adjusted test to reflect changes in commit
+  retrieval logic.
+
+### Features
+
+- **cli, core, gui**: :sparkles: Enhance version finder with progress indicators and improved UI
+  ([`db03423`](https://github.com/LevyMatan/version_finder/commit/db034234a41b0c826b51a41e5ba4b880a3610eb3))
+
+- Added a progress indicator for CLI operations to enhance user experience. - Refactored version
+  finding methods to include progress feedback. - Updated command-line argument parsing to support
+  version and verbose options. - Improved GUI with dropdowns for branch and submodule selection,
+  replacing autocomplete entries. - Enhanced error handling and logging for better debugging and
+  user feedback.
+
+- **cli, core, gui**: Enhance version finder with uncommitted changes handling and state restoration
+  ([`e7e7d4d`](https://github.com/LevyMatan/version_finder/commit/e7e7d4db23c566933a535579a3eb1035770a3079))
+
+- Added support for handling uncommitted changes in CLI and GUI, prompting user confirmation before
+  proceeding. - Implemented state restoration functionality to revert to the original repository
+  state after operations. - Updated command-line arguments to include options for force operations
+  and state restoration. - Enhanced GUI to display warnings and manage user confirmations
+  effectively.
+
+- **cli, core, gui**: Improve uncommitted changes handling and state restoration
+  ([`7bedd12`](https://github.com/LevyMatan/version_finder/commit/7bedd12346272b0d1710512b44ebf7df04f3e623))
+
+- Enhanced user prompts for uncommitted changes in CLI and GUI, detailing the stashing and
+  restoration process. - Improved logging for state restoration, including checks for uncommitted
+  changes and stash status. - Added exit event handling in the worker process to ensure proper
+  cleanup and state restoration on shutdown. - Updated GUI to explicitly manage state restoration
+  during application closure.
+
+- **installation**: :sparkles: Add Windows installation scripts and enhance Makefile options
+  ([`ef5fa23`](https://github.com/LevyMatan/version_finder/commit/ef5fa2306a222e7de23bad6be36b0d3bb513432f))
+
+- Introduced `install.bat` and `install.ps1` for user-friendly installation on Windows. - Updated
+  Makefile to support installation options based on the detected OS. - Added a test script for
+  verifying installation prerequisites on Windows. - Enhanced README with installation instructions
+  for Windows users.
+
+### Refactoring
+
+- **logging**: Centralize logger usage in CLI and GUI components
+  ([`5f402cc`](https://github.com/LevyMatan/version_finder/commit/5f402cc9a447715affefe168f5de91ddc765bc0d))
+
+- Replaced instance-specific logger initialization with a centralized logger in CLI and GUI. -
+  Enhanced error handling in worker processes with detailed traceback logging. - Added timeout
+  handling for tasks in the GUI to improve user feedback on long-running operations.
+
+- **logging**: Replace setup_logger with get_logger for centralized logging
+  ([`d9500bc`](https://github.com/LevyMatan/version_finder/commit/d9500bcb1b6431a3446ecb47bba89d19c925b579))
+
+- Updated logger initialization across CLI, core, and GUI components to use get_logger for
+  consistency. - Enhanced logging functionality by ensuring proper module-level logging
+  configuration. - Improved code readability and maintainability by centralizing logger setup.
+
+- **version_finder**: Simplify repository clean check and enhance test setup
+  ([`54ab5e1`](https://github.com/LevyMatan/version_finder/commit/54ab5e1d7250c4be55692445d1f24f3eca1f0b1d))
+
+- Removed the SKIP_CLEAN_CHECK environment variable from the clean repository check. - Updated test
+  setup to use Python file creation instead of shell commands for better readability and
+  reliability. - Improved test fixtures to return repository paths as tuples for better handling in
+  tests. - Enhanced cleanup process in tests by using shutil for directory removal.
+
+
 ## v10.2.0 (2025-03-13)
 
 ### Bug Fixes

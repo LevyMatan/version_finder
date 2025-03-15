@@ -8,14 +8,15 @@ from prompt_toolkit import prompt
 from prompt_toolkit.styles import Style
 from prompt_toolkit.completion import WordCompleter, PathCompleter
 from prompt_toolkit.validation import Validator, ValidationError
-from version_finder.logger import setup_logger
+from version_finder.logger import get_logger
 from version_finder.version_finder import VersionFinder, GitError, VersionNotFoundError
 from version_finder.version_finder import VersionFinderTask, VersionFinderTaskRegistry
 from version_finder.common import parse_arguments
 import threading
 import time
 
-logger = setup_logger()
+# Initialize module logger
+logger = get_logger(__name__)
 
 
 class TaskNumberValidator(Validator):

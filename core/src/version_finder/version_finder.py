@@ -1039,15 +1039,17 @@ class VersionFinder:
         if not self.is_task_ready:
             raise RepositoryNotTaskReady()
 
-        # Find the commit that indicates the specified version
-        # Use a more specific grep pattern to match version commits
-        # The pattern should match various version formats like:
+        # Find the commit that indicates the specified version using git's extended regex
+        # The pattern matches various version formats:
         # - "Version: X_Y_Z"
         # - "VERSION: X_Y_Z"
         # - "Updated version X_Y_Z"
-        version_pattern = f"(Version|VERSION|Updated version).*{version}"
+        # - With optional XX_ prefix
+        version_pattern = f"(Version|VERSION|Updated version)(:)? (XX_)?{version}"
+        logger.debug(f"Using version pattern: {version_pattern}")
+        
         commits = self._git.execute(
-            ["log", "-i", "--grep", version_pattern, "--format=%H"]).decode("utf-8").strip().split("\n")
+            ["log", "--grep", version_pattern, "--extended-regexp", "--format=%H"]).decode("utf-8").strip().split("\n")
         
         # Filter out empty strings that might occur if no commits are found
         commits = [commit for commit in commits if commit]
@@ -1083,14 +1085,17 @@ class VersionFinder:
         if not self.is_task_ready:
             raise RepositoryNotTaskReady()
 
-        start_commit = self.find_commit_by_version(start_version)[0]
-        logger.debug(f"The commit SHA of version: {start_version} is {start_commit}")
-        if not start_commit:
+        start_commits = self.find_commit_by_version(start_version)
+        if not start_commits:
             raise VersionNotFoundError(f"Version: {start_version} was not found in the repository.")
-        end_commit = self.find_commit_by_version(end_version)[0]
-        logger.debug(f"The commit SHA of version: {end_version} is {end_commit}")
-        if not end_commit:
+        start_commit = start_commits[0]
+        logger.debug(f"The commit SHA of version: {start_version} is {start_commit}")
+
+        end_commits = self.find_commit_by_version(end_version)
+        if not end_commits:
             raise VersionNotFoundError(f"Version: {end_version} was not found in the repository.")
+        end_commit = end_commits[0]
+        logger.debug(f"The commit SHA of version: {end_version} is {end_commit}")
 
         if submodule:
             start_commit = self.get_submodule_commit_hash(start_commit, submodule)

@@ -392,7 +392,7 @@ class TestVersionFinder:
         finder.update_repository(repo_with_versions[1])
         commits = finder.find_commit_by_version('1_0_0')
         assert len(commits) == 1
-        assert commits[0] == os.popen('git rev-parse HEAD~1').read().strip()
+        assert commits[0] == os.popen('git rev-parse HEAD~2').read().strip()
 
         commits = finder.find_commit_by_version('1_1_0')
         assert len(commits) == 1

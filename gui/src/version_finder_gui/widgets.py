@@ -23,9 +23,9 @@ def center_window(window: ctk.CTkToplevel):
 
 
 class CommitListWindow(ctk.CTkToplevel):
-    def __init__(self, parent, commits: List[Commit]):
+    def __init__(self, parent, title: str, commits: List[Commit]):
         super().__init__(parent)
-        self.title("Commits List")
+        self.title(title)
         self.geometry("800x600")
 
         center_window(self)
@@ -290,7 +290,7 @@ class LoadingSpinner(ctk.CTkFrame):
             self, 
             width=size, 
             height=size,
-            bg=self.cget("fg_color"),
+            bg=self.cget("fg_color")[0 if ctk.get_appearance_mode() == "Light" else 1],
             highlightthickness=0
         )
         self.canvas.grid(row=0, column=0, padx=10, pady=10)

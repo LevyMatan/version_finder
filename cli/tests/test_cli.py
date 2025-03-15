@@ -1,9 +1,9 @@
 import pytest
 import sys
-from version_finder.logger import setup_logger
+from version_finder.logger import get_logger
 from version_finder_cli.cli import main
 
-logger = setup_logger(verbose=True)
+logger = get_logger(__name__, verbose=True)
 
 
 class TestCLI:

@@ -9,7 +9,7 @@ import subprocess
 import time
 import os
 from typing import Optional, Union
-from version_finder.logger import setup_logger
+from version_finder.logger import get_logger
 from version_finder.common import (
     DEFAULT_GIT_TIMEOUT,
     DEFAULT_GIT_MAX_RETRIES,
@@ -20,6 +20,7 @@ from version_finder.common import (
 )
 
 
+logger = get_logger(__name__)
 @dataclass
 class GitConfig:
     """Configuration settings for git operations"""
@@ -58,7 +59,6 @@ class GitCommandExecutor:
                  config: Optional[GitConfig] = None):
         self.repository_path = repository_path
         self.config = config or GitConfig()
-        self.logger = setup_logger()
 
         # Check Git is installed
         try:
@@ -85,7 +85,7 @@ class GitCommandExecutor:
             GitPermissionError: When permission issues occur
         """
         try:
-            self.logger.debug(f"Executing git command: {' '.join(command)}")
+            logger.debug(f"Executing git command: {' '.join(command)}")
             output = subprocess.check_output(
                 ["git"] + command,
                 cwd=self.repository_path,
@@ -98,7 +98,7 @@ class GitCommandExecutor:
                 return subprocess.CompletedProcess(args=["git"] + command, returncode=1, stdout=b"", stderr=str(e).encode())
             
             if retries < self.config.max_retries:
-                self.logger.warning(f"Git command timed out, retrying in {self.config.retry_delay}s: {e}")
+                logger.warning(f"Git command timed out, retrying in {self.config.retry_delay}s: {e}")
                 time.sleep(self.config.retry_delay)
                 return self.execute(command, retries + 1)
             
@@ -118,7 +118,7 @@ class GitCommandExecutor:
                 raise GitPermissionError(f"Permission error during git operation: {error_msg}") from e
                 
             if retries < self.config.max_retries:
-                self.logger.warning(f"Git command failed, retrying in {self.config.retry_delay}s: {error_msg}")
+                logger.warning(f"Git command failed, retrying in {self.config.retry_delay}s: {error_msg}")
                 time.sleep(self.config.retry_delay)
                 return self.execute(command, retries + 1)
                 

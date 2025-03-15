@@ -52,6 +52,16 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--path", "-p", type=str, default="", help="Path to the Git repository")
     parser.add_argument("--debug", "-d", action="store_true", help="Enable debug logging")
     parser.add_argument("--config", "-c", type=str, default=DEFAULT_CONFIG_PATH, help="Path to configuration file")
+    parser.add_argument("--version", "-v", action="store_true", help="Show version information")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument("--force", "-f", action="store_true", help="Force operation even if repository has uncommitted changes")
+    parser.add_argument("--restore-state", "-r", action="store_true", help="Restore repository to original state after operation")
+    parser.add_argument("--branch", "-b", type=str, help="Branch to use")
+    parser.add_argument("--commit", type=str, help="Commit SHA to find version for")
+    parser.add_argument("--submodule", "-s", type=str, help="Submodule to use")
+    parser.add_argument("--cli", action="store_true", help="Run the CLI version")
+    parser.add_argument("--gui", action="store_true", help="Run the GUI version")
+    parser.add_argument("--task", "-t", type=str, help="Task to run")
     
     return parser.parse_args()
 
@@ -80,3 +90,35 @@ def get_repository_path(path_arg: str) -> Optional[Path]:
         return None
         
     return path
+
+def args_to_command(args):
+    """
+    Convert argparse.Namespace object to command-line arguments string.
+    
+    Args:
+        args: argparse.Namespace object containing command-line arguments
+        
+    Returns:
+        str: Command-line arguments as a string
+        
+    Raises:
+        AttributeError: If args is not an argparse.Namespace object
+    """
+    if not isinstance(args, argparse.Namespace):
+        raise AttributeError("args must be an argparse.Namespace object")
+        
+    command_parts = []
+    
+    for key, value in vars(args).items():
+        # Replace underscores with hyphens in argument names
+        arg_name = key.replace('_', '-')
+        
+        # Include boolean flags that are True
+        if isinstance(value, bool):
+            if value:
+                command_parts.append(f"--{arg_name}")
+        # Include non-None and non-False values
+        elif value is not None:
+            command_parts.append(f"--{arg_name} {value}")
+    
+    return " ".join(command_parts)

@@ -558,6 +558,11 @@ class VersionFinder:
         Returns:
             bool: True if restoration was successful, False otherwise
         """
+        # Check if the repository directory still exists
+        if not os.path.exists(self.repository_path):
+            logger.warning(f"Repository directory {self.repository_path} no longer exists")
+            return False
+            
         if not self._state_saved:
             logger.warning("No saved state to restore")
             return False
@@ -1024,13 +1029,29 @@ class VersionFinder:
     def find_commit_by_version(self, version: str) -> List[str]:
         """
         Find the commit that indicates the specified version.
+        
+        Args:
+            version: The version string to search for
+            
+        Returns:
+            List[str]: List of commit hashes that have the version in their commit message
         """
         if not self.is_task_ready:
             raise RepositoryNotTaskReady()
 
         # Find the commit that indicates the specified version
+        # Use a more specific grep pattern to match version commits
+        # The pattern should match various version formats like:
+        # - "Version: X_Y_Z"
+        # - "VERSION: X_Y_Z"
+        # - "Updated version X_Y_Z"
+        version_pattern = f"(Version|VERSION|Updated version).*{version}"
         commits = self._git.execute(
-            ["log", "-i", "--grep", version, "--format=%H"]).decode("utf-8").strip().split("\n")
+            ["log", "-i", "--grep", version_pattern, "--format=%H"]).decode("utf-8").strip().split("\n")
+        
+        # Filter out empty strings that might occur if no commits are found
+        commits = [commit for commit in commits if commit]
+        
         logger.debug(f"Found {len(commits)} commits for version {version}")
         logger.debug(f"The type of commits: {type(commits)}")
         return commits
@@ -1424,8 +1445,13 @@ class VersionFinder:
             # If _state_restored is True, it means the state was already restored explicitly
             if (hasattr(self, '_state_saved') and self._state_saved and 
                 not (hasattr(self, '_state_restored') and self._state_restored)):
-                logger.info("VersionFinder being destroyed, attempting to restore repository state")
-                self.restore_repository_state()
+                
+                # Check if the repository directory still exists
+                if hasattr(self, 'repository_path') and os.path.exists(self.repository_path):
+                    logger.info("VersionFinder being destroyed, attempting to restore repository state")
+                    self.restore_repository_state()
+                else:
+                    logger.debug("Repository directory no longer exists, skipping state restoration")
         except Exception as e:
             # We can't raise exceptions in __del__, so just log them
             logger.error(f"Error in VersionFinder destructor: {str(e)}")

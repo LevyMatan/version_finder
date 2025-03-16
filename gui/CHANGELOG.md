@@ -1,6 +1,67 @@
 # CHANGELOG
 
 
+## v2.3.1 (2025-03-16)
+
+### Bug Fixes
+
+- **gui**: Enhance AutocompleteEntry and version finder initialization
+  ([`810d2bd`](https://github.com/LevyMatan/version_finder/commit/810d2bd4a0f072b61a88b1d7f279f8464610d773))
+
+- Refactored AutocompleteEntry to improve suggestion handling and placeholder behavior. - Updated
+  version finder worker to manage repository initialization with user confirmation for uncommitted
+  changes. - Improved GUI interactions for branch selection and repository updates. - Added tests
+  for AutocompleteEntry functionality to ensure reliability.
+
+- **tests**: Enhance tk_app fixture for headless environments
+  ([`0af3947`](https://github.com/LevyMatan/version_finder/commit/0af39478c8b53cea5e5a651b21dca9e6743cdc75))
+
+- Added exception handling in the tk_app fixture to mock CTk for headless testing. - Ensured proper
+  cleanup of the app instance only if it's not a mock.
+
+### Chores
+
+- **tests**: Refine CI workflow and Makefile for test execution
+  ([`fccef1b`](https://github.com/LevyMatan/version_finder/commit/fccef1be10436cad1862de11367318c3ee6771e6))
+
+- Updated GitHub Actions workflow to cache pip dependencies and upload test results. - Modified
+  Makefile to streamline GUI test execution with xvfb.
+
+- **tests**: Update CI workflow for dependency installation and artifact upload
+  ([`e7c42c2`](https://github.com/LevyMatan/version_finder/commit/e7c42c2abfba6f35bb218d9a96972144c718460b))
+
+- Reorganized the installation of dependencies in the GitHub Actions workflow. - Upgraded the
+  artifact upload action to version 4 for improved functionality.
+
+- **tests**: Update test execution in Makefile and CI workflow
+  ([`05b34ba`](https://github.com/LevyMatan/version_finder/commit/05b34bad1a6bf761f7b19ca0a7fa35faf6310710))
+
+- Modified Makefile to run GUI tests with xvfb for headless execution. - Updated GitHub Actions
+  workflow to install xvfb and separate test execution for core, GUI, and CLI tests.
+
+### Refactoring
+
+- **gui**: Update AutocompleteEntry and improve submodule handling
+  ([`237ed85`](https://github.com/LevyMatan/version_finder/commit/237ed85225059d0b3dd7ea7b954a70768354437a))
+
+- Added placeholder text setter to AutocompleteEntry for better UI feedback. - Refactored submodule
+  selection logic in VersionFinderGUI to utilize AutocompleteEntry. - Enhanced error handling and
+  state management for submodule loading in the GUI.
+
+- **logging**: Remove legacy setup_logger function
+  ([`8e5d2c2`](https://github.com/LevyMatan/version_finder/commit/8e5d2c2ab3907809754f7fe93defbb0bb05095d4))
+
+- Deleted the setup_logger function to streamline logger initialization.
+
+- **tests**: Simplify test execution and enhance pytest configuration
+  ([`d117929`](https://github.com/LevyMatan/version_finder/commit/d117929cbc7fb31571521f9e301eac14a6de4dc4))
+
+- Updated Makefile to streamline test commands for core, cli, and gui. - Modified pyproject.toml to
+  specify test paths and python paths for pytest. - Added a new fixture for the tkinter application
+  in gui tests to improve test setup. - Enhanced the entry fixture to ensure proper cleanup after
+  tests.
+
+
 ## v2.3.0 (2025-03-15)
 
 ### Bug Fixes

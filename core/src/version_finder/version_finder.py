@@ -1339,9 +1339,8 @@ class VersionFinder:
             The version string if found, None otherwise
         """
         logger.info(
-            f"Finding version for commit {commit_sha} in {
-                'submodule ' +
-                submodule if submodule else 'main repository'}")
+            f"Finding version for commit {commit_sha} in "
+            f"{'submodule ' + submodule if submodule else 'main repository'}")
 
         try:
             # Validate commit

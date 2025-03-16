@@ -4,10 +4,11 @@
 
       {
         "name": "Python: Debug Pytest",
-        "type": "python",
+        "type": "debugpy",
         "request": "launch",
         "module": "pytest",
         "args": [
+          "${workspaceFolder}/core/tests/test_core_version.py",
           "-v"
         ],
         "console": "integratedTerminal",
@@ -15,7 +16,7 @@
       },
       {
         "name": "Python: Debug CLI",
-        "type": "python",
+        "type": "debugpy",
         "request": "launch",
         "program": "${workspaceFolder}/src/version_finder/__cli__.py",
         "args": [
@@ -28,7 +29,7 @@
       },
       {
         "name": "Python: Debug GUI",
-        "type": "python",
+        "type": "debugpy",
         "request": "launch",
         "program": "${workspaceFolder}/gui/src/version_finder_gui/gui.py",
         "args": [

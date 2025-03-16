@@ -135,19 +135,6 @@ def get_logger(name: str = "version_finder", verbose: bool = False) -> logging.L
     return logger
 
 
-def setup_logger(verbose: bool = False) -> logging.Logger:
-    """
-    Legacy function to maintain backward compatibility.
-    
-    Args:
-        verbose: Whether to enable verbose logging
-        
-    Returns:
-        logging.Logger: The configured logger
-    """
-    return get_logger("version_finder", verbose)
-
-
 def configure_logging(verbose: bool = False, log_file: Optional[str] = None) -> None:
     """
     Configure global logging settings.

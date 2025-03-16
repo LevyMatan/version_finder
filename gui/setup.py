@@ -43,7 +43,8 @@ setup(
     },
     install_requires=[
         "version-finder-git-based-versions>=7.0.1",
-        "customtkinter",
+        "customtkinter>=5.0.0",
+        "pillow>=9.0.0",
     ],
     extras_require={
         "dev": ["pytest", "pytest-xdist", "pytest-cov", "flake8", "autopep8"],  # Development tools

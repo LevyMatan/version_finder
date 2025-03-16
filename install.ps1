@@ -34,7 +34,7 @@ function Install-Dev {
     Write-Host "Installing development environment..." -ForegroundColor Green
     pip install -e .\core\[dev]
     pip install -e .\cli\
-    pip install -e .\gui\
+    pip install -e .\gui\[gui]
 }
 
 function Clean-Project {

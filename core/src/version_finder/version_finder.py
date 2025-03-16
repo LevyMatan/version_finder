@@ -1408,9 +1408,8 @@ class VersionFinder:
             List of commits containing the text
         """
         logger.info(
-            f"Finding commits containing text '{text}' in {
-                'submodule ' +
-                submodule if submodule else 'main repository'}")
+            f"Finding commits containing text '{text}' in"
+            f"{'submodule ' + submodule if submodule else 'main repository'}")
 
         try:
             # Get the commits

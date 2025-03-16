@@ -2,19 +2,19 @@ import customtkinter as ctk
 import argparse
 from pathlib import Path
 from enum import Enum, auto
-from typing import List, Dict, Any, Optional, Callable
 import tkinter as tk
+from typing import List, Tuple
 from tkinter import filedialog, messagebox
 import importlib.resources
 import multiprocessing
 import queue
-from version_finder.version_finder import VersionFinder, Commit
+from version_finder.version_finder import VersionFinder, GitRepositoryNotClean
 from version_finder.common import parse_arguments
 from version_finder.logger import get_logger, configure_logging
 from version_finder_gui.widgets import AutocompleteEntry, CommitListWindow, center_window, LoadingSpinner
 import time
-import subprocess
 import os
+from PIL import Image
 
 logger = get_logger(__name__)
 # Define message types for inter-process communication
@@ -34,270 +34,184 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
     """Worker process for version finder operations"""
     logger.info("Worker process started")
     
-    # Initialize version finder
     version_finder = None
     waiting_for_confirmation = False
-    pending_init_task_id = None  # Track the ID of the pending init task
+    pending_init_task_id = None
     
-    # Process tasks until shutdown
     while True:
         try:
-            # Check if exit event is set
+            # Check for exit signal
             if exit_event and exit_event.is_set():
-                logger.info("Worker process detected exit event")
-                # Restore original branch if needed
-                if version_finder and version_finder.has_saved_state():
-                    try:
-                        logger.info("Restoring original repository state due to exit event")
-                        version_finder.restore_repository_state()
-                        # Set flag to prevent destructor from trying to restore again
-                        version_finder._state_restored = True
-                    except Exception as e:
-                        logger.error(f"Failed to restore original repository state: {str(e)}")
+                logger.info("Exit event received, shutting down worker")
                 break
             
-            # Get the next task from the queue with timeout
+            # Get next task from queue with timeout
             try:
-                request = request_queue.get(timeout=0.5)
+                message = request_queue.get(timeout=0.5)  # 500ms timeout
             except queue.Empty:
                 continue
                 
-            # Check if we should shut down
-            if request["type"] == MessageType.SHUTDOWN:
-                logger.info("Worker process shutting down")
-                
-                # Restore original branch if needed
-                # Note: We're explicitly restoring here for better control and logging
-                # The VersionFinder.__del__ method will also try to restore as a safety net
-                if version_finder and version_finder.has_saved_state():
-                    try:
-                        logger.info("Restoring original repository state")
-                        # Get the state before restoration for logging
-                        state = version_finder.get_saved_state()
-                        has_changes = state.get("has_changes", False)
-                        stash_created = state.get("stash_created", False)
-                        
-                        if has_changes:
-                            if stash_created:
-                                logger.info("Attempting to restore stashed changes")
-                            else:
-                                logger.warning("Repository had changes but they were not stashed")
-                        
-                        # Perform the restoration
-                        if version_finder.restore_repository_state():
-                            logger.info("Original repository state restored successfully")
-                            
-                            # Verify the restoration
-                            current_branch = version_finder.get_current_branch()
-                            original_branch = state.get("branch")
-                            if original_branch and current_branch:
-                                if original_branch.startswith("HEAD:"):
-                                    logger.info(f"Restored to detached HEAD state")
-                                else:
-                                    logger.info(f"Restored to branch: {current_branch}")
-                            
-                            # Check if we still have uncommitted changes
-                            if has_changes and version_finder.has_uncommitted_changes():
-                                logger.info("Uncommitted changes were successfully restored")
-                            elif has_changes and not version_finder.has_uncommitted_changes():
-                                logger.error("Failed to restore uncommitted changes")
-                            
-                            # Set a flag to indicate we've already restored the state
-                            # This will prevent the destructor from trying to restore again
-                            version_finder._state_restored = True
-                        else:
-                            logger.error("Failed to restore original repository state")
-                    except Exception as e:
-                        logger.error(f"Failed to restore original repository state: {str(e)}")
-                        # Get full traceback for better debugging
-                        import traceback
-                        error_traceback = traceback.format_exc()
-                        logger.error(f"Restoration error details: {error_traceback}")
-                
+            # Handle shutdown message
+            if message["type"] == MessageType.SHUTDOWN:
+                logger.info("Shutdown message received")
                 break
-                
-            # Process the task
-            if request["type"] == MessageType.TASK_REQUEST:
-                task = request["task"]
-                task_id = request.get("task_id")
-                args = request.get("args", {})
-                
-                # Handle confirmation response
-                if task == "confirm_proceed":
-                    user_confirmed_proceed = args.get("proceed", False)
-                    logger.info(f"User confirmed proceed: {user_confirmed_proceed}")
+            
+            # Extract task info
+            task = message.get("task")
+            task_id = message.get("task_id")
+            args = message.get("args", {})
+            
+            # Handle user confirmation for repository initialization
+            if task == "confirm_init":
+                if waiting_for_confirmation and pending_init_task_id:
+                    logger.info("Received confirmation for repository initialization")
+                    # Re-initialize with force=True
+                    version_finder = VersionFinder(args["repo_path"], force=True)
                     waiting_for_confirmation = False
                     
-                    # Send confirmation to version finder
-                    if not user_confirmed_proceed:
-                        # If user didn't confirm, we'll shut down
-                        logger.info("User cancelled operation due to uncommitted changes")
-                        response_queue.put({
-                            "type": MessageType.TASK_ERROR,
-                            "task_id": None,
-                            "error": "Operation cancelled by user due to uncommitted changes",
-                            "error_type": "UserCancelled"
-                        })
-                    else:
-                        # User confirmed, send success response for the init_repo task
-                        # We don't have the task_id, but we can send a success response with a special task_id
-                        logger.info("User confirmed to proceed with uncommitted changes")
-                        response_queue.put({
-                            "type": MessageType.TASK_RESULT,
-                            "task_id": "init_repo_confirmed",
-                            "result": {"status": "success", "original_task_id": pending_init_task_id}
-                        })
-                    continue
-                
-                # If waiting for confirmation, don't process other tasks
-                if waiting_for_confirmation and task != "confirm_proceed":
-                    logger.warning(f"Task {task} not processed - waiting for user confirmation")
+                    # Send success response for the original init task
                     response_queue.put({
-                        "type": MessageType.TASK_ERROR,
-                        "task_id": task_id,
-                        "error": "Operation pending user confirmation",
-                        "error_type": "PendingConfirmation"
+                        "type": MessageType.TASK_RESULT,
+                        "task_id": "init_repo_confirmed",
+                        "result": {
+                            "status": "success",
+                            "original_task_id": pending_init_task_id
+                        }
                     })
-                    continue
-                
-                try:
-                    # Initialize version finder if needed
-                    if task == "init_repo" and version_finder is None:
-                        repo_path = args["repo_path"]
-                        logger.info(f"Initializing version finder with repo: {repo_path}")
-                        
-                        # Store the task ID in case we need to wait for confirmation
-                        pending_init_task_id = task_id
-                        
-                        # Check if repo exists
-                        if not os.path.exists(repo_path):
-                            raise ValueError(f"Repository path does not exist: {repo_path}")
-                        
-                        # Initialize version finder with force=True to allow uncommitted changes
-                        version_finder = VersionFinder(repo_path, force=True)
-                        
-                        # Check repository state
-                        state = version_finder.get_saved_state()
-                        logger.info(f"Repository state: {state}")
-                        
-                        # Send initial state to main process
-                        response_queue.put({
-                            "type": MessageType.TASK_RESULT,
-                            "task_id": "initial_state",
-                            "result": state
-                        })
-                        
-                        # If there are uncommitted changes, wait for user confirmation
-                        if state.get("has_changes", False):
-                            logger.info("Repository has uncommitted changes, waiting for user confirmation")
-                            # Don't send success response yet - wait for confirmation
-                            # We'll send the success response after receiving the confirmation
-                            waiting_for_confirmation = True
-                            continue
+                    pending_init_task_id = None
+                continue
+            
+            # Process tasks
+            try:
+                # Initialize version finder if needed
+                if task == "init_repo":
+                    repo_path = args["repo_path"]
+                    user_confirmation = args.get("user_confirmation", False)
+                    logger.info(f"Initializing version finder with repo: {repo_path}, force: {user_confirmation}")
+                    
+                    try:
+                        # Initialize version finder with specified force parameter
+                        version_finder = VersionFinder(repo_path, force=user_confirmation)
                         
                         response_queue.put({
                             "type": MessageType.TASK_RESULT,
                             "task_id": task_id,
                             "result": {"status": "success"}
                         })
-                    elif task == "update_repository":
-                        if not version_finder:
-                            raise ValueError("Version finder not initialized")
-                        result = version_finder.update_repository(**args)
+                    except GitRepositoryNotClean as e:
+                        # Forward the specific error for GUI handling
                         response_queue.put({
-                            "type": MessageType.TASK_RESULT,
+                            "type": MessageType.TASK_ERROR,
                             "task_id": task_id,
-                            "result": result
+                            "error": str(e),
+                            "error_type": type(e).__name__
                         })
-                    elif task == "get_branches":
-                        if not version_finder:
-                            raise ValueError("Version finder not initialized")
-                        result = version_finder.get_branches()
+                    except Exception as e:
+                        # Handle other initialization errors
                         response_queue.put({
-                            "type": MessageType.TASK_RESULT,
+                            "type": MessageType.TASK_ERROR,
                             "task_id": task_id,
-                            "result": result
+                            "error": str(e),
+                            "error_type": type(e).__name__
                         })
-                    elif task == "get_submodules":
-                        if not version_finder:
-                            raise ValueError("Version finder not initialized")
-                        result = version_finder.get_submodules()
-                        response_queue.put({
-                            "type": MessageType.TASK_RESULT,
-                            "task_id": task_id,
-                            "result": result
-                        })
-                    elif task == "find_version":
-                        if not version_finder:
-                            raise ValueError("Version finder not initialized")
-                        result = version_finder.find_version(**args)
-                        response_queue.put({
-                            "type": MessageType.TASK_RESULT,
-                            "task_id": task_id,
-                            "result": result
-                        })
-                    elif task == "find_all_commits_between_versions":
-                        if not version_finder:
-                            raise ValueError("Version finder not initialized")
-                        result = version_finder.find_all_commits_between_versions(**args)
-                        response_queue.put({
-                            "type": MessageType.TASK_RESULT,
-                            "task_id": task_id,
-                            "result": result
-                        })
-                    elif task == "find_commit_by_text":
-                        if not version_finder:
-                            raise ValueError("Version finder not initialized")
-                        result = version_finder.find_commit_by_text(**args)
-                        response_queue.put({
-                            "type": MessageType.TASK_RESULT,
-                            "task_id": task_id,
-                            "result": result
-                        })
-                    elif task == "restore_state":
-                        if not version_finder:
-                            raise ValueError("Version finder not initialized")
-                        # Explicitly restore repository state
-                        if version_finder.has_saved_state():
-                            logger.info("Explicitly restoring repository state on close")
-                            result = version_finder.restore_repository_state()
-                            # Set flag to prevent destructor from trying to restore again
-                            version_finder._state_restored = True
-                            
-                            # Force the destructor to be called by deleting the reference
-                            logger.info("Forcing VersionFinder destructor by deleting reference")
-                            version_finder_copy = version_finder
-                            version_finder = None
-                            del version_finder_copy
-                            
-                            response_queue.put({
-                                "type": MessageType.TASK_RESULT,
-                                "task_id": task_id,
-                                "result": {"status": "success", "restored": result, "forced_destructor": True}
-                            })
-                        else:
-                            logger.info("No saved state to restore")
-                            response_queue.put({
-                                "type": MessageType.TASK_RESULT,
-                                "task_id": task_id,
-                                "result": {"status": "success", "restored": False}
-                            })
-                    else:
-                        raise ValueError(f"Unknown task: {task}")
-                except Exception as e:
-                    # Get full traceback for better debugging
-                    import traceback
-                    error_traceback = traceback.format_exc()
-                    logger.error(f"Error executing task {task}: {str(e)}\n{error_traceback}")
-                    
-                    # Send error back
+                elif task == "update_repository":
+                    if not version_finder:
+                        raise ValueError("Version finder not initialized")
+                    result = version_finder.update_repository(**args)
                     response_queue.put({
-                        "type": MessageType.TASK_ERROR,
+                        "type": MessageType.TASK_RESULT,
                         "task_id": task_id,
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                        "traceback": error_traceback
+                        "result": result
                     })
+                elif task == "get_branches":
+                    if not version_finder:
+                        raise ValueError("Version finder not initialized")
+                    result = version_finder.get_branches(), version_finder.get_current_branch()
+                    response_queue.put({
+                        "type": MessageType.TASK_RESULT,
+                        "task_id": task_id,
+                        "result": result
+                    })
+                elif task == "get_submodules":
+                    if not version_finder:
+                        raise ValueError("Version finder not initialized")
+                    result = version_finder.get_submodules()
+                    response_queue.put({
+                        "type": MessageType.TASK_RESULT,
+                        "task_id": task_id,
+                        "result": result
+                    })
+                elif task == "find_version":
+                    if not version_finder:
+                        raise ValueError("Version finder not initialized")
+                    result = version_finder.find_version(**args)
+                    response_queue.put({
+                        "type": MessageType.TASK_RESULT,
+                        "task_id": task_id,
+                        "result": result
+                    })
+                elif task == "find_all_commits_between_versions":
+                    if not version_finder:
+                        raise ValueError("Version finder not initialized")
+                    result = version_finder.find_all_commits_between_versions(**args)
+                    response_queue.put({
+                        "type": MessageType.TASK_RESULT,
+                        "task_id": task_id,
+                        "result": result
+                    })
+                elif task == "find_commit_by_text":
+                    if not version_finder:
+                        raise ValueError("Version finder not initialized")
+                    result = version_finder.find_commit_by_text(**args)
+                    response_queue.put({
+                        "type": MessageType.TASK_RESULT,
+                        "task_id": task_id,
+                        "result": result
+                    })
+                elif task == "restore_state":
+                    if not version_finder:
+                        raise ValueError("Version finder not initialized")
+                    # Explicitly restore repository state
+                    if version_finder.has_saved_state():
+                        logger.info("Explicitly restoring repository state on close")
+                        result = version_finder.restore_repository_state()
+                        # Set flag to prevent destructor from trying to restore again
+                        version_finder._state_restored = True
+                        
+                        # Force the destructor to be called by deleting the reference
+                        logger.info("Forcing VersionFinder destructor by deleting reference")
+                        version_finder_copy = version_finder
+                        version_finder = None
+                        del version_finder_copy
+                        
+                        response_queue.put({
+                            "type": MessageType.TASK_RESULT,
+                            "task_id": task_id,
+                            "result": {"status": "success", "restored": result, "forced_destructor": True}
+                        })
+                    else:
+                        logger.info("No saved state to restore")
+                        response_queue.put({
+                            "type": MessageType.TASK_RESULT,
+                            "task_id": task_id,
+                            "result": {"status": "success", "restored": False}
+                        })
+                else:
+                    raise ValueError(f"Unknown task: {task}")
+            except Exception as e:
+                # Get full traceback for better debugging
+                import traceback
+                error_traceback = traceback.format_exc()
+                logger.error(f"Error executing task {task}: {str(e)}\n{error_traceback}")
+                
+                # Send error back
+                response_queue.put({
+                    "type": MessageType.TASK_ERROR,
+                    "task_id": task_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "traceback": error_traceback
+                })
         except Exception as e:
             # Get full traceback for better debugging
             import traceback
@@ -623,20 +537,19 @@ class VersionFinderGUI(ctk.CTk):
             # Reset flag
             self.waiting_for_confirmation = False
             
-            # Send confirmation to worker
-            self.request_queue.put({
-                "type": MessageType.TASK_REQUEST,
-                "task": "confirm_proceed",
-                "args": {"proceed": proceed}
-            })
-            
-            if not proceed:
-                self._log_warning("Operation cancelled by user")
-                self._stop_worker_process()
-                return
+            if proceed:
+                # Send confirmation to worker
+                self._execute_task(
+                    "confirm_init",
+                    args={"repo_path": str(self.repo_path), "proceed": True},
+                    callback=None  # No callback needed as worker will send init_repo_confirmed
+                )
             else:
-                self._log_output("Proceeding with operations...")
-                
+                self._log_output("Operation cancelled by user")
+                # Clear repository path
+                self.dir_entry.delete(0, "end")
+                self.repo_path = ""
+        
         # Save initial state for reference
         self.initial_repo_state = state
         
@@ -943,17 +856,10 @@ class VersionFinderGUI(ctk.CTk):
 
         ctk.CTkLabel(branch_frame, text="Branch:").grid(row=0, column=0, padx=5)
         
-        # Create branch dropdown instead of autocomplete entry
-        self.branch_var = ctk.StringVar()
-        self.branch_dropdown = ctk.CTkOptionMenu(
-            branch_frame, 
-            variable=self.branch_var,
-            values=[],
-            command=self._on_branch_select,
-            width=400,
-            dynamic_resizing=False
-        )
-        self.branch_dropdown.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        self.branch_entry = AutocompleteEntry(branch_frame, width=400, placeholder_text="Select a branch")
+        self.branch_entry.configure(state="disabled")
+        self.branch_entry.callback = self._on_branch_select
+        self.branch_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         
         return branch_frame
 
@@ -1140,8 +1046,6 @@ class VersionFinderGUI(ctk.CTk):
             self.dir_entry.insert(0, str(self.repo_path))
             
             # Clear branch and submodule selections
-            self.branch_var.set("")
-            self.submodule_var.set("")
             self.selected_branch = ""
             self.selected_submodule = ""
             
@@ -1152,28 +1056,57 @@ class VersionFinderGUI(ctk.CTk):
         else:
             self._log_output("No directory selected")
 
-    def _update_branch_dropdown(self):
-        """Update the branch dropdown with the current branch"""
-        if self.version_finder:
-            branches = self.version_finder.list_branches()
-            self.branch_dropdown.configure(values=branches)
-            self.selected_branch = self.version_finder.get_current_branch()
-            if self.selected_branch and self.selected_branch in branches:
-                self.branch_var.set(self.selected_branch)
-                self._log_output("Loaded branches successfully.")
-                self._on_branch_select(self.selected_branch)
-
     def _initialize_version_finder(self):
         """Initialize the VersionFinder with the selected repository path"""
         try:
-            # Initialize the repository
-            self.init_repo(self.repo_path)
+            # Initialize with user_confirmation=False first
+            self._execute_task(
+                "init_repo",
+                args={"repo_path": str(self.repo_path), "user_confirmation": False},
+                callback=self._handle_init_result,
+                spinner_parent=self.main_frame,
+                spinner_text="Initializing repository..."
+            )
         except Exception as e:
             logger.error(f"Error initializing VersionFinder: {str(e)}")
             messagebox.showerror("Error", f"Failed to initialize repository: {str(e)}")
+
+    def _handle_init_result(self, result, error=None):
+        """Handle the result of repository initialization"""
+        if error:
+            # Check if error is due to uncommitted changes
+            if "Repository has uncommitted changes" in str(error):
+                message = (
+                    "The repository has uncommitted changes. Version Finder will:\n\n"
+                    "1. Stash your changes with a unique identifier\n"
+                    "2. Perform the requested operations\n"
+                    "3. Restore your original branch and stashed changes when closing\n\n"
+                    "Do you want to proceed?"
+                )
+                if messagebox.askyesno("Uncommitted Changes", message, icon="warning"):
+                    # Retry initialization with user_confirmation=True
+                    self._execute_task(
+                        "init_repo",
+                        args={"repo_path": str(self.repo_path), "user_confirmation": True},
+                        callback=self._on_repo_initialized,
+                        spinner_parent=self.main_frame,
+                        spinner_text="Initializing repository..."
+                    )
+                else:
+                    self._log_output("Operation cancelled by user")
+                    # Clear repository path
+                    self.dir_entry.delete(0, "end")
+                    self.repo_path = ""
+                return
+            else:
+                self._log_error(f"Error initializing repository: {error}")
+                return
             
-    def _handle_branches_loaded(self, branches, error=None):
+        self._on_repo_initialized(result)
+
+    def _handle_branches_loaded(self, branches: Tuple[List[str], str], error=None):
         """Handle branches loaded from worker process"""
+        branches, current_branch = branches
         if error:
             self._log_error(f"Error loading branches: {error}")
             return
@@ -1181,17 +1114,18 @@ class VersionFinderGUI(ctk.CTk):
         if not branches:
             self._log_warning("No branches found in repository")
             return
-            
-        # Update branch dropdown
-        self.branch_var.set("")
-        self.branch_dropdown.configure(values=branches)
         
-        # Select first branch by default
-        self.branch_var.set(branches[0])
-        self.selected_branch = branches[0]
-        
+        # Update branch autocomplete entry
+        self.branch_entry.configure(state="normal")
+        self.branch_entry.suggestions = branches
+
+        # Set the current branch as the first suggestion
+        self.branch_entry.insert(0, current_branch)
         self._log_output(f"Loaded {len(branches)} branches")
         
+        # Set the selected branch
+        self.selected_branch = current_branch
+
         # Update repository with selected branch
         self._update_repository()
         
@@ -1383,8 +1317,7 @@ class VersionFinderGUI(ctk.CTk):
         if not self.dir_entry.get():
             messagebox.showerror("Error", "Please select a repository directory")
             return False
-
-        if not self.branch_var.get():
+        if not self.branch_entry.get():
             messagebox.showerror("Error", "Please select a branch")
             return False
 
@@ -1395,7 +1328,33 @@ class VersionFinderGUI(ctk.CTk):
             # Return False to prevent proceeding until initialization is complete
             return False
 
+        # If we have a selected branch but repo is not task ready, update it first
+        if self.selected_branch:
+            self._execute_task(
+                "update_repository",
+                args={"branch": self.selected_branch},
+                callback=lambda result, error=None: self._handle_update_before_search(result, error),
+                spinner_parent=self.main_content_frame,
+                spinner_text=f"Updating to branch {self.selected_branch}..."
+            )
+            return False  # Return False to prevent proceeding until update is complete
+
         return True
+
+    def _handle_update_before_search(self, result, error=None):
+        """Handle repository update result and proceed with search if successful"""
+        if error:
+            logger.error(f"Error updating repository: {error}")
+            messagebox.showerror("Error", f"Failed to update repository: {error}")
+            return
+            
+        # Now proceed with the search
+        if self.current_displayed_task == VersionFinderTasks.FIND_VERSION:
+            self._find_version()
+        elif self.current_displayed_task == VersionFinderTasks.COMMITS_BETWEEN_VERSIONS:
+            self._find_all_commits_between_versions()
+        elif self.current_displayed_task == VersionFinderTasks.COMMITS_BY_TEXT:
+            self._find_commit_by_text()
 
     def _log_output(self, message: str):
         """Log output message to the output area"""
@@ -1417,8 +1376,20 @@ class VersionFinderGUI(ctk.CTk):
         """Setup application icon"""
         try:
             with importlib.resources.path("version_finder_gui.assets", 'icon.png') as icon_path:
-                self.iconphoto(True, tk.PhotoImage(file=str(icon_path)))
-        except Exception:
+                if os.name == 'nt':  # Windows
+                    # Convert PNG to ICO using PIL
+                    icon = Image.open(str(icon_path))
+                    icon_path_ico = str(icon_path).replace('.png', '.ico')
+                    icon.save(icon_path_ico, format='ICO')
+                    # Set both window and taskbar icons
+                    self.iconbitmap(icon_path_ico)
+                    self.wm_iconbitmap(icon_path_ico)
+                    # Clean up temporary .ico file
+                    os.remove(icon_path_ico)
+                else:  # Unix-like systems
+                    self.iconphoto(True, tk.PhotoImage(file=str(icon_path)))
+        except Exception as e:
+            logger.warning(f"Failed to set application icon: {e}")
             pass
 
     def center_window(window):

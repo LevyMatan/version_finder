@@ -1,13 +1,14 @@
 """Custom widgets used in the GUI application."""
 
-from typing import Dict, List
+from typing import List
 import customtkinter as ctk
 from tkinter import messagebox
+import logging
 from version_finder.version_finder import (
     Commit,
 )
 
-
+logger = logging.getLogger(__name__)
 def center_window(window: ctk.CTkToplevel):
     """Center the window on the screen"""
     window.update()
@@ -157,106 +158,132 @@ class CommitListWindow(ctk.CTkToplevel):
 
 
 class AutocompleteEntry(ctk.CTkEntry):
-    def __init__(self, *args, placeholder_text='', **kwargs):
-        self.suggestions = kwargs.pop('suggestions', [])
-        super().__init__(*args, placeholder_text=placeholder_text, **kwargs)
+    """A customtkinter entry widget with autocomplete functionality."""
+    
+    def __init__(self, *args, placeholder_text: str = '', callback: callable = None, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
-        self._placeholder_text = placeholder_text
-        self._placeholder_shown = True
-        self.callable = None
-        self.suggestion_window = None
-        self.suggestion_listbox = None
+        self._suggestions: list[str] = []
+        self._placeholder_text: str = placeholder_text
+        self._placeholder_shown: bool = True
+        self.callback: callable | None = callback
+        self.suggestion_window: ctk.CTkToplevel | None = None
+        self._text_color = ctk.ThemeManager.theme["CTkEntry"]["text_color"]
+        self._temp_selection: str = ''
 
-        self.bind('<FocusIn>', self._on_focus_in)
+        # Bind events
         self.bind('<KeyRelease>', self._on_key_release)
         self.bind('<FocusOut>', self._on_focus_out)
+        self.bind('<FocusIn>', self._on_focus_in)
 
-        # Initialize placeholder if provided
-        if self._placeholder_text:
-            self._show_placeholder()
-
-    def set_placeholder(self, text):
-        self.delete(0, ctk.END)
-        self._placeholder_text = text
+        # Show initial placeholder
         self._show_placeholder()
 
-    def _on_focus_in(self, event):
-        self.delete(0, ctk.END)
-        self._placeholder_shown = False
-        self.configure(text_color=self._text_color)  # Reset to normal text color
+    @property
+    def suggestions(self) -> list[str]:
+        return self._suggestions
 
-    def _show_placeholder(self):
-        self.delete(0, ctk.END)
-        self.insert(0, self._placeholder_text)
-        self.configure(text_color='gray')  # Make placeholder gray
+    @suggestions.setter
+    def suggestions(self, value: list[str] | None) -> None:
+        self._suggestions = value if value is not None else []
+
+    @property
+    def placeholder_text(self) -> str:
+        return self._placeholder_text
+
+    def _show_placeholder(self) -> None:
+        super().delete(0, "end")
+        if self.placeholder_text:
+            super().insert(0, self._placeholder_text)
+        self.configure(text_color='gray')
         self._placeholder_shown = True
 
-    def get(self):
-        # Don't return the placeholder text as the actual value
-        if self._placeholder_shown:
+    def get(self) -> str:
+        if self._placeholder_shown or self.cget("state") == "disabled":
             return ''
         return super().get()
 
-    def insert(self, index, string):
+    def insert(self, index: str, string: str) -> None:
         if self._placeholder_shown:
-            self.delete(0, ctk.END)
-            self._placeholder_shown = False
+            super().delete(0, "end")
             self.configure(text_color=self._text_color)
+            self._placeholder_shown = False
         super().insert(index, string)
 
-    def _on_key_release(self, event):
-        if self.suggestion_window:
-            self.suggestion_window.destroy()
-            self.suggestion_window = None
+    def _get_filtered_suggestions(self) -> list[str]:
+        text = self.get().lower()
+        exact_matches = [s for s in self._suggestions if s.lower().startswith(text)]
+        contains_matches = [s for s in self._suggestions if text in s.lower() and not s.lower().startswith(text)]
+        return sorted(exact_matches) + sorted(contains_matches)
 
-        if not self.get():  # If entry is empty
+    def _show_suggestions(self) -> None:
+        suggestions = self._get_filtered_suggestions()
+        if not suggestions:
+            if self.suggestion_window:
+                self.suggestion_window.destroy()
+                self.suggestion_window = None
             return
 
-        text = self.get().lower()
-        # First show exact prefix matches, then contains matches
-        exact_matches = [s for s in self.suggestions if s.lower().startswith(text)]
-        contains_matches = [s for s in self.suggestions if text in s.lower() and not s.lower().startswith(text)]
+        if self.suggestion_window:
+            self.suggestion_window.destroy()
 
-        suggestions = sorted(exact_matches) + sorted(contains_matches)
+        self.suggestion_window = ctk.CTkToplevel()
+        self.suggestion_window.withdraw()
+        self.suggestion_window.overrideredirect(True)
 
-        if suggestions:
-            x = self.winfo_rootx()
-            y = self.winfo_rooty() + self.winfo_height()
+        suggestion_frame = ctk.CTkScrollableFrame(self.suggestion_window)
+        suggestion_frame.pack(fill="both", expand=True)
 
-            self.suggestion_window = ctk.CTkToplevel()
-            self.suggestion_window.withdraw()  # Hide initially
-            self.suggestion_window.overrideredirect(True)
+        for suggestion in suggestions:
+            btn = ctk.CTkButton(
+                suggestion_frame,
+                text=suggestion,
+                command=lambda s=suggestion: self._select_suggestion(s)
+            )
+            btn.pack(fill="x", padx=2, pady=1)
 
-            self.suggestion_listbox = ctk.CTkScrollableFrame(self.suggestion_window)
-            self.suggestion_listbox.pack(fill="both", expand=True)
+        x = self.winfo_rootx()
+        y = self.winfo_rooty() + self.winfo_height()
+        self.suggestion_window.geometry(f"{self.winfo_width()}x200+{x}+{y}")
+        self.suggestion_window.deiconify()
 
-            for suggestion in suggestions:
-                suggestion_button = ctk.CTkButton(
-                    self.suggestion_listbox,
-                    text=suggestion,
-                    command=lambda s=suggestion: self._select_suggestion(s)
-                )
-                suggestion_button.pack(fill="x", padx=2, pady=1)
-
-            self.suggestion_window.geometry(f"{self.winfo_width()}x300+{x}+{y}")
-            self.suggestion_window.deiconify()  # Show window
-
-    def _select_suggestion(self, suggestion):
+    def _select_suggestion(self, suggestion: str) -> None:
+            
         self.delete(0, "end")
         self.insert(0, suggestion)
+        
         if self.suggestion_window:
             self.suggestion_window.destroy()
             self.suggestion_window = None
-        # Trigger the callback if it exists
-        if hasattr(self, 'callback') and self.callback:
+
+        # Move focus to parent window
+        self.master.focus_set()
+        
+        if self.callback:
             self.callback(suggestion)
 
-    def _on_focus_out(self, event):
-        # Add a small delay before destroying the window
+    def _on_key_release(self, event: 'tkinter.Event') -> str | None:
+        self._show_suggestions()
+
+    def _on_focus_out(self, event: 'tkinter.Event') -> None:
+        print("Focus out event")
         if self.suggestion_window:
             self.after(100, self._destroy_suggestion_window)
+        self.insert(0, self._temp_selection)
+        self._temp_selection = ''
 
-    def _destroy_suggestion_window(self):
+        # If the entry is empty, show the placeholder
+        if not self.get():
+            self._show_placeholder()
+
+    def _on_focus_in(self, event: 'tkinter.Event') -> str | None:
+        self._temp_selection = self.get()
+        super().delete(0, "end")
+        self.configure(text_color=self._text_color)
+        self._placeholder_shown = False
+        self._show_suggestions()
+
+    def _destroy_suggestion_window(self) -> None:
         if self.suggestion_window:
             self.suggestion_window.destroy()
             self.suggestion_window = None

@@ -218,7 +218,7 @@ jobs:
           make install-dev
           git config --global init.defaultBranch main
       - name: Run code coverage report
-        run: make coverage
+        run: make cov-combine
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload Pages artifact

@@ -79,12 +79,23 @@ test:
 	$(MAKE) test-cli
 	$(MAKE) test-gui
 
-coverage:
-# Run tests and generate coverage report
-# Run on core, cli and gui
-	pytest --cov=core/src --cov=cli/src --cov=gui/src --cov-report term-missing --cov-report html
-	@echo "HTML coverage report generated in htmlcov/index.html"
+cov-gui:
+	pytest gui --cov=gui/src --cov-report term-missing --cov-report html
 
+cov-core:		
+	pytest core --cov=core/src --cov-report term-missing --cov-report html
+
+cov-cli:
+	pytest cli --cov=cli/src --cov-report term-missing --cov-report html
+
+cov-combine:
+	coverage erase
+	pytest gui --cov=gui/src --cov-append
+	pytest core --cov=core/src --cov-append
+	pytest cli --cov=cli/src --cov-append
+	coverage report
+	coverage html
+	
 format:
 	autopep8 --in-place --recursive .
 

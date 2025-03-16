@@ -1379,9 +1379,8 @@ class VersionFinder:
             List of commits between the versions
         """
         logger.info(
-            f"Finding commits between versions {from_version} and {to_version} in {
-                'submodule ' +
-                submodule if submodule else 'main repository'}")
+            f"Finding commits between versions {from_version} and {to_version} in"
+            f"{'submodule ' + submodule if submodule else 'main repository'}")
 
         try:
             # Get the commits

@@ -16,7 +16,7 @@ import time
 from typing import List, Optional, Dict, Callable
 from version_finder.git_executer import GitCommandExecutor, GitConfig, GitCommandError
 from version_finder.logger import get_logger
-from version_finder.common import GIT_CMD_FETCH, GIT_CMD_CHECKOUT, GIT_CMD_SUBMODULE_UPDATE, GIT_CMD_LIST_BRANCHES, GIT_CMD_LIST_SUBMODULES, BRANCH_PATTERN, SUBMODULE_PATTERN
+from version_finder.common import GIT_CMD_FETCH, GIT_CMD_CHECKOUT, GIT_CMD_SUBMODULE_UPDATE, GIT_CMD_LIST_BRANCHES, GIT_CMD_LIST_SUBMODULES, BRANCH_PATTERN
 
 # Initialize module logger
 logger = get_logger(__name__)
@@ -773,10 +773,8 @@ class VersionFinder:
             output = self._git.execute(GIT_CMD_LIST_SUBMODULES)
             submodules = []
             for line in output.decode('utf-8').splitlines():
-                match = re.match(SUBMODULE_PATTERN, line.strip())
-                if match:
-                    submodule = match.group(2)
-                    submodules.append(submodule)
+                _hash, submodule, _pointer = line.split()
+                submodules.append(submodule)
             return sorted(submodules)
         except GitCommandError as e:
             logger.error(f"Failed to get submodules: {e}")

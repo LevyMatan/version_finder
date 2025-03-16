@@ -32,7 +32,6 @@ GIT_CMD_GREP = ["grep"]
 
 # Regex patterns
 BRANCH_PATTERN = r"\s*(?:\*\s)?(.*)"
-SUBMODULE_PATTERN = r"[\s+-]([0-9a-f]+)\s([^\s]+)(?:\s\(.*\))?"
 
 # UI constants
 MAX_COMMITS_DISPLAY = 1000  # Maximum number of commits to display in UI

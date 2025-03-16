@@ -171,7 +171,7 @@ class AutocompleteEntry(ctk.CTkEntry):
         self._placeholder_shown: bool = True
         self.callback: callable | None = callback
         self.suggestion_window: ctk.CTkToplevel | None = None
-        self._text_color = ctk.ThemeManager.theme["CTkEntry"]["text_color"]
+        self._text_color = "black"
         self._temp_selection: str = ''
 
         # Bind events
@@ -255,17 +255,14 @@ class AutocompleteEntry(ctk.CTkEntry):
         self.suggestion_window.deiconify()
 
     def _select_suggestion(self, suggestion: str) -> None:
-
         self.delete(0, "end")
         self.insert(0, suggestion)
-
+        self._temp_selection = suggestion  # Set the current selection so previous text is not reinserted
         if self.suggestion_window:
             self.suggestion_window.destroy()
             self.suggestion_window = None
-
         # Move focus to parent window
         self.master.focus_set()
-
         if self.callback:
             self.callback(suggestion)
 
@@ -273,20 +270,20 @@ class AutocompleteEntry(ctk.CTkEntry):
         self._show_suggestions()
 
     def _on_focus_out(self, event: 'tkinter.Event') -> None:
-        print("Focus out event")
         if self.suggestion_window:
             self.after(100, self._destroy_suggestion_window)
-        self.insert(0, self._temp_selection)
-        self._temp_selection = ''
 
-        # If the entry is empty, show the placeholder
-        if not self.get():
+        if self.get() and not self._placeholder_shown:
+            self.configure(text_color=self._text_color)
+        else:
             self._show_placeholder()
+
+        self._temp_selection = ''
 
     def _on_focus_in(self, event: 'tkinter.Event') -> str | None:
         self._temp_selection = self.get()
         super().delete(0, "end")
-        self.configure(text_color=self._text_color)
+        self.configure(text_color="black")
         self._placeholder_shown = False
         self._show_suggestions()
 

@@ -827,28 +827,14 @@ class VersionFinderGUI(ctk.CTk):
         browse_btn.grid(row=0, column=2, padx=5)
         return dir_frame
 
-    def _update_submodule_entry(self, submodules):
-        # First ensure the widget is in normal state
-        self.submodule_entry.configure(state="normal")
-        if submodules:
-            self.submodule_entry.placeholder_text = "Select a submodule [Optional]"
-            self.submodule_entry.suggestions = submodules
-            self._log_output("Loaded submodules successfully.")
-        else:
-            self.submodule_entry.placeholder_text = "No submodules found"
-            self._log_output("There are no submodules in the repository (with selected branch).")
-            # Set readonly state last
-            self.submodule_entry.configure(state="readonly")
-
-        self.submodule_entry.after(100, self.submodule_entry.update)
-
     def _on_branch_select(self, branch):
         """Handle branch selection"""
         if not branch:
             return
 
-        self.selected_branch = branch
-        self._update_repository()
+        if branch != self.selected_branch:
+            self.selected_branch = branch
+            self._update_repository()
 
     def _on_submodule_select(self, submodule: str):
         """Handle submodule selection"""
@@ -1160,16 +1146,21 @@ class VersionFinderGUI(ctk.CTk):
         """Handle submodules loaded from worker process"""
         if error:
             return
+        self.submodule_entry.configure(state="normal")
+
+        # Clear submodule entry
+        self.submodule_entry.delete(0, "end")
+        self.submodule_entry.suggestions = submodules
 
         # Update submodule entry
-        self.submodule_entry.configure(state="normal")
         if submodules:
-            self.submodule_entry.suggestions = submodules
+            self.submodule_entry.insert(0, "Select a submodule [Optional]")
             self._log_output("Loaded submodules successfully.")
         else:
-            self.submodule_entry.placeholder_text = "No submodules found"
+            self.submodule_entry.insert(0, f"No submodules found (on branch: {self.selected_branch})")
+            self._log_output(f"There are no submodules in the repository (with selected branch: {self.selected_branch}).")
             self.submodule_entry.configure(state="disabled")
-            self._log_output("There are no submodules in the repository (with selected branch: {self.sele}).")
+            self.submodule_entry.configure(text_color="gray")
 
         # Enable UI elements now that repository is ready
         self._enable_ui_after_repo_load()

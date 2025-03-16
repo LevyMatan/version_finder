@@ -66,16 +66,18 @@ else
 endif
 
 test-core:
-	cd core && pytest -n auto
+	pytest core -n auto
 
 test-cli:
-	cd cli && pytest -n auto
+	pytest cli -n auto
 
 test-gui:
-	cd gui && pytest -n auto
+	pytest gui -n auto
 
 test:
-	pytest -n auto
+	$(MAKE) test-core
+	$(MAKE) test-cli
+	$(MAKE) test-gui
 
 coverage:
 # Run tests and generate coverage report

@@ -2,16 +2,23 @@ import pytest
 import customtkinter as ctk
 from version_finder_gui.widgets import AutocompleteEntry
 
+@pytest.fixture(scope="session")
+def tk_app():
+    app = ctk.CTk()
+    yield app
+    app.destroy()
+
 @pytest.fixture
-def root():
-    root = ctk.CTk()
-    yield root
-    root.destroy()
+def root(tk_app):
+    yield tk_app
 
 @pytest.fixture
 def entry(root):
     entry = AutocompleteEntry(root, placeholder_text="Test Entry")
-    return entry
+    yield entry
+    entry.destroy()
+
+
 
 def test_initial_state(entry):
     assert entry.get() == ""

@@ -73,6 +73,16 @@ version-finder-gui = "gui.version_finder_gui.gui:main"
 
 [tool.setuptools.packages.find]
 include = ["core.*", "cli.*", "gui.*", "custom_scope_commit_parser.*"]
+where = ["core/src", "cli/src", "gui/src"]
+
+[tool.pytest.ini_options]
+testpaths = ["gui/tests", "core/tests", "cli/tests"]
+pythonpath = [
+    "core/src",
+    "cli/src",
+    "gui/src"
+]
+addopts = "-v"
 
 [tool.autopep8]
 max_line_length = 120

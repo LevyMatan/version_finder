@@ -49,19 +49,19 @@ class CommitSHAValidator(Validator):
 
 class ProgressIndicator:
     """A simple progress indicator for CLI operations"""
-    
+
     def __init__(self, message="Processing"):
         self.message = message
         self.running = False
         self.thread = None
-        
+
     def start(self):
         """Start the progress indicator"""
         self.running = True
         self.thread = threading.Thread(target=self._show_progress)
         self.thread.daemon = True
         self.thread.start()
-        
+
     def stop(self):
         """Stop the progress indicator"""
         self.running = False
@@ -70,7 +70,7 @@ class ProgressIndicator:
         # Clear the indicator line
         sys.stdout.write("\r" + " " * (len(self.message) + 10) + "\r")
         sys.stdout.flush()
-        
+
     def _show_progress(self):
         """Show the progress indicator animation"""
         symbols = ["-", "\\", "|", "/"]
@@ -80,6 +80,7 @@ class ProgressIndicator:
             sys.stdout.flush()
             time.sleep(0.1)
             i = (i + 1) % len(symbols)
+
 
 def with_progress(message):
     """Decorator to add progress indicator to functions"""
@@ -146,16 +147,16 @@ class VersionFinderCLI:
         """
         try:
             self.path = self.handle_path_input(args.path)
-            
+
             # Initialize VersionFinder with force=True to allow uncommitted changes
             self.finder = VersionFinder(path=self.path, force=True)
-            
+
             # Check for uncommitted changes
             state = self.finder.get_saved_state()
             if state.get("has_changes", False):
                 logger.warning("Repository has uncommitted changes")
                 has_submodules = bool(state.get("submodules", {}))
-                
+
                 if not args.force:
                     # Build message with details about what will happen
                     message = (
@@ -164,12 +165,12 @@ class VersionFinderCLI:
                         "2. Perform the requested operations\n"
                         "3. Restore your original branch and stashed changes when closing\n"
                     )
-                    
+
                     if has_submodules:
                         message += "Submodules with uncommitted changes will also be handled similarly.\n"
-                    
+
                     message += "Proceed anyway? (y/N): "
-                    
+
                     proceed = input(message).lower() == 'y'
                     if not proceed:
                         logger.info("Operation cancelled by user")
@@ -186,26 +187,26 @@ class VersionFinderCLI:
             self.task_name = self.handle_task_input(args.task)
 
             self.run_task(self.task_name)
-            
+
             # Restore original state if requested
             if args.restore_state:
                 logger.info("Restoring original repository state")
-                
+
                 # Get the state before restoration for logging
                 state = self.finder.get_saved_state()
                 has_changes = state.get("has_changes", False)
                 stash_created = state.get("stash_created", False)
-                
+
                 if has_changes:
                     if stash_created:
                         logger.info("Attempting to restore stashed changes")
                     else:
                         logger.warning("Repository had changes but they were not stashed")
-                
+
                 # Perform the restoration
                 if self.finder.restore_repository_state():
                     logger.info("Original repository state restored successfully")
-                    
+
                     # Verify the restoration
                     current_branch = self.finder.get_current_branch()
                     original_branch = state.get("branch")
@@ -214,7 +215,7 @@ class VersionFinderCLI:
                             logger.info(f"Restored to detached HEAD state")
                         else:
                             logger.info(f"Restored to branch: {current_branch}")
-                    
+
                     # Check if we still have uncommitted changes
                     if has_changes and self.finder.has_uncommitted_changes():
                         logger.info("Uncommitted changes were successfully restored")
@@ -225,7 +226,7 @@ class VersionFinderCLI:
 
         except KeyboardInterrupt:
             logger.info("\nOperation cancelled by user")
-            
+
             # Try to restore original state
             if hasattr(self, 'finder') and self.finder and args.restore_state:
                 logger.info("Restoring original repository state")
@@ -233,11 +234,11 @@ class VersionFinderCLI:
                     logger.info("Original repository state restored successfully")
                 else:
                     logger.warning("Failed to restore original repository state")
-                    
+
             return 0
         except Exception as e:
             logger.error("Error during task execution: %s", str(e))
-            
+
             # Try to restore original state
             if hasattr(self, 'finder') and self.finder and args.restore_state:
                 logger.info("Restoring original repository state")
@@ -245,7 +246,7 @@ class VersionFinderCLI:
                     logger.info("Original repository state restored successfully")
                 else:
                     logger.warning("Failed to restore original repository state")
-                    
+
             return 1
 
     def handle_task_input(self, task_name: str) -> str:

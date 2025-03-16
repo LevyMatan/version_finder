@@ -21,6 +21,8 @@ from version_finder.common import (
 
 
 logger = get_logger(__name__)
+
+
 @dataclass
 class GitConfig:
     """Configuration settings for git operations"""
@@ -66,7 +68,8 @@ class GitCommandExecutor:
         except FileNotFoundError:
             raise GitCommandError("Git is not installed")
 
-    def execute(self, command: list[str], retries: int = 0, check: bool = True) -> Union[bytes, subprocess.CompletedProcess]:
+    def execute(self, command: list[str], retries: int = 0,
+                check: bool = True) -> Union[bytes, subprocess.CompletedProcess]:
         """
         Execute a git command with retry logic and timeout.
 
@@ -95,31 +98,36 @@ class GitCommandExecutor:
             return output
         except subprocess.TimeoutExpired as e:
             if not check:
-                return subprocess.CompletedProcess(args=["git"] + command, returncode=1, stdout=b"", stderr=str(e).encode())
-            
+                return subprocess.CompletedProcess(args=["git"] +
+                                                   command, returncode=1, stdout=b"", stderr=str(e).encode())
+
             if retries < self.config.max_retries:
                 logger.warning(f"Git command timed out, retrying in {self.config.retry_delay}s: {e}")
                 time.sleep(self.config.retry_delay)
                 return self.execute(command, retries + 1)
-            
+
             raise GitTimeoutError(f"Git command timed out after {self.config.timeout}s: {' '.join(command)}") from e
-            
+
         except subprocess.CalledProcessError as e:
             if not check:
                 return e
-                
+
             error_msg = e.stderr.decode('utf-8', errors='replace')
-            
+
             # Handle specific error types
-            if any(net_err in error_msg for net_err in ['could not resolve host', 'Connection refused', 'Connection timed out']):
+            if any(
+                net_err in error_msg for net_err in [
+                    'could not resolve host',
+                    'Connection refused',
+                    'Connection timed out']):
                 raise GitNetworkError(f"Network error during git operation: {error_msg}") from e
-                
+
             if any(perm_err in error_msg for perm_err in ['Permission denied', 'authentication failed']):
                 raise GitPermissionError(f"Permission error during git operation: {error_msg}") from e
-                
+
             if retries < self.config.max_retries:
                 logger.warning(f"Git command failed, retrying in {self.config.retry_delay}s: {error_msg}")
                 time.sleep(self.config.retry_delay)
                 return self.execute(command, retries + 1)
-                
+
             raise GitCommandError(f"Git command failed: {error_msg}") from e

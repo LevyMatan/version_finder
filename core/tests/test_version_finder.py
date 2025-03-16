@@ -102,7 +102,7 @@ class TestVersionFinder:
 
         # Get the default branch name (could be main or master depending on git version)
         default_branch = os.popen("git branch --show-current").read().strip()
-        
+
         # Create test branches
         os.system('git branch dev')
         os.system('git branch feature')
@@ -627,7 +627,7 @@ class TestGetCommitDiffFiles:
 
         # Get the default branch name (could be main or master depending on git version)
         default_branch = os.popen("git branch --show-current").read().strip()
-        
+
         # Create test branches
         os.system('git branch dev')
         os.system('git branch feature')
@@ -694,7 +694,7 @@ class TestGetCommitDiffFiles:
             merge_commit = os.popen('git rev-parse HEAD').read().strip()
         finally:
             os.chdir(current_dir)
-            
+
         diff_files = finder.get_commit_diff_files(merge_commit)
         assert 'new_file' in diff_files
 
@@ -714,7 +714,6 @@ class TestGetCommitDiffFiles:
     #     assert 'file1' in diff_files
     #     assert 'file1_renamed' in diff_files
     #
-
 
 
 class TestVersionFinderNegative:
@@ -737,11 +736,10 @@ class TestVersionFinderNegative:
 
         # Get the default branch name (could be main or master depending on git version)
         default_branch = os.popen("git branch --show-current").read().strip()
-        
+
         # Create test branches
         os.system('git branch dev')
         os.system('git branch feature')
-
 
         yield temp_dir, default_branch
 
@@ -764,7 +762,6 @@ class TestVersionFinderNegative:
         """Test get_file_content_at_commit with empty file path."""
         with pytest.raises(InvalidFilepathError):
             version_finder.get_file_content_at_commit("HEAD", "")
-
 
     # def test_get_file_content_at_commit_file_outside_repository(self, version_finder):
     #     """Test get_file_content_at_commit with file path outside repository."""
@@ -802,15 +799,12 @@ class TestVersionFinderNegative:
         finder.update_repository(test_repo[1])
         return finder
 
-
-
     def test_generate_commit_diff_html_empty_commit_hash(self, test_repo: tuple[str, str]):
         """Test generate_commit_diff_html with an empty commit hash."""
         finder = VersionFinder(path=test_repo[0])
         finder.update_repository(test_repo[1])
         with pytest.raises(TypeError):
             result = finder.generate_commit_diff_html('')
-
 
     def test_generate_commit_diff_html_exception_handling(self, test_repo, monkeypatch):
         """Test exception handling in generate_commit_diff_html."""
@@ -823,14 +817,12 @@ class TestVersionFinderNegative:
         result = finder.generate_commit_diff_html('HEAD')
         assert result == 'Error: Mocked exception'
 
-
     def test_generate_commit_diff_html_incorrect_type(self, test_repo: tuple[str, str]):
         """Test generate_commit_diff_html with incorrect type for commit_hash."""
         finder = VersionFinder(path=test_repo[0])
         finder.update_repository(test_repo[1])
         with pytest.raises(TypeError):
             finder.generate_commit_diff_html(123)
-
 
     def test_generate_commit_diff_html_invalid_commit_hash(self, test_repo: tuple[str, str]):
         """Test generate_commit_diff_html with an invalid commit hash."""
@@ -839,7 +831,6 @@ class TestVersionFinderNegative:
         result = finder.generate_commit_diff_html('invalid_commit_hash')
         assert result.startswith('Error: ')
 
-
     def test_generate_commit_diff_html_invalid_output_path(self, test_repo: tuple[str, str]):
         """Test generate_commit_diff_html with an invalid output path."""
         finder = VersionFinder(path=test_repo[0])
@@ -847,14 +838,12 @@ class TestVersionFinderNegative:
         result = finder.generate_commit_diff_html('HEAD', output_html='/invalid/path/output.html')
         assert result.startswith('Error: ')
 
-
     def test_generate_commit_diff_html_invalid_submodule(self, test_repo: tuple[str, str]):
         """Test generate_commit_diff_html with an invalid submodule."""
         finder = VersionFinder(path=test_repo[0])
         finder.update_repository(test_repo[1])
         result = finder.generate_commit_diff_html('HEAD', submodule='nonexistent_submodule')
         assert result.startswith('Error: ')
-
 
     # def test_generate_commit_diff_html_no_changes(self, test_repo):
     #     """Test generate_commit_diff_html when there are no changes in the commit."""
@@ -865,7 +854,6 @@ class TestVersionFinderNegative:
     #     result = finder.generate_commit_diff_html(commit_hash)
     #     assert 'No changes in this commit' in result
 
-
     def test_generate_commit_diff_html_nonexistent_commit(self, test_repo: tuple[str, str]):
         """Test generate_commit_diff_html with a nonexistent commit hash."""
         finder = VersionFinder(path=test_repo[0])
@@ -873,14 +861,12 @@ class TestVersionFinderNegative:
         result = finder.generate_commit_diff_html('1234567890abcdef')
         assert result.startswith('Error: ')
 
-
     def test_generate_commit_diff_html_repository_not_ready(self, test_repo: tuple[str, str]):
         """Test generate_commit_diff_html when repository is not ready."""
         finder = VersionFinder(path=test_repo[0])
         # Don't call update_repository to test not ready state
         result = finder.generate_commit_diff_html('some_commit_hash')
         assert result.startswith('Error: ')
-
 
     def test_get_file_content_at_commit_existing_file(self, test_repo: tuple[str, str]):
         """

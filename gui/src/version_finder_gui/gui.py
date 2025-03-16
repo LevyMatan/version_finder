@@ -98,14 +98,6 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                             "task_id": task_id,
                             "result": {"status": "success"}
                         })
-                    except GitRepositoryNotClean as e:
-                        # Forward the specific error for GUI handling
-                        response_queue.put({
-                            "type": MessageType.TASK_ERROR,
-                            "task_id": task_id,
-                            "error": str(e),
-                            "error_type": type(e).__name__
-                        })
                     except Exception as e:
                         # Handle other initialization errors
                         response_queue.put({
@@ -826,11 +818,11 @@ class VersionFinderGUI(ctk.CTk):
         # First ensure the widget is in normal state
         self.submodule_entry.configure(state="normal")
         if submodules:
-            self.submodule_entry.set_placeholder("Select a submodule [Optional]")
+            self.submodule_entry.placeholder_text = "Select a submodule [Optional]"
             self.submodule_entry.suggestions = submodules
             self._log_output("Loaded submodules successfully.")
         else:
-            self.submodule_entry.set_placeholder("No submodules found")
+            self.submodule_entry.placeholder_text = "No submodules found"
             self._log_output("There are no submodules in the repository (with selected branch).")
             # Set readonly state last
             self.submodule_entry.configure(state="readonly")
@@ -845,7 +837,7 @@ class VersionFinderGUI(ctk.CTk):
         self.selected_branch = branch
         self._update_repository()
         
-    def _on_submodule_select(self, submodule):
+    def _on_submodule_select(self, submodule: str):
         """Handle submodule selection"""
         self.selected_submodule = submodule
         
@@ -870,17 +862,10 @@ class VersionFinderGUI(ctk.CTk):
 
         ctk.CTkLabel(submodule_frame, text="Submodule:").grid(row=0, column=0, padx=5)
         
-        # Create submodule dropdown instead of autocomplete entry
-        self.submodule_var = ctk.StringVar()
-        self.submodule_dropdown = ctk.CTkOptionMenu(
-            submodule_frame, 
-            variable=self.submodule_var,
-            values=[""],
-            command=self._on_submodule_select,
-            width=400,
-            dynamic_resizing=False
-        )
-        self.submodule_dropdown.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        self.submodule_entry = AutocompleteEntry(submodule_frame, width=400, placeholder_text="Select a submodule [Optional]")
+        self.submodule_entry.configure(state="disabled")
+        self.submodule_entry.callback = self._on_submodule_select
+        self.submodule_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         
         return submodule_frame
 
@@ -1157,14 +1142,20 @@ class VersionFinderGUI(ctk.CTk):
             spinner_text="Loading submodules..."
         )
         
-    def _handle_submodules_loaded(self, submodules, error=None):
+    def _handle_submodules_loaded(self, submodules: List[str], error=None):
         """Handle submodules loaded from worker process"""
         if error:
             return
             
-        # Update submodule dropdown
-        self.submodule_var.set("")
-        self.submodule_dropdown.configure(values=[""] + submodules)
+        # Update submodule entry
+        self.submodule_entry.configure(state="normal")
+        if submodules:
+            self.submodule_entry.suggestions = submodules
+            self._log_output("Loaded submodules successfully.")
+        else:
+            self.submodule_entry.placeholder_text = "No submodules found"
+            self.submodule_entry.configure(state="disabled")
+            self._log_output("There are no submodules in the repository (with selected branch).")
         
         # Enable UI elements now that repository is ready
         self._enable_ui_after_repo_load()

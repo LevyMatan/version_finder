@@ -7,7 +7,7 @@ on:
 
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,9 +21,22 @@ jobs:
           make install-dev
           sudo apt-get install xvfb
           git config --global init.defaultBranch main
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: Run Core Tests
         run: make test-core
       - name: Run GUI Tests
-        run: make test-gui
+        run: xvfb-run -a make test-gui
       - name: Run CLI Tests
         run: make test-cli
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest-results
+          path: pytest-results.xml
+        if: always()  # Upload even if tests fail

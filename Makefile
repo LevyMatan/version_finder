@@ -72,7 +72,7 @@ test-cli:
 	pytest cli -n auto
 
 test-gui:
-	 xvfb-run -a pytest gui -n auto
+	pytest gui -n auto
 
 test:
 	$(MAKE) test-core

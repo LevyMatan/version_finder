@@ -21,6 +21,7 @@ from version_finder.common import GIT_CMD_FETCH, GIT_CMD_CHECKOUT, GIT_CMD_SUBMO
 # Initialize module logger
 logger = get_logger(__name__)
 
+
 class GitError(Exception):
     """Base exception for git operations"""
 
@@ -47,6 +48,7 @@ class InvalidBranchError(GitError):
 
 class VersionNotFoundError(GitError):
     """Raised when version is not found in commits message"""
+
 
 class InvalidFilepathError(GitError):
     """Raised when a filepath input is not valid"""
@@ -188,7 +190,7 @@ class VersionFinder:
     # - Year formats (e.g., 2023)
     # - Various separators (., _, -)
     # - Multiple version components (e.g., 1.2.3, 2023_01_15, etc.)
-    # 
+    #
     # Examples of matched versions:
     # - Version: 1.2.3
     # - VERSION: XX_2023_01_15
@@ -258,7 +260,7 @@ class VersionFinder:
 
         # Check for uncommitted changes
         has_changes = not self.__is_clean_git_repo()
-        
+
         # Only raise an error if force is False
         if has_changes and not self.force:
             logger.warning("Repository has uncommitted changes. Use force=True to proceed anyway.")
@@ -273,7 +275,7 @@ class VersionFinder:
         self.__load_submodules()
         # If the checked out branch is valid, set it as updated
         self.updated_branch = self.get_current_branch()
-        
+
         # Save initial repository state
         self.save_repository_state()
 
@@ -416,20 +418,20 @@ class VersionFinder:
     def save_repository_state(self) -> dict:
         """
         Save the current state of the repository.
-        
+
         This method:
         1. Saves the current branch (or commit hash if in detached HEAD state)
         2. Stashes uncommitted changes if present with a unique identifier
         3. Recursively saves state for all submodules
-        
+
         Returns:
             dict: A dictionary containing the saved state information
         """
         logger.info("Saving repository state")
-        
+
         # Generate a unique stash identifier
         stash_id = f"version_finder_stash_{int(time.time())}"
-        
+
         # Get current branch or commit hash if in detached HEAD
         current_branch = self.get_current_branch()
         if not current_branch:  # Detached HEAD state
@@ -440,11 +442,11 @@ class VersionFinder:
                 logger.info(f"Repository is in detached HEAD state at commit {output}")
             except GitCommandError as e:
                 logger.error(f"Failed to get current commit hash: {e}")
-        
+
         # Check for uncommitted changes
         has_changes = not self.__is_clean_git_repo()
         stash_created = False
-        
+
         # Stash changes if needed
         if has_changes:
             logger.info(f"Repository has uncommitted changes, stashing with ID: {stash_id}")
@@ -454,7 +456,7 @@ class VersionFinder:
                 logger.info("Changes stashed successfully")
             except GitCommandError as e:
                 logger.error(f"Failed to stash changes: {e}")
-        
+
         # Save submodule states
         submodule_states = {}
         if self.submodules:
@@ -464,7 +466,7 @@ class VersionFinder:
                     # Get submodule branch
                     git_command = ["--git-dir", f"{submodule}/.git", "rev-parse", "--abbrev-ref", "HEAD"]
                     submodule_branch = self._git.execute(git_command).decode("utf-8").strip()
-                    
+
                     # Check if submodule has changes
                     git_command = ["--git-dir", f"{submodule}/.git", "diff", "--quiet", "HEAD"]
                     submodule_has_changes = False
@@ -472,7 +474,7 @@ class VersionFinder:
                         self._git.execute(git_command)
                     except GitCommandError:
                         submodule_has_changes = True
-                    
+
                     # Stash submodule changes if needed
                     submodule_stash_created = False
                     if submodule_has_changes:
@@ -484,7 +486,7 @@ class VersionFinder:
                             logger.info(f"Stashed changes in submodule {submodule}")
                         except GitCommandError as e:
                             logger.error(f"Failed to stash changes in submodule {submodule}: {e}")
-                    
+
                     # Save submodule state
                     submodule_states[submodule] = {
                         "branch": submodule_branch if submodule_branch != "HEAD" else None,
@@ -492,7 +494,7 @@ class VersionFinder:
                         "stash_created": submodule_stash_created,
                         "stash_id": f"{stash_id}_{submodule}" if submodule_has_changes else None
                     }
-                    
+
                     # If in detached HEAD, get the commit hash
                     if submodule_branch == "HEAD":
                         try:
@@ -501,11 +503,11 @@ class VersionFinder:
                             submodule_states[submodule]["commit_hash"] = commit_hash
                         except GitCommandError as e:
                             logger.error(f"Failed to get commit hash for submodule {submodule}: {e}")
-                    
+
                 except GitCommandError as e:
                     logger.error(f"Failed to save state for submodule {submodule}: {e}")
                     submodule_states[submodule] = {"error": str(e)}
-        
+
         # Save state
         self._initial_state = {
             "branch": current_branch,
@@ -515,46 +517,46 @@ class VersionFinder:
             "submodules": submodule_states
         }
         self._state_saved = True
-        
+
         logger.info(f"Saved repository state: {self._initial_state}")
         return self._initial_state
-    
+
     def get_saved_state(self) -> dict:
         """
         Get the saved repository state.
-        
+
         Returns:
             dict: A dictionary containing the saved state information
         """
         return self._initial_state
-    
+
     def has_saved_state(self) -> bool:
         """
         Check if the repository state has been saved.
-        
+
         Returns:
             bool: True if state has been saved, False otherwise
         """
         return self._state_saved
-    
+
     def has_uncommitted_changes(self) -> bool:
         """
         Check if the repository has uncommitted changes.
-        
+
         Returns:
             bool: True if there are uncommitted changes, False otherwise
         """
         return not self.__is_clean_git_repo()
-    
+
     def restore_repository_state(self) -> bool:
         """
         Restore the repository to its saved state.
-        
+
         This method:
         1. Restores the original branch (or commit if in detached HEAD)
         2. Pops stashed changes if they were stashed during save
         3. Recursively restores state for all submodules
-        
+
         Returns:
             bool: True if restoration was successful, False otherwise
         """
@@ -562,18 +564,18 @@ class VersionFinder:
         if not os.path.exists(self.repository_path):
             logger.warning(f"Repository directory {self.repository_path} no longer exists")
             return False
-            
+
         if not self._state_saved:
             logger.warning("No saved state to restore")
             return False
-            
+
         original_branch = self._initial_state.get("branch")
         if not original_branch:
             logger.warning("No branch information in saved state")
             return False
-            
+
         logger.info(f"Restoring repository to original state: {original_branch}")
-        
+
         # Restore submodules first (in reverse order)
         submodule_states = self._initial_state.get("submodules", {})
         if submodule_states:
@@ -584,7 +586,7 @@ class VersionFinder:
                     if "error" in state:
                         logger.warning(f"Skipping submodule {submodule} due to previous error: {state['error']}")
                         continue
-                    
+
                     # Checkout original branch or commit
                     if state.get("branch"):
                         git_command = ["-C", submodule, "checkout", state["branch"]]
@@ -594,7 +596,7 @@ class VersionFinder:
                         git_command = ["-C", submodule, "checkout", state["commit_hash"]]
                         self._git.execute(git_command)
                         logger.info(f"Restored submodule {submodule} to commit {state['commit_hash']}")
-                    
+
                     # Pop stashed changes if they were stashed
                     if state.get("stash_created"):
                         stash_id = state.get("stash_id")
@@ -603,25 +605,25 @@ class VersionFinder:
                                 # Find the stash by its message
                                 git_command = ["-C", submodule, "stash", "list"]
                                 stash_output = self._git.execute(git_command).decode("utf-8").strip()
-                                
+
                                 if not stash_output:
                                     logger.warning(f"No stashes found for submodule {submodule}")
                                     continue
-                                    
+
                                 stash_list = stash_output.split("\n")
                                 stash_index = None
-                                
+
                                 for i, stash in enumerate(stash_list):
                                     if stash_id in stash:
                                         stash_index = i
                                         break
-                                
+
                                 if stash_index is not None:
                                     # Use apply instead of pop to avoid conflicts
                                     git_command = ["-C", submodule, "stash", "apply", f"stash@{{{stash_index}}}"]
                                     self._git.execute(git_command)
                                     logger.info(f"Applied stashed changes in submodule {submodule}")
-                                    
+
                                     # Now drop the stash
                                     git_command = ["-C", submodule, "stash", "drop", f"stash@{{{stash_index}}}"]
                                     self._git.execute(git_command)
@@ -630,10 +632,10 @@ class VersionFinder:
                                     logger.warning(f"Could not find stash with ID {stash_id} for submodule {submodule}")
                             except GitCommandError as e:
                                 logger.error(f"Failed to restore stashed changes for submodule {submodule}: {e}")
-                    
+
                 except GitCommandError as e:
                     logger.error(f"Failed to restore state for submodule {submodule}: {e}")
-        
+
         # Restore main repository
         try:
             # Check if we're restoring to a detached HEAD state
@@ -645,7 +647,7 @@ class VersionFinder:
                 # Checkout original branch
                 self._git.execute(GIT_CMD_CHECKOUT + [original_branch])
                 logger.info(f"Restored repository to branch {original_branch}")
-            
+
             # Pop stashed changes if they were stashed
             if self._initial_state.get("stash_created"):
                 stash_id = self._initial_state.get("stash_id")
@@ -653,24 +655,24 @@ class VersionFinder:
                     try:
                         # Find the stash by its message
                         stash_output = self._git.execute(["stash", "list"]).decode("utf-8").strip()
-                        
+
                         if not stash_output:
                             logger.warning("No stashes found in repository")
                             return True  # Still consider restoration successful
-                            
+
                         stash_list = stash_output.split("\n")
                         stash_index = None
-                        
+
                         for i, stash in enumerate(stash_list):
                             if stash_id in stash:
                                 stash_index = i
                                 break
-                        
+
                         if stash_index is not None:
                             # Use apply instead of pop to avoid conflicts
                             self._git.execute(["stash", "apply", f"stash@{{{stash_index}}}"])
                             logger.info("Applied stashed changes")
-                            
+
                             # Now drop the stash
                             self._git.execute(["stash", "drop", f"stash@{{{stash_index}}}"])
                             logger.info("Dropped stash after successful apply")
@@ -679,10 +681,10 @@ class VersionFinder:
                     except GitCommandError as e:
                         logger.error(f"Failed to restore stashed changes: {e}")
                         # Continue anyway, as we've at least restored the branch
-            
+
             # Set a flag to indicate that state has been restored
             self._state_restored = True
-            
+
             return True
         except GitCommandError as e:
             logger.error(f"Failed to restore repository state: {e}")
@@ -701,7 +703,7 @@ class VersionFinder:
             GitRepositoryNotClean: If the repository has uncommitted changes
         """
         logger.info(f"Updating repository to branch: {branch}")
-        
+
         # Save current state if requested
         if save_state and not self._state_saved:
             self.save_repository_state()
@@ -1029,10 +1031,10 @@ class VersionFinder:
     def find_commit_by_version(self, version: str) -> List[str]:
         """
         Find the commit that indicates the specified version.
-        
+
         Args:
             version: The version string to search for
-            
+
         Returns:
             List[str]: List of commit hashes that have the version in their commit message
         """
@@ -1047,13 +1049,13 @@ class VersionFinder:
         # - With optional XX_ prefix
         version_pattern = f"(Version|VERSION|Updated version)(:)? (XX_)?{version}"
         logger.debug(f"Using version pattern: {version_pattern}")
-        
+
         commits = self._git.execute(
             ["log", "--grep", version_pattern, "--extended-regexp", "--format=%H"]).decode("utf-8").strip().split("\n")
-        
+
         # Filter out empty strings that might occur if no commits are found
         commits = [commit for commit in commits if commit]
-        
+
         logger.debug(f"Found {len(commits)} commits for version {version}")
         logger.debug(f"The type of commits: {type(commits)}")
         return commits
@@ -1224,12 +1226,11 @@ class VersionFinder:
         if not self.is_task_ready:
             raise RepositoryNotTaskReady()
 
-
         # Check if this is the initial commit by trying to get its parent
         try:
             self._git.execute(["rev-parse", f"{commit_hash}^"])
             has_parent = True
-        except:
+        except BaseException:
             has_parent = False
 
         if has_parent:
@@ -1337,24 +1338,27 @@ class VersionFinder:
         Returns:
             The version string if found, None otherwise
         """
-        logger.info(f"Finding version for commit {commit_sha} in {'submodule ' + submodule if submodule else 'main repository'}")
-        
+        logger.info(
+            f"Finding version for commit {commit_sha} in {
+                'submodule ' +
+                submodule if submodule else 'main repository'}")
+
         try:
             # Validate commit
             if not self.is_valid_commit(commit_sha, submodule):
                 logger.error(f"Invalid commit: {commit_sha}")
                 raise InvalidCommitError(f"Invalid commit: {commit_sha}")
-                
+
             # Find the version
             version = self.find_first_version_containing_commit(commit_sha, submodule)
-            
+
             if version:
                 logger.info(f"Found version {version} for commit {commit_sha}")
             else:
                 logger.info(f"No version found for commit {commit_sha}")
-                
+
             return version
-            
+
         except GitCommandError as e:
             logger.error(f"Git error while finding version: {e}")
             raise
@@ -1362,7 +1366,8 @@ class VersionFinder:
             logger.error(f"Error finding version: {e}")
             raise
 
-    def find_all_commits_between_versions(self, from_version: str, to_version: str, submodule: str = None) -> List[Commit]:
+    def find_all_commits_between_versions(self, from_version: str, to_version: str,
+                                          submodule: str = None) -> List[Commit]:
         """
         Find all commits between two versions.
 
@@ -1374,15 +1379,18 @@ class VersionFinder:
         Returns:
             List of commits between the versions
         """
-        logger.info(f"Finding commits between versions {from_version} and {to_version} in {'submodule ' + submodule if submodule else 'main repository'}")
-        
+        logger.info(
+            f"Finding commits between versions {from_version} and {to_version} in {
+                'submodule ' +
+                submodule if submodule else 'main repository'}")
+
         try:
             # Get the commits
             commits = self.get_commits_between_versions(from_version, to_version, submodule)
-            
+
             logger.info(f"Found {len(commits)} commits between versions {from_version} and {to_version}")
             return commits
-            
+
         except GitCommandError as e:
             logger.error(f"Git error while finding commits: {e}")
             raise
@@ -1401,15 +1409,18 @@ class VersionFinder:
         Returns:
             List of commits containing the text
         """
-        logger.info(f"Finding commits containing text '{text}' in {'submodule ' + submodule if submodule else 'main repository'}")
-        
+        logger.info(
+            f"Finding commits containing text '{text}' in {
+                'submodule ' +
+                submodule if submodule else 'main repository'}")
+
         try:
             # Get the commits
             commits = self.find_commits_by_text(text, submodule)
-            
+
             logger.info(f"Found {len(commits)} commits containing text '{text}'")
             return commits
-            
+
         except GitCommandError as e:
             logger.error(f"Git error while finding commits: {e}")
             raise
@@ -1420,7 +1431,7 @@ class VersionFinder:
     def check_repository_state(self) -> dict:
         """
         Check the current state of the repository without raising exceptions.
-        
+
         Returns:
             dict: A dictionary containing information about the repository state
         """
@@ -1430,14 +1441,14 @@ class VersionFinder:
             "is_valid": True,
             "error": None
         }
-        
+
         try:
             # Check if directory is a git repository
             self._git.execute(["status"])
         except GitCommandError as e:
             state["is_valid"] = False
             state["error"] = f"Not a valid git repository: {str(e)}"
-            
+
         return state
 
     def __del__(self):
@@ -1448,9 +1459,9 @@ class VersionFinder:
         try:
             # Check if we need to restore the state
             # If _state_restored is True, it means the state was already restored explicitly
-            if (hasattr(self, '_state_saved') and self._state_saved and 
-                not (hasattr(self, '_state_restored') and self._state_restored)):
-                
+            if (hasattr(self, '_state_saved') and self._state_saved and
+                    not (hasattr(self, '_state_restored') and self._state_restored)):
+
                 # Check if the repository directory still exists
                 if hasattr(self, 'repository_path') and os.path.exists(self.repository_path):
                     logger.info("VersionFinder being destroyed, attempting to restore repository state")

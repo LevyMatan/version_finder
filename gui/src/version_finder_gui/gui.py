@@ -18,11 +18,14 @@ from PIL import Image
 
 logger = get_logger(__name__)
 # Define message types for inter-process communication
+
+
 class MessageType(Enum):
     TASK_REQUEST = auto()
     TASK_RESULT = auto()
     TASK_ERROR = auto()
     SHUTDOWN = auto()
+
 
 class VersionFinderTasks(Enum):
     FIND_VERSION = auto()
@@ -30,37 +33,39 @@ class VersionFinderTasks(Enum):
     COMMITS_BY_TEXT = auto()
 
 # Worker process function
+
+
 def version_finder_worker(request_queue, response_queue, exit_event=None):
     """Worker process for version finder operations"""
     logger.info("Worker process started")
-    
+
     version_finder = None
     waiting_for_confirmation = False
     pending_init_task_id = None
-    
+
     while True:
         try:
             # Check for exit signal
             if exit_event and exit_event.is_set():
                 logger.info("Exit event received, shutting down worker")
                 break
-            
+
             # Get next task from queue with timeout
             try:
                 message = request_queue.get(timeout=0.5)  # 500ms timeout
             except queue.Empty:
                 continue
-                
+
             # Handle shutdown message
             if message["type"] == MessageType.SHUTDOWN:
                 logger.info("Shutdown message received")
                 break
-            
+
             # Extract task info
             task = message.get("task")
             task_id = message.get("task_id")
             args = message.get("args", {})
-            
+
             # Handle user confirmation for repository initialization
             if task == "confirm_init":
                 if waiting_for_confirmation and pending_init_task_id:
@@ -68,7 +73,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                     # Re-initialize with force=True
                     version_finder = VersionFinder(args["repo_path"], force=True)
                     waiting_for_confirmation = False
-                    
+
                     # Send success response for the original init task
                     response_queue.put({
                         "type": MessageType.TASK_RESULT,
@@ -80,7 +85,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                     })
                     pending_init_task_id = None
                 continue
-            
+
             # Process tasks
             try:
                 # Initialize version finder if needed
@@ -88,11 +93,11 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                     repo_path = args["repo_path"]
                     user_confirmation = args.get("user_confirmation", False)
                     logger.info(f"Initializing version finder with repo: {repo_path}, force: {user_confirmation}")
-                    
+
                     try:
                         # Initialize version finder with specified force parameter
                         version_finder = VersionFinder(repo_path, force=user_confirmation)
-                        
+
                         response_queue.put({
                             "type": MessageType.TASK_RESULT,
                             "task_id": task_id,
@@ -169,13 +174,13 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                         result = version_finder.restore_repository_state()
                         # Set flag to prevent destructor from trying to restore again
                         version_finder._state_restored = True
-                        
+
                         # Force the destructor to be called by deleting the reference
                         logger.info("Forcing VersionFinder destructor by deleting reference")
                         version_finder_copy = version_finder
                         version_finder = None
                         del version_finder_copy
-                        
+
                         response_queue.put({
                             "type": MessageType.TASK_RESULT,
                             "task_id": task_id,
@@ -195,7 +200,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                 import traceback
                 error_traceback = traceback.format_exc()
                 logger.error(f"Error executing task {task}: {str(e)}\n{error_traceback}")
-                
+
                 # Send error back
                 response_queue.put({
                     "type": MessageType.TASK_ERROR,
@@ -209,7 +214,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
             import traceback
             error_traceback = traceback.format_exc()
             logger.error(f"Unexpected error in worker process: {str(e)}\n{error_traceback}")
-            
+
             # Send error back to main process
             response_queue.put({
                 "type": MessageType.TASK_ERROR,
@@ -218,10 +223,12 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                 "error_type": type(e).__name__,
                 "traceback": error_traceback
             })
-    
+
     logger.info("Worker process terminated")
 
+
 ctk.set_default_color_theme("green")
+
 
 class VersionFinderGUI(ctk.CTk):
     def __init__(self, path: str = ''):
@@ -231,7 +238,7 @@ class VersionFinderGUI(ctk.CTk):
         self.version_finder: VersionFinder = None
         self.selected_branch: str = ''
         self.selected_submodule: str = ''
-        
+
         # Setup multiprocessing
         self.worker_process = None
         self.request_queue = None
@@ -239,19 +246,19 @@ class VersionFinderGUI(ctk.CTk):
         self.task_callbacks = {}
         self.next_task_id = 0
         self.waiting_for_confirmation = False
-        
+
         # Initialize UI
         self._setup_window()
         self._create_window_layout()
         self._setup_icon()
         self._show_find_version()
-        
+
         # Center window on screen
         center_window(self)
 
         # Focus on window
         self.focus_force()
-        
+
         # Start checking for worker responses
         self.after(100, self._check_worker_responses)
 
@@ -259,19 +266,19 @@ class VersionFinderGUI(ctk.CTk):
         if self.repo_path:
             # Update the entry field after UI is created
             self.after(100, lambda: self._update_repo_path_entry())
-            
+
     def _update_repo_path_entry(self):
         """Update the repository path entry field with the current path"""
         if hasattr(self, 'dir_entry') and self.repo_path:
             self.dir_entry.delete(0, "end")
             self.dir_entry.insert(0, str(self.repo_path))
             self._initialize_version_finder()
-        
+
     def _start_worker_process(self):
         """Start the worker process for background operations"""
         if self.worker_process is not None and self.worker_process.is_alive():
             return
-            
+
         self.request_queue = multiprocessing.Queue()
         self.response_queue = multiprocessing.Queue()
         self.exit_event = multiprocessing.Event()
@@ -282,7 +289,7 @@ class VersionFinderGUI(ctk.CTk):
         )
         self.worker_process.start()
         logger.info(f"Started worker process with PID: {self.worker_process.pid}")
-        
+
     def _stop_worker_process(self):
         """Stop the worker process"""
         if self.worker_process is not None and self.worker_process.is_alive():
@@ -290,16 +297,16 @@ class VersionFinderGUI(ctk.CTk):
                 # First try to signal exit via event
                 logger.info("Setting exit event for worker process")
                 self.exit_event.set()
-                
+
                 # Give the process a moment to shut down gracefully
                 self.worker_process.join(timeout=2)
-                
+
                 # If still alive, try shutdown message
                 if self.worker_process.is_alive():
                     logger.info("Worker still alive, sending shutdown message")
                     self.request_queue.put({"type": MessageType.SHUTDOWN})
                     self.worker_process.join(timeout=2)
-                
+
                 # If still alive, terminate
                 if self.worker_process.is_alive():
                     logger.warning("Worker process did not exit, terminating forcefully")
@@ -308,7 +315,7 @@ class VersionFinderGUI(ctk.CTk):
                     logger.info("Worker process shut down gracefully")
             except Exception as e:
                 logger.error(f"Error stopping worker process: {str(e)}")
-                
+
     def _check_worker_responses(self):
         """Check for responses from the worker process"""
         if self.response_queue is not None:
@@ -320,77 +327,77 @@ class VersionFinderGUI(ctk.CTk):
                         self._handle_worker_message(message)
                     except queue.Empty:
                         break
-                        
+
                 # Check for timed-out tasks
                 self._check_task_timeouts()
-                
+
             except Exception as e:
                 logger.error(f"Error checking worker responses: {str(e)}")
-                
+
         # Schedule the next check
         self.after(100, self._check_worker_responses)
-        
+
     def _check_task_timeouts(self):
         """Check for tasks that have timed out"""
         current_time = time.time()
         timed_out_tasks = []
-        
+
         # Find timed-out tasks
         for task_id, callback_info in self.task_callbacks.items():
             start_time = callback_info.get("start_time", 0)
             timeout = callback_info.get("timeout", 30)
-            
+
             if current_time - start_time > timeout:
                 timed_out_tasks.append(task_id)
-                
+
         # Handle timed-out tasks
         for task_id in timed_out_tasks:
             callback_info = self.task_callbacks.pop(task_id)
             callback = callback_info["callback"]
             spinner = callback_info.get("spinner")
-            
+
             # Stop the spinner
             if spinner is not None:
                 spinner.stop()
-                
+
             # Log timeout error
             error_msg = f"Task timed out after {callback_info.get('timeout', 30)} seconds"
             logger.error(f"Task timeout: {error_msg}")
-            
+
             # Display error in UI
             self._log_error(f"Timeout: {error_msg}")
-            
+
             # Call callback with error
             if callback is not None:
                 callback(None, error=error_msg)
-        
+
     def _handle_worker_message(self, message):
         """Handle a message from the worker process"""
         message_type = message["type"]
         task_id = message.get("task_id")
-        
+
         # Handle initial repository state message
         if message_type == MessageType.TASK_RESULT and task_id == "initial_state":
             self._handle_initial_repo_state(message["result"])
             return
-            
+
         # Handle repository initialization confirmation
         if message_type == MessageType.TASK_RESULT and task_id == "init_repo_confirmed":
             self._log_output("Repository initialization confirmed")
-            
+
             # Check if we have the original task ID
             original_task_id = message.get("result", {}).get("original_task_id")
-            
+
             if original_task_id is not None and original_task_id in self.task_callbacks:
                 # Get the callback info for the original task
                 callback_info = self.task_callbacks.pop(original_task_id)
                 callback = callback_info.get("callback")
                 spinner = callback_info.get("spinner")
-                
+
                 # Stop the spinner if it exists
                 if spinner:
                     spinner.stop()
-                
+
                 # Call the callback with the success result
                 if callback:
                     callback(message["result"])
@@ -404,55 +411,55 @@ class VersionFinderGUI(ctk.CTk):
                         callback = callback_info.get("callback")
                         spinner = callback_info.get("spinner")
                         self.task_callbacks.pop(task_id)
-                        
+
                         # Stop the spinner if it exists
                         if spinner:
                             spinner.stop()
-                        
+
                         # Call the callback with the success result
                         if callback:
                             callback(message["result"])
                             return
-            
+
             # If no pending init_repo task was found, just call the handler directly
             self._on_repo_initialized(message["result"])
             return
-        
+
         # Handle general worker errors (no specific task ID)
         if message_type == MessageType.TASK_ERROR and task_id is None:
             error_msg = message.get("error", "Unknown error")
             error_type = message.get("error_type", "Error")
-            
+
             # Log the error
             logger.error(f"Worker error ({error_type}): {error_msg}")
-            
+
             # Display error in UI
             self._log_error(f"{error_type}: {error_msg}")
-            
+
             # Show error dialog
             messagebox.showerror("Worker Error", f"{error_type}: {error_msg}")
-            
+
             # Stop all active spinners
             self._stop_all_spinners()
             return
-        
+
         # Handle task-specific messages
         if task_id in self.task_callbacks:
             callback_info = self.task_callbacks.pop(task_id)
             callback = callback_info["callback"]
             spinner = callback_info.get("spinner")
-            
+
             # Stop the spinner if one was created
             if spinner is not None:
                 spinner.stop()
-                
+
             if message_type == MessageType.TASK_RESULT:
                 callback(message["result"])
             elif message_type == MessageType.TASK_ERROR:
                 error_msg = message["error"]
                 error_type = message["error_type"]
                 logger.error(f"Task error ({error_type}): {error_msg}")
-                
+
                 # Handle pending confirmation errors differently
                 if error_type == "PendingConfirmation":
                     self._log_warning(error_msg)
@@ -460,52 +467,52 @@ class VersionFinderGUI(ctk.CTk):
                 else:
                     # Display error in UI
                     self._log_error(f"{error_type}: {error_msg}")
-                    
+
                     # Show error dialog
                     messagebox.showerror("Error", f"{error_type}: {error_msg}")
-                
+
                 # Call callback with error
                 callback(None, error=error_msg)
         elif message_type == MessageType.TASK_ERROR:
             # Handle error for unknown task ID
             error_msg = message.get("error", "Unknown error")
             error_type = message.get("error_type", "Error")
-            
+
             # Log the error
             logger.error(f"Task error for unknown task ({error_type}): {error_msg}")
-            
+
             # Display error in UI
             self._log_error(f"{error_type}: {error_msg}")
-            
+
             # Show error dialog
             messagebox.showerror("Error", f"{error_type}: {error_msg}")
-            
+
             # Stop all active spinners as a precaution
             self._stop_all_spinners()
-            
+
     def _handle_initial_repo_state(self, state):
         """Handle the initial repository state message"""
         branch = state.get("branch")
         has_changes = state.get("has_changes", False)
         has_submodules = bool(state.get("submodules", {}))
-        
+
         if branch:
             if branch.startswith("HEAD:"):
                 commit = branch.split(":", 1)[1][:8]  # Show first 8 chars of commit hash
                 self._log_output(f"Repository is in detached HEAD state at commit {commit}")
             else:
                 self._log_output(f"Repository is on branch: {branch}")
-            
+
         if has_changes:
             self._log_warning("Repository has uncommitted changes")
             self._log_output("Waiting for user confirmation before proceeding...")
-            
+
             # Stop any existing spinners since we're waiting for user input
             self._stop_all_spinners()
-            
+
             # Set flag to indicate we're waiting for confirmation
             self.waiting_for_confirmation = True
-            
+
             # Build message with details about what will happen
             message = (
                 "The repository has uncommitted changes. Version Finder will:\n\n"
@@ -513,22 +520,22 @@ class VersionFinderGUI(ctk.CTk):
                 "2. Perform the requested operations\n"
                 "3. Restore your original branch and stashed changes when closing\n"
             )
-            
+
             if has_submodules:
                 message += "\nSubmodules with uncommitted changes will also be handled similarly."
-            
+
             message += "\n\nDo you want to proceed?"
-            
+
             # Ask user if they want to proceed
             proceed = messagebox.askyesno(
                 "Uncommitted Changes",
                 message,
                 icon="warning"
             )
-            
+
             # Reset flag
             self.waiting_for_confirmation = False
-            
+
             if proceed:
                 # Send confirmation to worker
                 self._execute_task(
@@ -541,10 +548,10 @@ class VersionFinderGUI(ctk.CTk):
                 # Clear repository path
                 self.dir_entry.delete(0, "end")
                 self.repo_path = ""
-        
+
         # Save initial state for reference
         self.initial_repo_state = state
-        
+
     def _log_warning(self, message: str):
         """Log warning message to the output area"""
         self.output_text.configure(state="normal")
@@ -552,7 +559,7 @@ class VersionFinderGUI(ctk.CTk):
         self.output_text.configure(state="disabled")
         self.output_text.see("end")
         logger.warning(message)
-        
+
     def _stop_all_spinners(self):
         """Stop all active spinners"""
         # Stop all spinners in task_callbacks
@@ -560,31 +567,39 @@ class VersionFinderGUI(ctk.CTk):
             spinner = callback_info.get("spinner")
             if spinner is not None:
                 spinner.stop()
-        
+
         # Clear task callbacks since we've handled all pending tasks
         self.task_callbacks.clear()
-  
-    def _execute_task(self, task_name, args=None, callback=None, show_spinner=True, spinner_parent=None, spinner_text="Processing...", timeout=30):
+
+    def _execute_task(
+            self,
+            task_name,
+            args=None,
+            callback=None,
+            show_spinner=True,
+            spinner_parent=None,
+            spinner_text="Processing...",
+            timeout=30):
         """Execute a task in the worker process"""
         if self.worker_process is None or not self.worker_process.is_alive():
             self._start_worker_process()
-            
+
         # Don't execute new tasks if waiting for confirmation
         if self.waiting_for_confirmation and task_name != "confirm_proceed":
             logger.warning(f"Task {task_name} not executed - waiting for user confirmation")
             if callback:
                 callback(None, error="Operation pending user confirmation")
             return None
-            
+
         task_id = self.next_task_id
         self.next_task_id += 1
-        
+
         # Create a spinner if requested
         spinner = None
         if show_spinner and spinner_parent is not None:
             spinner = LoadingSpinner(spinner_parent, text=spinner_text)
             spinner.start()
-            
+
         # Store callback with task ID
         if callback is not None:
             self.task_callbacks[task_id] = {
@@ -594,7 +609,7 @@ class VersionFinderGUI(ctk.CTk):
                 "timeout": timeout,
                 "task_name": task_name  # Store the task name for reference
             }
-            
+
         # Send task to worker
         self.request_queue.put({
             "type": MessageType.TASK_REQUEST,
@@ -602,17 +617,17 @@ class VersionFinderGUI(ctk.CTk):
             "args": args or {},
             "task_id": task_id
         })
-        
+
         return task_id
-        
+
     def _setup_window(self):
         """Configure the main window settings"""
         self.geometry("1200x800")
         self.minsize(800, 600)
-        
+
         # Handle window close event
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-        
+
     def _on_close(self):
         """Handle window close event"""
         # Explicitly restore repository state before shutting down
@@ -621,43 +636,41 @@ class VersionFinderGUI(ctk.CTk):
                 # Log that we're closing
                 logger.info("Application closing, restoring repository state...")
                 self._log_output("Closing application, restoring repository state...")
-                
+
                 # First try to signal exit via event
                 logger.info("Setting exit event for worker process")
                 self.exit_event.set()
-                
+
                 # Explicitly request state restoration
                 try:
                     # Send a task to explicitly restore state and delete the version_finder
                     self._execute_task(
-                        "restore_state",
-                        callback=lambda result, error=None: logger.info(f"State restoration result: {result}, error: {error}"),
-                        timeout=5
-                    )
+                        "restore_state", callback=lambda result, error=None: logger.info(
+                            f"State restoration result: {result}, error: {error}"), timeout=5)
                     # Give a moment for the task to complete
                     time.sleep(1)
                 except Exception as e:
                     logger.error(f"Error during explicit state restoration: {str(e)}")
-                
+
                 # Wait for the worker to finish (with timeout)
                 self.worker_process.join(timeout=3)
-                
+
                 # If still alive, try shutdown message
                 if self.worker_process.is_alive():
                     logger.info("Worker still alive, sending shutdown message")
                     self.request_queue.put({"type": MessageType.SHUTDOWN})
                     self.worker_process.join(timeout=2)
-                
+
                 # If still alive, terminate
                 if self.worker_process.is_alive():
                     logger.warning("Worker process did not exit, terminating forcefully")
                     self.worker_process.terminate()
                 else:
                     logger.info("Worker process shut down gracefully")
-                    
+
             except Exception as e:
                 logger.error(f"Error during shutdown: {str(e)}")
-                
+
         # Now destroy the window
         self.destroy()
 
@@ -833,26 +846,26 @@ class VersionFinderGUI(ctk.CTk):
         """Handle branch selection"""
         if not branch:
             return
-            
+
         self.selected_branch = branch
         self._update_repository()
-        
+
     def _on_submodule_select(self, submodule: str):
         """Handle submodule selection"""
         self.selected_submodule = submodule
-        
+
     def _create_branch_selection(self, parent_frame):
         """Create the branch selection section"""
         branch_frame = ctk.CTkFrame(parent_frame)
         branch_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(branch_frame, text="Branch:").grid(row=0, column=0, padx=5)
-        
+
         self.branch_entry = AutocompleteEntry(branch_frame, width=400, placeholder_text="Select a branch")
         self.branch_entry.configure(state="disabled")
         self.branch_entry.callback = self._on_branch_select
         self.branch_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        
+
         return branch_frame
 
     def _create_submodule_selection(self, parent_frame):
@@ -861,12 +874,13 @@ class VersionFinderGUI(ctk.CTk):
         submodule_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(submodule_frame, text="Submodule:").grid(row=0, column=0, padx=5)
-        
-        self.submodule_entry = AutocompleteEntry(submodule_frame, width=400, placeholder_text="Select a submodule [Optional]")
+
+        self.submodule_entry = AutocompleteEntry(
+            submodule_frame, width=400, placeholder_text="Select a submodule [Optional]")
         self.submodule_entry.configure(state="disabled")
         self.submodule_entry.callback = self._on_submodule_select
         self.submodule_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        
+
         return submodule_frame
 
     def _create_app_buttons(self, parent_frame):
@@ -982,7 +996,7 @@ class VersionFinderGUI(ctk.CTk):
         ctk.CTkLabel(self.task_frame, text="Commit SHA:").grid(row=0, column=0, padx=5)
         self.commit_entry = ctk.CTkEntry(self.task_frame, width=400, placeholder_text="Required")
         self.commit_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        
+
         self.task_frame.grid_columnconfigure(1, weight=1)
         self.current_displayed_task = VersionFinderTasks.FIND_VERSION
 
@@ -996,7 +1010,7 @@ class VersionFinderGUI(ctk.CTk):
         ctk.CTkLabel(self.task_frame, text="End Version:").grid(row=0, column=2, padx=5)
         self.end_version_entry = ctk.CTkEntry(self.task_frame, width=400, placeholder_text="Required")
         self.end_version_entry.grid(row=0, column=3, padx=10, pady=10, sticky="ew")
-        
+
         self.current_displayed_task = VersionFinderTasks.COMMITS_BETWEEN_VERSIONS
 
     def _show_search_commits(self):
@@ -1006,7 +1020,7 @@ class VersionFinderGUI(ctk.CTk):
         ctk.CTkLabel(self.task_frame, text="Search Pattern:").grid(row=0, column=0, padx=5)
         self.search_text_pattern_entry = ctk.CTkEntry(self.task_frame, width=400, placeholder_text="Required")
         self.search_text_pattern_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        
+
         self.task_frame.grid_columnconfigure(1, weight=1)
         self.current_displayed_task = VersionFinderTasks.COMMITS_BY_TEXT
 
@@ -1022,21 +1036,21 @@ class VersionFinderGUI(ctk.CTk):
         if directory:
             # Stop any existing worker process
             self._stop_worker_process()
-            
+
             # Update repository path
             self.repo_path = Path(directory).resolve()
-            
+
             # Update directory entry
             self.dir_entry.delete(0, "end")
             self.dir_entry.insert(0, str(self.repo_path))
-            
+
             # Clear branch and submodule selections
             self.selected_branch = ""
             self.selected_submodule = ""
-            
+
             # Initialize with new repository
             self._initialize_version_finder()
-            
+
             self._log_output(f"Selected repository: {self.repo_path}")
         else:
             self._log_output("No directory selected")
@@ -1086,7 +1100,7 @@ class VersionFinderGUI(ctk.CTk):
             else:
                 self._log_error(f"Error initializing repository: {error}")
                 return
-            
+
         self._on_repo_initialized(result)
 
     def _handle_branches_loaded(self, branches: Tuple[List[str], str], error=None):
@@ -1095,11 +1109,11 @@ class VersionFinderGUI(ctk.CTk):
         if error:
             self._log_error(f"Error loading branches: {error}")
             return
-            
+
         if not branches:
             self._log_warning("No branches found in repository")
             return
-        
+
         # Update branch autocomplete entry
         self.branch_entry.configure(state="normal")
         self.branch_entry.suggestions = branches
@@ -1107,18 +1121,18 @@ class VersionFinderGUI(ctk.CTk):
         # Set the current branch as the first suggestion
         self.branch_entry.insert(0, current_branch)
         self._log_output(f"Loaded {len(branches)} branches")
-        
+
         # Set the selected branch
         self.selected_branch = current_branch
 
         # Update repository with selected branch
         self._update_repository()
-        
+
     def _update_repository(self):
         """Update the repository with the selected branch"""
         if not self.selected_branch:
             return
-            
+
         self._execute_task(
             "update_repository",
             args={"branch": self.selected_branch},
@@ -1126,14 +1140,14 @@ class VersionFinderGUI(ctk.CTk):
             spinner_parent=self.main_content_frame,
             spinner_text=f"Updating to branch {self.selected_branch}..."
         )
-        
+
     def _handle_repository_updated(self, result, error=None):
         """Handle repository update result"""
         if error:
             logger.error(f"Error updating repository: {error}")
             messagebox.showerror("Error", f"Failed to update repository: {error}")
             return
-            
+
         # Get submodules
         self._execute_task(
             "get_submodules",
@@ -1141,12 +1155,12 @@ class VersionFinderGUI(ctk.CTk):
             spinner_parent=self.main_content_frame,
             spinner_text="Loading submodules..."
         )
-        
+
     def _handle_submodules_loaded(self, submodules: List[str], error=None):
         """Handle submodules loaded from worker process"""
         if error:
             return
-            
+
         # Update submodule entry
         self.submodule_entry.configure(state="normal")
         if submodules:
@@ -1155,8 +1169,8 @@ class VersionFinderGUI(ctk.CTk):
         else:
             self.submodule_entry.placeholder_text = "No submodules found"
             self.submodule_entry.configure(state="disabled")
-            self._log_output("There are no submodules in the repository (with selected branch).")
-        
+            self._log_output("There are no submodules in the repository (with selected branch: {self.sele}).")
+
         # Enable UI elements now that repository is ready
         self._enable_ui_after_repo_load()
 
@@ -1176,10 +1190,10 @@ class VersionFinderGUI(ctk.CTk):
         if not commit_sha:
             messagebox.showwarning("Input Error", "Please enter a commit SHA")
             return
-            
+
         # Get current submodule selection
         submodule = self.selected_submodule if self.selected_submodule else None
-        
+
         # Execute the task in the worker process
         self._execute_task(
             "find_version",
@@ -1191,36 +1205,36 @@ class VersionFinderGUI(ctk.CTk):
             spinner_parent=self.main_content_frame,
             spinner_text=f"Finding version for commit {commit_sha[:7]}..."
         )
-        
+
     def _handle_find_version_result(self, result, error=None):
         """Handle the result of find_version task"""
         if error:
             self._log_error(f"Error finding version: {error}")
             return
-            
+
         if not result:
             self._log_error("No version found for this commit")
             return
-            
+
         # Display the result
         self._log_output(f"Version found: {result}")
-        
+
         # Update the result label
         if hasattr(self, 'version_result_label'):
             self.version_result_label.configure(text=f"Version: {result}")
-            
+
     def _find_all_commits_between_versions(self):
         """Find all commits between two versions"""
         from_version = self.start_version_entry.get().strip()
         to_version = self.end_version_entry.get().strip()
-        
+
         if not from_version or not to_version:
             messagebox.showwarning("Input Error", "Please enter both from and to versions")
             return
-            
+
         # Get current submodule selection
         submodule = self.selected_submodule if self.selected_submodule else None
-        
+
         # Execute the task in the worker process
         self._execute_task(
             "find_all_commits_between_versions",
@@ -1233,34 +1247,34 @@ class VersionFinderGUI(ctk.CTk):
             spinner_parent=self.commits_result_frame,
             spinner_text=f"Finding commits between {from_version} and {to_version}..."
         )
-        
+
     def _handle_commits_between_versions_result(self, commits, error=None):
         """Handle the result of find_all_commits_between_versions task"""
         if error:
             self._log_error(f"Error finding commits: {error}")
             return
-            
+
         if not commits:
             self._log_output("No commits found between these versions")
             return
-            
+
         # Log the number of commits found
         self._log_output(f"Found {len(commits)} commits between versions")
-        
+
         # Display commits in a new window
         CommitListWindow(self, "Commits Between Versions", commits)
-        
+
     def _find_commit_by_text(self):
         """Find commits containing specific text"""
         search_text = self.search_text_pattern_entry.get().strip()
-        
+
         if not search_text:
             messagebox.showwarning("Input Error", "Please enter search text")
             return
-            
+
         # Get current submodule selection
         submodule = self.selected_submodule if self.selected_submodule else None
-        
+
         # Execute the task in the worker process
         self._execute_task(
             "find_commit_by_text",
@@ -1272,20 +1286,20 @@ class VersionFinderGUI(ctk.CTk):
             spinner_parent=self.main_content_frame,
             spinner_text=f"Searching for commits with text: {search_text}..."
         )
-        
+
     def _handle_find_commit_by_text_result(self, commits, error=None):
         """Handle the result of find_commit_by_text task"""
         if error:
             self._log_error(f"Error searching commits: {error}")
             return
-            
+
         if not commits:
             self._log_output("No commits found matching the search text")
             return
-            
+
         # Log the number of commits found
         self._log_output(f"Found {len(commits)} commits matching the search")
-        
+
         # Display commits in a new window
         CommitListWindow(self, "Search Results", commits)
 
@@ -1338,7 +1352,7 @@ class VersionFinderGUI(ctk.CTk):
             logger.error(f"Error updating repository: {error}")
             messagebox.showerror("Error", f"Failed to update repository: {error}")
             return
-            
+
         # Now proceed with the search
         if self.current_displayed_task == VersionFinderTasks.FIND_VERSION:
             self._find_version()
@@ -1402,30 +1416,30 @@ class VersionFinderGUI(ctk.CTk):
         for widget in self.task_frame.winfo_children():
             if isinstance(widget, ctk.CTkEntry) or isinstance(widget, ctk.CTkButton):
                 widget.configure(state="normal")
-                
+
         self._log_output("Repository ready for operations")
 
     def init_repo(self, repo_path):
         """Initialize the repository"""
         self.repo_path = repo_path
         self._log_output(f"Initializing repository: {repo_path}")
-        
+
         # Start worker process if not already running
         if not self.worker_process or not self.worker_process.is_alive():
             self.request_queue = multiprocessing.Queue()
             self.response_queue = multiprocessing.Queue()
             self.exit_event = multiprocessing.Event()
-            
+
             self.worker_process = multiprocessing.Process(
                 target=version_finder_worker,
                 args=(self.request_queue, self.response_queue, self.exit_event),
                 daemon=False  # Use non-daemon process for proper cleanup
             )
             self.worker_process.start()
-            
+
             # Start response checker
             self.after(100, self._check_worker_responses)
-        
+
         # Send init_repo task to worker
         self._execute_task(
             "init_repo",
@@ -1442,11 +1456,11 @@ class VersionFinderGUI(ctk.CTk):
             logger.error(f"Error initializing repository: {error}")
             messagebox.showerror("Error", f"Failed to initialize repository: {error}")
             return
-            
+
         # Set version_finder to a non-None value to indicate repository is initialized
         # This is a placeholder since the actual VersionFinder object is in the worker process
         self.version_finder = True
-            
+
         # Get branches
         self._execute_task(
             "get_branches",

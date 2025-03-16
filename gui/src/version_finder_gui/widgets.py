@@ -191,6 +191,10 @@ class AutocompleteEntry(ctk.CTkEntry):
     def placeholder_text(self) -> str:
         return self._placeholder_text
 
+    @placeholder_text.setter
+    def placeholder_text(self, value: str) -> None:
+        self._placeholder_text = value
+
     def _show_placeholder(self) -> None:
         super().delete(0, "end")
         if self.placeholder_text:

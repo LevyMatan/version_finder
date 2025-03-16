@@ -8,7 +8,6 @@ from platformdirs import user_log_dir
 import os
 import logging
 import sys
-import traceback
 from typing import Dict, Optional
 
 

@@ -8,7 +8,7 @@ from tkinter import filedialog, messagebox
 import importlib.resources
 import multiprocessing
 import queue
-from version_finder.version_finder import VersionFinder, GitRepositoryNotClean
+from version_finder.version_finder import VersionFinder
 from version_finder.common import parse_arguments
 from version_finder.logger import get_logger, configure_logging
 from version_finder_gui.widgets import AutocompleteEntry, CommitListWindow, center_window, LoadingSpinner

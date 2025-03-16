@@ -1,6 +1,4 @@
-import pytest
 from version_finder_gui.__version__ import __version__
-from version_finder_gui.gui import main
 import subprocess
 import re
 

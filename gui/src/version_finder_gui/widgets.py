@@ -4,6 +4,7 @@ from typing import List
 import customtkinter as ctk
 from tkinter import messagebox
 import logging
+import tkinter
 from version_finder.version_finder import (
     Commit,
 )

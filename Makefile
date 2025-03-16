@@ -1,4 +1,4 @@
-.PHONY: test coverage format lint clean install install-dev uninstall
+.PHONY: test coverage format lint clean install install-dev uninstall list tree
 
 # Detect OS
 ifeq ($(OS),Windows_NT)
@@ -14,6 +14,9 @@ ifeq ($(DETECTED_OS),Windows)
 else
 	tree -L 4 -I "version_finder_env" -I "__pycache__" -I "*.egg-info"
 endif
+
+list:
+	@grep -E '^[a-zA-Z0-9_-]+:' Makefile | sed 's/:.*//'
 
 install-core:
 	pip install core/
@@ -82,7 +85,7 @@ test:
 cov-gui:
 	pytest gui --cov=gui/src --cov-report term-missing --cov-report html
 
-cov-core:		
+cov-core:
 	pytest core --cov=core/src --cov-report term-missing --cov-report html
 
 cov-cli:
@@ -95,7 +98,7 @@ cov-combine:
 	pytest cli --cov=cli/src --cov-append
 	coverage report
 	coverage html
-	
+
 format:
 	autopep8 --in-place --recursive .
 

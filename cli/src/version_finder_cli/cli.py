@@ -9,7 +9,7 @@ from prompt_toolkit.styles import Style
 from prompt_toolkit.completion import WordCompleter, PathCompleter
 from prompt_toolkit.validation import Validator, ValidationError
 from version_finder.logger import get_logger
-from version_finder.version_finder import VersionFinder, GitError, VersionNotFoundError
+from version_finder.version_finder import VersionFinder, GitError
 from version_finder.version_finder import VersionFinderTask, VersionFinderTaskRegistry
 from version_finder.common import parse_arguments
 import threading
@@ -212,7 +212,7 @@ class VersionFinderCLI:
                     original_branch = state.get("branch")
                     if original_branch and current_branch:
                         if original_branch.startswith("HEAD:"):
-                            logger.info(f"Restored to detached HEAD state")
+                            logger.info("Restored to detached HEAD state")
                         else:
                             logger.info(f"Restored to branch: {current_branch}")
 

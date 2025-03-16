@@ -1,0 +1,3 @@
+"""
+Version Finder CLI package
+"""

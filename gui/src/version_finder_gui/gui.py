@@ -123,7 +123,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                 elif task == "get_branches":
                     if not version_finder:
                         raise ValueError("Version finder not initialized")
-                    result = version_finder.get_branches(), version_finder.get_current_branch()
+                    result = version_finder.list_branches(), version_finder.updated_branch
                     response_queue.put({
                         "type": MessageType.TASK_RESULT,
                         "task_id": task_id,
@@ -132,7 +132,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                 elif task == "get_submodules":
                     if not version_finder:
                         raise ValueError("Version finder not initialized")
-                    result = version_finder.get_submodules()
+                    result = version_finder.list_submodules()
                     response_queue.put({
                         "type": MessageType.TASK_RESULT,
                         "task_id": task_id,
@@ -150,7 +150,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                 elif task == "find_all_commits_between_versions":
                     if not version_finder:
                         raise ValueError("Version finder not initialized")
-                    result = version_finder.find_all_commits_between_versions(**args)
+                    result = version_finder.get_commits_between_versions(**args)
                     response_queue.put({
                         "type": MessageType.TASK_RESULT,
                         "task_id": task_id,
@@ -159,7 +159,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                 elif task == "find_commit_by_text":
                     if not version_finder:
                         raise ValueError("Version finder not initialized")
-                    result = version_finder.find_commit_by_text(**args)
+                    result = version_finder.find_commits_by_text(**args)
                     response_queue.put({
                         "type": MessageType.TASK_RESULT,
                         "task_id": task_id,
@@ -1158,7 +1158,9 @@ class VersionFinderGUI(ctk.CTk):
             self._log_output("Loaded submodules successfully.")
         else:
             self.submodule_entry.insert(0, f"No submodules found (on branch: {self.selected_branch})")
-            self._log_output(f"There are no submodules in the repository (with selected branch: {self.selected_branch}).")
+            self._log_output(
+                f"There are no submodules in the repository (with selected branch: {
+                    self.selected_branch}).")
             self.submodule_entry.configure(state="disabled")
             self.submodule_entry.configure(text_color="gray")
 

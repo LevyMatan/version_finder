@@ -1159,8 +1159,8 @@ class VersionFinderGUI(ctk.CTk):
         else:
             self.submodule_entry.insert(0, f"No submodules found (on branch: {self.selected_branch})")
             self._log_output(
-                f"There are no submodules in the repository (with selected branch: {
-                    self.selected_branch}).")
+                f"There are no submodules in the repository (with selected branch: "
+                f"{self.selected_branch}).")
             self.submodule_entry.configure(state="disabled")
             self.submodule_entry.configure(text_color="gray")
 

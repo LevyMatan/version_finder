@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.3.3 (2025-03-17)
+
+### Bug Fixes
+
+- **gui**: :lipstick: Improve label alignment and justification in CommitListWindow
+  ([`0453ab9`](https://github.com/LevyMatan/version_finder/commit/0453ab9b5cbe824aa7d07bfd116dc29de64f3df6))
+
+
 ## v2.3.2 (2025-03-17)
 
 ### Bug Fixes

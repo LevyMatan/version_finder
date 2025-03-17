@@ -115,18 +115,18 @@ class CommitListWindow(ctk.CTkToplevel):
         rest_of_message = message_lines[1] if len(message_lines) > 1 else ""
 
         # Add first line in bold
-        first_line_label = ctk.CTkLabel(self.card, text=first_line, font=("Arial", 14, "bold"))
+        first_line_label = ctk.CTkLabel(self.card, text=first_line, font=("Arial", 14, "bold"), anchor="w", justify=tkinter.LEFT)
         first_line_label.pack(pady=5, padx=10, anchor="w")
 
         # Add rest of message if it exists
         if rest_of_message:
             message_label = ctk.CTkLabel(
                 self.card, text=rest_of_message, font=(
-                    "Arial", 12), wraplength=button_width - 20)
+                    "Arial", 12), wraplength=button_width - 20, anchor="w", justify=tkinter.LEFT)
             message_label.pack(pady=5, padx=10, anchor="w")
 
         # Author with label
-        author_label = ctk.CTkLabel(self.card, text=f"Author: {commit.author}", font=("Arial", 12))
+        author_label = ctk.CTkLabel(self.card, text=f"Author: {commit.author}", font=("Arial", 12), anchor="w", justify=tkinter.LEFT)
         author_label.pack(pady=5, padx=10, anchor="w")
 
         # Convert timestamp to human readable format
@@ -134,16 +134,16 @@ class CommitListWindow(ctk.CTkToplevel):
         try:
             timestamp_dt = datetime.fromtimestamp(float(commit.timestamp))
             formatted_time = timestamp_dt.strftime("%B %d, %Y at %I:%M %p")
-            timestamp_label = ctk.CTkLabel(self.card, text=formatted_time, font=("Arial", 12))
+            timestamp_label = ctk.CTkLabel(self.card, text=formatted_time, font=("Arial", 12), anchor="w", justify=tkinter.LEFT)
             timestamp_label.pack(pady=5, padx=10, anchor="w")
         except (ValueError, TypeError):
             # Fallback in case timestamp conversion fails
-            timestamp_label = ctk.CTkLabel(self.card, text=str(commit.timestamp), font=("Arial", 12))
+            timestamp_label = ctk.CTkLabel(self.card, text=str(commit.timestamp), font=("Arial", 12), anchor="w", justify=tkinter.LEFT)
             timestamp_label.pack(pady=5, padx=10, anchor="w")
 
         # Version with label (if exists)
         if commit.version:
-            version_label = ctk.CTkLabel(self.card, text=f"Version: {commit.version}", font=("Arial", 12))
+            version_label = ctk.CTkLabel(self.card, text=f"Version: {commit.version}", font=("Arial", 12), anchor="w", justify=tkinter.LEFT)
             version_label.pack(pady=5, padx=10, anchor="w")
 
         close_button = ctk.CTkButton(self.card, text="Close", command=self.card.destroy)

@@ -716,7 +716,7 @@ class VersionFinder:
             raise
 
         # Check if branch exists
-        branches = self.get_branches()
+        branches = self.list_branches()
         if branch not in branches:
             raise InvalidBranchError(f"Branch '{branch}' not found in repository")
 
@@ -736,49 +736,6 @@ class VersionFinder:
 
         self.is_task_ready = True
         logger.info(f"Repository updated to branch: {branch}")
-
-    def get_branches(self) -> List[str]:
-        """
-        Get list of branches in the repository.
-
-        Returns:
-            List of branch names
-        """
-        try:
-            output = self._git.execute(GIT_CMD_LIST_BRANCHES)
-            branches = []
-            for line in output.decode('utf-8').splitlines():
-                match = re.match(BRANCH_PATTERN, line.strip())
-                if match:
-                    branch = match.group(1)
-                    # Remove remote prefix if present
-                    if branch.startswith('remotes/'):
-                        parts = branch.split('/', 2)
-                        if len(parts) > 2:
-                            branch = parts[2]
-                    branches.append(branch)
-            return sorted(list(set(branches)))  # Remove duplicates and sort
-        except GitCommandError as e:
-            logger.error(f"Failed to get branches: {e}")
-            return []
-
-    def get_submodules(self) -> List[str]:
-        """
-        Get list of submodules in the repository.
-
-        Returns:
-            List of submodule names
-        """
-        try:
-            output = self._git.execute(GIT_CMD_LIST_SUBMODULES)
-            submodules = []
-            for line in output.decode('utf-8').splitlines():
-                _hash, submodule, _pointer = line.split()
-                submodules.append(submodule)
-            return sorted(submodules)
-        except GitCommandError as e:
-            logger.error(f"Failed to get submodules: {e}")
-            return []
 
     def find_commits_by_text(self, text: str, submodule: str = '') -> List[Commit]:
         """
@@ -1363,66 +1320,6 @@ class VersionFinder:
             logger.error(f"Error finding version: {e}")
             raise
 
-    def find_all_commits_between_versions(self, from_version: str, to_version: str,
-                                          submodule: str = None) -> List[Commit]:
-        """
-        Find all commits between two versions.
-
-        Args:
-            from_version: The starting version
-            to_version: The ending version
-            submodule: Optional submodule path
-
-        Returns:
-            List of commits between the versions
-        """
-        logger.info(
-            f"Finding commits between versions {from_version} and {to_version} in"
-            f"{'submodule ' + submodule if submodule else 'main repository'}")
-
-        try:
-            # Get the commits
-            commits = self.get_commits_between_versions(from_version, to_version, submodule)
-
-            logger.info(f"Found {len(commits)} commits between versions {from_version} and {to_version}")
-            return commits
-
-        except GitCommandError as e:
-            logger.error(f"Git error while finding commits: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Error finding commits: {e}")
-            raise
-
-    def find_commit_by_text(self, text: str, submodule: str = None) -> List[Commit]:
-        """
-        Find commits containing specific text.
-
-        Args:
-            text: The text to search for
-            submodule: Optional submodule path
-
-        Returns:
-            List of commits containing the text
-        """
-        logger.info(
-            f"Finding commits containing text '{text}' in"
-            f"{'submodule ' + submodule if submodule else 'main repository'}")
-
-        try:
-            # Get the commits
-            commits = self.find_commits_by_text(text, submodule)
-
-            logger.info(f"Found {len(commits)} commits containing text '{text}'")
-            return commits
-
-        except GitCommandError as e:
-            logger.error(f"Git error while finding commits: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Error finding commits: {e}")
-            raise
-
     def check_repository_state(self) -> dict:
         """
         Check the current state of the repository without raising exceptions.
@@ -1431,7 +1328,7 @@ class VersionFinder:
             dict: A dictionary containing information about the repository state
         """
         state = {
-            "branch": self.get_current_branch(),
+            "branch": self.updated_branch,
             "has_changes": not self.__is_clean_git_repo(),
             "is_valid": True,
             "error": None

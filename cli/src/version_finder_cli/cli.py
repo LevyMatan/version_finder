@@ -128,7 +128,7 @@ class VersionFinderCLI:
                 tasks_actions[task.index] = (self.find_all_commits_between_versions)
                 continue
             if (task.name == "Find commit by text"):
-                tasks_actions[task.index] = (self.find_commit_by_text)
+                tasks_actions[task.index] = (self.find_commits_by_text)
                 continue
             if (task.name == "Find first version containing commit"):
                 tasks_actions[task.index] = (self.find_first_version_containing_commit)
@@ -448,7 +448,7 @@ class VersionFinderCLI:
             submodule: Optional submodule path
         """
         try:
-            commits = self.finder.find_all_commits_between_versions(from_version, to_version, submodule)
+            commits = self.finder.get_commits_between_versions(from_version, to_version, submodule)
             if commits:
                 print(f"\nFound {len(commits)} commits between {from_version} and {to_version}:")
                 for commit in commits:
@@ -459,7 +459,7 @@ class VersionFinderCLI:
             print(f"\nError: {str(e)}")
 
     @with_progress("Searching for commits")
-    def find_commit_by_text(self, text: str, submodule: str = None):
+    def find_commits_by_text(self, text: str, submodule: str = None):
         """
         Find commits containing specific text.
 
@@ -468,7 +468,7 @@ class VersionFinderCLI:
             submodule: Optional submodule path
         """
         try:
-            commits = self.finder.find_commit_by_text(text, submodule)
+            commits = self.finder.find_commits_by_text(text, submodule)
             if commits:
                 print(f"\nFound {len(commits)} commits containing '{text}':")
                 for commit in commits:

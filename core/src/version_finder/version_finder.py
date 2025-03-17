@@ -433,7 +433,7 @@ class VersionFinder:
         stash_id = f"version_finder_stash_{int(time.time())}"
 
         # Get current branch or commit hash if in detached HEAD
-        current_branch = self.get_current_branch()
+        current_branch = self.updated_branch
         if not current_branch:  # Detached HEAD state
             try:
                 # Get the current commit hash
@@ -1035,7 +1035,7 @@ class VersionFinder:
         return submodule_ptr[0].split()[2]
 
     def find_commits_between_versions(self, start_version: str,
-                                     end_version: str, submodule: Optional[str] = None) -> List[Commit]:
+                                      end_version: str, submodule: Optional[str] = None) -> List[Commit]:
         """
         Get the list of commits between two versions.
         """

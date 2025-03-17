@@ -903,3 +903,88 @@ class TestVersionFinderNegative:
         # Call the method and check for RepositoryNotTaskReady exception
         with pytest.raises(RepositoryNotTaskReady):
             finder.get_file_content_at_commit(commit_hash, file_path)
+
+
+class TestVersionFinderDirtyRepo:
+
+    @pytest.fixture
+    def test_repo(self):
+        """Creates a temporary test repository with initial commit"""
+        temp_dir = tempfile.mkdtemp()
+        os.chdir(temp_dir)
+
+        # Initialize repo and create initial commit
+        os.system('git init')
+        os.system('git config user.email "test@gmail.com"')
+        os.system('git config user.name "Test User"')
+        # Replace touch with Python file creation
+        with open(os.path.join(temp_dir, "file1"), "w") as f:
+            pass
+        os.system('git add file1')
+        os.system('git commit -m "Initial commit"')
+
+        # Get the default branch name (could be main or master depending on git version)
+        default_branch = os.popen("git branch --show-current").read().strip()
+
+        yield temp_dir, default_branch
+
+        # Cleanup - use shutil instead of rm -rf
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @pytest.fixture
+    def dirty_repo(self, test_repo: tuple[str, str]):
+        """Creates a dirty repository with uncommitted changes"""
+        os.chdir(test_repo[0])
+        with open("file1", "w") as f:
+            f.write("modified content")
+
+        yield test_repo
+
+    def test_dirty_repo(self, dirty_repo: tuple[str, str]):
+        """Test VersionFinder with a dirty repository"""
+        with pytest.raises(GitRepositoryNotClean):
+            VersionFinder(path=dirty_repo[0])
+
+    def test_dirty_repo_with_force(self, dirty_repo: tuple[str, str]):
+        """Test VersionFinder with a dirty repository and force=True"""
+        finder = VersionFinder(path=dirty_repo[0], force=True)
+
+        assert finder.repository_path.resolve() == Path(dirty_repo[0]).resolve()
+        assert finder.has_uncommitted_changes() is False
+        assert finder.is_task_ready is False
+        assert finder.has_saved_state() is True
+
+        finder.update_repository(dirty_repo[1])
+        assert finder.is_task_ready is True
+
+        commits = finder.find_commit_by_version("1.0.0")
+        assert len(commits) == 0
+
+        commits = finder.find_commits_by_text("Initial commit")
+        assert len(commits) == 1
+
+        finder.restore_repository_state()
+        assert finder.has_uncommitted_changes() is True
+
+    def test_dirty_repo_with_force_and_destructor(self, dirty_repo: tuple[str, str]):
+        """Test VersionFinder with a dirty repository and force=True and destructor"""
+        finder = VersionFinder(path=dirty_repo[0], force=True)
+        assert finder.repository_path.resolve() == Path(dirty_repo[0]).resolve()
+        assert finder.has_uncommitted_changes() is False
+        assert finder.is_task_ready is False
+        assert finder.has_saved_state() is True
+
+        finder.update_repository(dirty_repo[1])
+        assert finder.is_task_ready is True
+
+        commits = finder.find_commit_by_version("1.0.0")
+        assert len(commits) == 0
+
+        commits = finder.find_commits_by_text("Initial commit")
+        assert len(commits) == 1
+
+        del finder
+        # Check that the destructor restored the repository state
+        with pytest.raises(GitRepositoryNotClean):
+            VersionFinder(path=dirty_repo[0])

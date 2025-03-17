@@ -473,7 +473,7 @@ class TestVersionFinder:
 
         finder = VersionFinder(path=test_repo[0])
         finder.update_repository(test_repo[1])
-        commits = finder.get_commits_between_versions('2024_01', '2024_02')
+        commits = finder.find_commits_between_versions('2024_01', '2024_02')
         commits_shas = [commit.sha for commit in commits]
         # Verify we got the intermediate commits
         assert len(commits) == 4
@@ -506,7 +506,7 @@ class TestVersionFinder:
 
         finder = VersionFinder(path=repo_with_submodule[0])
         finder.update_repository(repo_with_submodule[1])
-        commits = finder.get_commits_between_versions('2024_01', '2024_02', submodule='sub_repo')
+        commits = finder.find_commits_between_versions('2024_01', '2024_02', submodule='sub_repo')
         commits_shas = [commit.sha for commit in commits]
         # Verify we got the submodule commit
         assert len(commits) == 2
@@ -517,13 +517,13 @@ class TestVersionFinder:
         finder = VersionFinder(path=test_repo[0])
         finder.update_repository(test_repo[1])
         with pytest.raises(VersionNotFoundError):
-            _ = finder.get_commits_between_versions('nonexistent_version1', 'nonexistent_version2')
+            _ = finder.find_commits_between_versions('nonexistent_version1', 'nonexistent_version2')
 
     def test_get_commits_between_versions_not_ready(self, test_repo: tuple[str, str]):
         finder = VersionFinder(path=test_repo[0])
         # Don't call update_repository to test not ready state
         with pytest.raises(RepositoryNotTaskReady):
-            finder.get_commits_between_versions('2024_01', '2024_02')
+            finder.find_commits_between_versions('2024_01', '2024_02')
 
     def test_get_commit_info_basic(self, test_repo: tuple[str, str]):
         finder = VersionFinder(path=test_repo[0])

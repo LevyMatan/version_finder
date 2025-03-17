@@ -448,7 +448,7 @@ class VersionFinderCLI:
             submodule: Optional submodule path
         """
         try:
-            commits = self.finder.get_commits_between_versions(from_version, to_version, submodule)
+            commits = self.finder.find_commits_between_versions(from_version, to_version, submodule)
             if commits:
                 print(f"\nFound {len(commits)} commits between {from_version} and {to_version}:")
                 for commit in commits:

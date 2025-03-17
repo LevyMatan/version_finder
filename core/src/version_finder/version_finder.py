@@ -1034,7 +1034,7 @@ class VersionFinder:
             return None
         return submodule_ptr[0].split()[2]
 
-    def get_commits_between_versions(self, start_version: str,
+    def find_commits_between_versions(self, start_version: str,
                                      end_version: str, submodule: Optional[str] = None) -> List[Commit]:
         """
         Get the list of commits between two versions.
@@ -1151,7 +1151,7 @@ class VersionFinder:
         return {
             0: self.find_commits_by_text,
             1: self.find_first_version_containing_commit,
-            2: self.get_commits_between_versions,
+            2: self.find_commits_between_versions,
         }
 
     def get_task_api_functions_params(self) -> Dict[int, List[str]]:

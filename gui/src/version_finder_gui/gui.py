@@ -150,7 +150,7 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                 elif task == "find_all_commits_between_versions":
                     if not version_finder:
                         raise ValueError("Version finder not initialized")
-                    result = version_finder.get_commits_between_versions(**args)
+                    result = version_finder.find_commits_between_versions(**args)
                     response_queue.put({
                         "type": MessageType.TASK_RESULT,
                         "task_id": task_id,

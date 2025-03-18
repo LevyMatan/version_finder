@@ -16,7 +16,7 @@ import threading
 import time
 
 # Initialize module logger
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 class TaskNumberValidator(Validator):

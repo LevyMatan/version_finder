@@ -19,7 +19,7 @@ from version_finder.logger import get_logger
 from version_finder.common import GIT_CMD_FETCH, GIT_CMD_CHECKOUT, GIT_CMD_SUBMODULE_UPDATE, GIT_CMD_LIST_BRANCHES, GIT_CMD_LIST_SUBMODULES, BRANCH_PATTERN
 
 # Initialize module logger
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 class GitError(Exception):

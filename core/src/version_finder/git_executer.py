@@ -20,7 +20,7 @@ from version_finder.common import (
 )
 
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 @dataclass

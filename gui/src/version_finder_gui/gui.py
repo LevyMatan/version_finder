@@ -16,9 +16,8 @@ import time
 import os
 from PIL import Image
 
-logger = get_logger(__name__)
+logger = get_logger()
 # Define message types for inter-process communication
-
 
 class MessageType(Enum):
     TASK_REQUEST = auto()
@@ -166,10 +165,8 @@ def version_finder_worker(request_queue, response_queue, exit_event=None):
                         "result": result
                     })
                 elif task == "restore_state":
-                    if not version_finder:
-                        raise ValueError("Version finder not initialized")
                     # Explicitly restore repository state
-                    if version_finder.has_saved_state():
+                    if version_finder and version_finder.has_saved_state():
                         logger.info("Explicitly restoring repository state on close")
                         result = version_finder.restore_repository_state()
                         # Set flag to prevent destructor from trying to restore again
@@ -929,7 +926,7 @@ class VersionFinderGUI(ctk.CTk):
         """Show the configuration window"""
         config_window = tk.Toplevel(self)
         config_window.title("Settings")
-        config_window.geometry("400x300")
+        config_window.geometry("400x400")  # Increased height for additional buttons
 
         center_window(config_window)
 
@@ -950,6 +947,20 @@ class VersionFinderGUI(ctk.CTk):
             command=lambda x: ctk.set_appearance_mode(x)
         )
         theme_menu.pack(pady=15)
+        
+        # Logging section
+        log_label = ctk.CTkLabel(config_frame, text="Logging", font=("Arial", 16, "bold"))
+        log_label.pack(pady=(15, 10))
+        
+        # Open log file button
+        open_log_btn = ctk.CTkButton(
+            config_frame,
+            text="Open Log File",
+            command=self._open_log_file,
+            fg_color=("blue", "darkblue"),
+            hover_color=("darkblue", "navy")
+        )
+        open_log_btn.pack(pady=10)
 
         # Apply button
         apply_btn = ctk.CTkButton(
@@ -961,6 +972,30 @@ class VersionFinderGUI(ctk.CTk):
         )
         apply_btn.pack(pady=15)
         self.config_window = config_window
+        
+    def _open_log_file(self):
+        """Open the current log file with the default system application"""
+        from version_finder.logger import get_current_log_file_path
+        import subprocess
+        import os
+        import sys
+        
+        log_path = get_current_log_file_path()
+        
+        if log_path and os.path.exists(log_path):
+            self._log_output(f"Opening log file: {log_path}")
+            
+            try:
+                if sys.platform.startswith('win'):
+                    os.startfile(log_path)
+                elif sys.platform.startswith('darwin'):  # macOS
+                    subprocess.run(['open', log_path], check=True)
+                else:  # Linux
+                    subprocess.run(['xdg-open', log_path], check=True)
+            except Exception as e:
+                self._log_error(f"Failed to open log file: {str(e)}")
+        else:
+            self._log_error("Log file not found")
 
     def _apply_settings(self):
         """Apply configuration settings and return to previous view"""
@@ -1467,9 +1502,11 @@ def gui_main(args: argparse.Namespace) -> int:
     if args.version:
         from version_finder_gui.__version__ import __version__
         print(f"version_finder gui-v{__version__}")
+        logger.info(f"version_finder gui-v{__version__}")
         return 0
 
     configure_logging(verbose=args.verbose)
+
     app = VersionFinderGUI(args.path)
     app.mainloop()
     return 0

@@ -22,7 +22,7 @@ from version_finder.logger import (
 )
 
 
-debug_logger = get_logger(__name__, verbose=True)
+debug_logger = get_logger()
 
 
 class TestGitConfig:
